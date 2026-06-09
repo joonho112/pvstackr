@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>M2: The BRR–Fay fixed-effect target — Rubin combining, design variance, and degrees of freedom</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">M2: The BRR–Fay fixed-effect target — Rubin
+combining, design variance, and degrees of freedom</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>The second page of the Method track derives the external variance
+answer the rest of the machinery is built to report. It assembles the
+per-plausible-value design covariance from the
+balanced-repeated-replication Fay sandwich, combines the M per-value
+fits with the Rubin rules into the external total covariance, and
+explains the two degrees-of-freedom regimes — the classic Rubin formula
+the bundled fixture carries, and the small-sample Barnard–Rubin
+correction that a coverage-claimable target supplies. It relates the
+fraction of missing information to the collapse of degrees of freedom at
+small M, states the design-variance coverage result qualitatively, and
+re-derives the whole Rubin pooling chain on the cached target so every
+quantity can be checked against the stored object. Where M1 named these
+equations, M2 derives them.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#the-target-as-an-external-object" id="toc-the-target-as-an-external-object">1. The target as an external
+object</a></li>
+<li><a href="#per-pv-design-variance-the-brrfay-sandwich" id="toc-per-pv-design-variance-the-brrfay-sandwich">2. Per-PV design
+variance: the BRR–Fay sandwich</a></li>
+<li><a href="#rubin-combining" id="toc-rubin-combining">3. Rubin
+combining</a></li>
+<li><a href="#small-sample-degrees-of-freedom" id="toc-small-sample-degrees-of-freedom">4. Small-sample degrees of
+freedom</a></li>
+<li><a href="#fraction-of-missing-information" id="toc-fraction-of-missing-information">5. Fraction of missing
+information</a></li>
+<li><a href="#the-design-variance-coverage-result" id="toc-the-design-variance-coverage-result">6. The design-variance
+coverage result</a></li>
+<li><a href="#verify-rubin-pooling-on-the-cached-target" id="toc-verify-rubin-pooling-on-the-cached-target">7. Verify Rubin
+pooling on the cached target</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">8. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<div id="the-target-as-an-external-object" class="section level2">
+<h2>1. The target as an external object</h2>
+<p>M1 fixed the vocabulary; this page derives the first piece of
+machinery that vocabulary describes — the <strong>external fixed-effect
+target</strong>. The single most important fact about it is structural:
+the variance answer for <span class="math inline">\(\beta_{\text{FE}}\)</span> does
+<strong>not</strong> come out of the model fit. It is assembled
+separately, from the plausible values and the replicate-weight design,
+and the stacked fit is then <em>calibrated to report it</em> (the
+calibration is M4’s subject). The target is an object in its own right —
+class <code>pvstackr_brr_target</code>, reached with
+<code>get_target(fit)</code> — carrying the pooled coefficients, the
+total covariance, the degrees of freedom, and the fraction of missing
+information.</p>
+<p>Why insist on this separation? Because <strong>provenance is what
+licenses a coverage claim</strong>, not the arithmetic of the fit. A
+correct point estimate paired with a model-based standard error can
+under-cover badly (Section 6); what restores nominal coverage is a
+variance built from the <em>design</em> — the BRR–Fay sandwich (Section
+2) combined by the Rubin rules (Section 3). A3 §6.1 met this object from
+the reading side: the standard errors in <code>get_estimates()</code>
+are <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>
+and the point estimates are the pooled <code>beta_bar</code>, both read
+straight off the target under the reportable convention
+<code>center = &quot;target&quot;</code>. This vignette opens that object up and
+derives every field in it.</p>
+<div class="alert alert-info">
+<p><strong>Scope of this page.</strong> M2 derives the target. It
+estimates nothing — there is no MCMC below, only base-R linear algebra
+and read-only accessor calls against the bundled synthetic fixture. The
+calibration that maps this target onto a stacked fit is
+<strong>M4</strong>; why only <code>stack_direct</code> fits may carry a
+coverage claim is <strong>M5</strong>.</p>
+</div>
+<p>The shared light-path load — the same one used across the Method
+track — gives us the fit and its target to point at:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)<span class="sc">$</span>fit</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>tg <span class="ot">&lt;-</span> <span class="fu">get_target</span>(fit)   <span class="co"># external Rubin / BRR–Fay target (class pvstackr_brr_target)</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">class</span>(tg)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;pvstackr_brr_target&quot; &quot;list&quot;</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="fu">c</span>(<span class="at">M =</span> tg<span class="sc">$</span>M, <span class="at">R =</span> tg<span class="sc">$</span>R, <span class="at">fay_k =</span> tg<span class="sc">$</span>fay_k)   <span class="co"># 2, 4, 0.5</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt;     M     R fay_k </span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt;   2.0   4.0   0.5</span></span></code></pre></div>
+<p>The design is the tiny synthetic one M1 introduced: <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights, Fay coefficient
+<span class="math inline">\(k = 0.5\)</span>.</p>
+</div>
+<div id="per-pv-design-variance-the-brrfay-sandwich" class="section level2">
+<h2>2. Per-PV design variance: the BRR–Fay sandwich</h2>
+<p>The first ingredient is the per-plausible-value covariance <span class="math inline">\(\hat U_m\)</span>. In this package it is
+<strong>design-based</strong>: rather than trust the model’s nominal
+covariance, it is built from PISA’s replicate-weight machinery. As M1
+§2.1 set out, alongside each student’s final weight <span class="math inline">\(W_{ij}\)</span> come <span class="math inline">\(R\)</span> replicate weights <span class="math inline">\(W_{ij}^{(r)}\)</span>, each a balanced
+perturbation of the sample. Re-estimating the fixed effects on every
+replicate and measuring how much they move is the design-based sampling
+variance.</p>
+<p>For plausible value <span class="math inline">\(m\)</span>, write
+<span class="math inline">\(\hat\beta_m\)</span> for the full-weight
+estimate and <span class="math inline">\(\hat\beta_m^{(r)}\)</span> for
+the estimate on the <span class="math inline">\(r\)</span>-th replicate
+weight. The <strong>BRR–Fay sandwich</strong> — <strong>tag
+EQ-BRRFAY</strong> — is</p>
+<p><span class="math display">\[
+\hat
+U_m^{\text{BRR-Fay}}=a_d\sum_{r=1}^{R}\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\big(\hat\beta_m^{(r)}-\hat\beta_m\big)^\top,\quad
+a_d=\tfrac1{R(1-k)^2}.
+\]</span></p>
+<p>Read it as a sum of outer products of replicate deviations. Each term
+<span class="math inline">\(\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\)</span>
+records how far the <span class="math inline">\(r\)</span>-th replicate
+pulls the estimate from its full-weight value; squaring and summing
+those deviations across the <span class="math inline">\(R\)</span>
+replicates measures the sampling spread, and the <strong>Fay
+multiplier</strong> <span class="math inline">\(a_d\)</span> rescales it
+to the correct variance <span class="citation">(Judkins
+1990)</span>.</p>
+<p>The multiplier carries the whole Fay correction. PISA uses Fay’s
+variant of BRR, which shrinks each perturbation by the coefficient <span class="math inline">\(k\)</span> rather than zeroing out half-samples;
+the factor <span class="math inline">\(1/(1-k)^2\)</span> undoes that
+shrinkage and <span class="math inline">\(1/R\)</span> averages over the
+replicates. For PISA reading (<span class="math inline">\(R =
+80\)</span>, <span class="math inline">\(k = 0.5\)</span>) this gives
+<span class="math inline">\(a_d = 1/[80\cdot 0.25] = 0.05\)</span>.</p>
+<div class="alert alert-warning">
+<p><strong>The fixture’s <span class="math inline">\(a_d = 1\)</span> is
+an arithmetic coincidence — do not generalise.</strong> With the
+fixture’s <span class="math inline">\(R = 4\)</span> and <span class="math inline">\(k = 0.5\)</span>, <span class="math inline">\(a_d
+= 1/[4\,(1-0.5)^2] = 1/(4\cdot
+0.25) = 1\)</span>. That is a quirk of this one tiny design — it matches
+the <code>fay_variance_multiplier</code> field on the target —
+<strong>not</strong> a typical value. Real PISA reading has <span class="math inline">\(a_d = 0.05\)</span> (M1 §2.1).</p>
+</div>
+<p>The replicate ingredients are stored on the target, one entry per
+plausible value. We can peek at the deviation matrix <span class="math inline">\(\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\)</span>
+that EQ-BRRFAY sums over — for the first plausible value it is a <span class="math inline">\(3 \times R\)</span> matrix (three fixed-effect
+terms, <span class="math inline">\(R = 4\)</span> replicates):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>tg<span class="sc">$</span>fay_variance_multiplier                 <span class="co"># a_d = 1 on this fixture (coincidence)</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">dim</span>(tg<span class="sc">$</span>per_pv[[<span class="dv">1</span>]]<span class="sc">$</span>replicate_diff)         <span class="co"># 3 x 4 : (beta_hat_m^(r) - beta_hat_m)</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] 3 4</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="fu">str</span>(tg<span class="sc">$</span>per_pv[[<span class="dv">1</span>]]<span class="sc">$</span>replicate_diff)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="co">#&gt;  num [1:3, 1:4] 0.0191 0.0562 -0.1768 0.0274 -0.0516 ...</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;dimnames&quot;)=List of 2</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co">#&gt;   ..$ : chr [1:3] &quot;b_Intercept&quot; &quot;b_x&quot; &quot;b_female&quot;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="co">#&gt;   ..$ : chr [1:4] &quot;W_FSTURWT1&quot; &quot;W_FSTURWT2&quot; &quot;W_FSTURWT3&quot; &quot;W_FSTURWT4&quot;</span></span></code></pre></div>
+<p>Each column is one replicate’s deviation from the full-weight
+estimate; the sandwich in EQ-BRRFAY forms <span class="math inline">\(a_d\sum_r\)</span> of the outer products of these
+columns to give <span class="math inline">\(\hat U_m\)</span>. (Section
+7 reads the assembled <span class="math inline">\(\hat U_m\)</span> back
+as <code>per_pv[[m]]$U</code> and pools it.)</p>
+</div>
+<div id="rubin-combining" class="section level2">
+<h2>3. Rubin combining</h2>
+<p>With a per-PV point estimate <span class="math inline">\(\hat\beta_m\)</span> and its design covariance
+<span class="math inline">\(\hat U_m\)</span> in hand for each <span class="math inline">\(m = 1,\dots,M\)</span>, the <strong>Rubin
+rules</strong> combine the <span class="math inline">\(M\)</span> fits
+into a single external answer <span class="citation">(Rubin
+1987)</span>. <strong>Tag EQ-TMI</strong> is the three combining
+quantities followed by the boxed total:</p>
+<p><span class="math display">\[
+\bar\beta=\tfrac1M\textstyle\sum_m\hat\beta_m,\quad
+\bar U=\tfrac1M\textstyle\sum_m\hat U_m,\quad
+B=\tfrac1{M-1}\textstyle\sum_m(\hat\beta_m-\bar\beta)(\hat\beta_m-\bar\beta)^\top,
+\]</span></p>
+<p><span class="math display">\[
+\boxed{\,T_{\text{MI}}=\bar U+\big(1+\tfrac1M\big)B\,}.
+\]</span></p>
+<p>The three pieces decompose the uncertainty:</p>
+<ul>
+<li><span class="math inline">\(\bar\beta\)</span> is the <strong>Rubin
+mean</strong> — the simple average of the per-PV estimates, and the
+reportable point. (M3 shows one stacked fit recovers exactly this value
+under stated conditions; here it is the combining rule that defines
+it.)</li>
+<li><span class="math inline">\(\bar U\)</span> is the
+<strong>within-imputation covariance</strong> — the average of the
+per-PV design covariances <span class="math inline">\(\hat U_m\)</span>.
+It is the sampling uncertainty you would have if the plausible values
+agreed perfectly.</li>
+<li><span class="math inline">\(B\)</span> is the
+<strong>between-imputation covariance</strong> — the spread of the
+per-PV estimates <em>around</em> their mean. It is the extra uncertainty
+the measurement leaves, the part that exists precisely because the
+proficiency is imputed rather than observed.</li>
+</ul>
+<p>The total <span class="math inline">\(T_{\text{MI}}\)</span> adds
+them, inflating the between-component by the finite- <span class="math inline">\(M\)</span> factor <span class="math inline">\((1+1/M)\)</span> that corrects for estimating
+<span class="math inline">\(B\)</span> from only <span class="math inline">\(M\)</span> imputations. This <span class="math inline">\(T_{\text{MI}}\)</span> is the external target
+covariance — the variance answer the whole package is engineered to
+report, and the <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>
+that M4’s calibration imposes on the stacked draws. Section 7 re-derives
+every quantity here from the stored per-PV pieces and checks it against
+the target.</p>
+</div>
+<div id="small-sample-degrees-of-freedom" class="section level2">
+<h2>4. Small-sample degrees of freedom</h2>
+<p>A variance is only half of an interval; the other half is the degrees
+of freedom that set the reference distribution’s tails. Two regimes
+matter, and the distinction governs whether an interval may carry a
+coverage claim.</p>
+<p>The <strong>classic Rubin</strong> degrees of freedom derive from the
+relative increase in variance alone and assume the complete-data
+analysis has effectively unlimited df <span class="citation">(Rubin
+1987)</span>. They are what the bundled fixture carries (Section 7).</p>
+<p>The small-sample correction is the <strong>Barnard–Rubin</strong>
+degrees of freedom <span class="math inline">\(\nu_{\text{BR}}\)</span>
+— <strong>tag EQ-BARNARD</strong> <span class="citation">(Barnard and
+Rubin 1999)</span>. It computes the combined-data df from two inputs:
+the <strong>fraction of missing information</strong> <span class="math inline">\(\lambda_k\)</span> (the FMI <span class="math inline">\(\gamma_k\)</span> of Section 5) and the
+<strong>complete-data df</strong> <span class="math inline">\(\nu_{\text{com}}\)</span>, the degrees of freedom
+the analysis would have had with no missing information (package field
+<code>df_complete</code>). When the complete-data analysis is itself
+small-sample, <span class="math inline">\(\nu_{\text{BR}}\)</span>
+corrects the classic formula downward; it is the df a
+<em>coverage-claimable</em> interval requires. Concretely, with <span class="math inline">\(\lambda_k=\gamma_k=(1+1/M)\,B_{kk}/T_{\text{MI},kk}\)</span>
+and <span class="math inline">\(\nu_{\text{com},k}\)</span> the
+complete-data df (<code>df_complete</code>), EQ-BARNARD combines the
+classic df <span class="math inline">\(\nu_{\text{old},k}=(M-1)/\lambda_k^{2}\)</span>
+with an <strong>observed-data df</strong> <span class="math inline">\(\nu_{\text{obs},k}\)</span> harmonically:</p>
+<p><span class="math display">\[
+\nu_{\text{obs},k}=\dfrac{\nu_{\text{com},k}+1}{\nu_{\text{com},k}+3}\,
+\nu_{\text{com},k}\,(1-\lambda_k),\qquad
+\nu_{\text{BR},k}=\left(\nu_{\text{old},k}^{-1}+\nu_{\text{obs},k}^{-1}\right)^{-1}.
+\]</span></p>
+<p>The observed-data term pulls <span class="math inline">\(\nu_{\text{BR}}\)</span> below the classic value
+when <span class="math inline">\(\nu_{\text{com}}\)</span> is small; as
+<span class="math inline">\(\nu_{\text{com}}\to\infty\)</span> it sends
+<span class="math inline">\(\nu_{\text{obs}}\to\infty\)</span> and <span class="math inline">\(\nu_{\text{BR},k}\to\nu_{\text{old},k}\)</span>,
+recovering classic Rubin. The package evaluates this
+<strong>only</strong> on the Barnard–Rubin path; the bundled fixture
+carries classic df, so this vignette prints the formula but does
+<strong>not</strong> numerically evaluate it or fabricate a <span class="math inline">\(\nu_{\text{BR}}\)</span> number for it.</p>
+<div class="alert alert-warning">
+<p><strong>The cached fixture carries classic df, not <span class="math inline">\(\nu_{\text{BR}}\)</span>.</strong> Every term on
+this target has <code>df_method == &quot;classic&quot;</code> and
+<code>df_complete == NA</code>, so the <code>df</code> it reports is the
+<strong>classic Rubin</strong> value, <em>not</em> the Barnard–Rubin
+<span class="math inline">\(\nu_{\text{BR}}\)</span>. The complete-data
+df that EQ-BARNARD needs is simply not present
+(<code>df_complete == NA</code>), because the classic path does not use
+it. The Barnard–Rubin correction is the path a <strong>reportable,
+coverage-claimable</strong> target would take — it is <em>not</em>
+exercised on <code>pisa_tiny</code>. Accordingly, this vignette reads
+the <strong>classic</strong> <code>df</code> / <code>df_method</code> /
+<code>df_complete</code> off the fixture (mirroring A3 §4) and does
+<strong>not</strong> compute or display a <span class="math inline">\(\nu_{\text{BR}}\)</span> number here.</p>
+</div>
+<p>Section 7 reads <code>df</code>, <code>df_method</code>, and
+<code>df_complete</code> directly off the target so the regime is
+visible in the object, exactly as A3 §4 reads them off the estimate
+table.</p>
+</div>
+<div id="fraction-of-missing-information" class="section level2">
+<h2>5. Fraction of missing information</h2>
+<p>The quantity that drives the degrees of freedom is the
+<strong>fraction of missing information</strong> (FMI). For coefficient
+<span class="math inline">\(k\)</span> it is the share of the total
+uncertainty contributed by the between-imputation component —
+<strong>tag EQ-FMI</strong>:</p>
+<p><span class="math display">\[
+\gamma_k=\dfrac{(1+1/M)\,B_{kk}}{T_{\text{MI},kk}},
+\]</span></p>
+<p>where <span class="math inline">\(B_{kk}\)</span> and <span class="math inline">\(T_{\text{MI},kk}\)</span> are the <span class="math inline">\(k\)</span>-th diagonal entries of the
+between-imputation covariance and the total <span class="citation">(Rubin 1987)</span>. The numerator is exactly the term
+EQ-TMI adds to <span class="math inline">\(\bar U_{kk}\)</span>, so
+<span class="math inline">\(\gamma_k\)</span> is the proportion of <span class="math inline">\(T_{\text{MI},kk}\)</span> that exists
+<em>because</em> the proficiency is imputed.</p>
+<p>FMI is what collapses the degrees of freedom at small <span class="math inline">\(M\)</span>. When <span class="math inline">\(\gamma_k\)</span> is near one almost all of a
+coefficient’s uncertainty is between-imputation, there is little
+information per coefficient, and the df fall toward their floor — which
+is why a small-<span class="math inline">\(M\)</span> design produces
+wide intervals and df near 1. Section 7 re-derives <span class="math inline">\(\gamma_k\)</span> from <span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> and confirms it against the
+stored <code>fmi</code>.</p>
+<div class="alert alert-warning">
+<p><strong>High FMI here is <span class="math inline">\(M = 2\)</span>
+mechanics, not a finding.</strong> The fixture’s FMI values run roughly
+0.84 to 0.99 because, with only <span class="math inline">\(M =
+2\)</span> plausible values, the <span class="math inline">\((1 + 1/M) =
+1.5\)</span> factor multiplies a between-imputation covariance estimated
+from a single pair of fits, so the between-share dominates and the df
+collapse toward 1. This is the MI machinery being honest about how
+little information two imputations carry. Real PISA reading uses <span class="math inline">\(M = 10\)</span>, where FMI is far smaller and the
+Barnard–Rubin correction operates in its intended regime. Do not read
+this fixture’s FMI as a substantive result.</p>
+</div>
+</div>
+<div id="the-design-variance-coverage-result" class="section level2">
+<h2>6. The design-variance coverage result</h2>
+<p>Everything above is arithmetic on a target. The reason that
+arithmetic is built the way it is — design-based <span class="math inline">\(\hat U_m\)</span>, design-based <span class="math inline">\(T_{\text{MI}}\)</span> — is a
+<strong>coverage</strong> result, and that result is empirical rather
+than something this vignette can compute on a 12-student synthetic
+fixture.</p>
+<div class="alert alert-info">
+<p><strong>Design variance is not optional (companion paper, in
+preparation).</strong> A correct weighted point estimate paired with
+<strong>model-based</strong> standard errors can
+<strong>under-cover</strong> — its nominal-95% intervals capture the
+truth far less than 95% of the time — because the model’s covariance
+does not see the survey’s clustering and weighting. Substituting the
+<strong>design-based</strong> BRR–Fay <span class="math inline">\(T_{\text{MI}}\)</span> derived above
+<strong>restores nominal coverage</strong>. This is established by
+simulation in the companion methods paper (in preparation) and is
+reported there <em>qualitatively</em>; the package neither bundles that
+evidence nor reproduces its numbers. The lesson is about the
+<em>provenance</em> of the target — external and design-based — which is
+precisely what Section 1 said licenses a coverage claim, and what M5
+ties to the <code>coverage_claim_allowed</code> flag.</p>
+</div>
+<p>So the target’s value is not that its identities check to high
+precision (they do, in Section 7 — but that is algebra), but that its
+variance is built from the design. The precise statement of which fits
+may therefore carry a coverage claim is M5; the calibration that
+delivers this target’s variance to a stacked fit is M4.</p>
+</div>
+<div id="verify-rubin-pooling-on-the-cached-target" class="section level2">
+<h2>7. Verify Rubin pooling on the cached target</h2>
+<p>We now re-derive the entire Rubin pooling chain — EQ-TMI and EQ-FMI —
+from the stored per-PV pieces, and check each quantity against the value
+the package computed. This is a read-and-recompute exercise:
+<code>tg$per_pv</code> holds, for each plausible value <span class="math inline">\(m\)</span>, the estimate <span class="math inline">\(\hat\beta_m\)</span> (<code>beta</code>) and the
+assembled BRR–Fay covariance <span class="math inline">\(\hat
+U_m\)</span> (<code>U</code>); we rebuild <span class="math inline">\(\bar\beta\)</span>, <span class="math inline">\(\bar U\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(T_{\text{MI}}\)</span>, and the FMI from them.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>M     <span class="ot">&lt;-</span> tg<span class="sc">$</span>M                                    <span class="co"># 2</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>betas <span class="ot">&lt;-</span> <span class="fu">sapply</span>(tg<span class="sc">$</span>per_pv, <span class="cf">function</span>(p) p<span class="sc">$</span>beta)   <span class="co"># 3 x M : per-PV beta_hat_m</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>Us    <span class="ot">&lt;-</span> <span class="fu">lapply</span>(tg<span class="sc">$</span>per_pv, <span class="cf">function</span>(p) p<span class="sc">$</span>U)      <span class="co"># list of per-PV U_hat_m (BRR–Fay)</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>beta_bar <span class="ot">&lt;-</span> <span class="fu">rowMeans</span>(betas)                      <span class="co"># Rubin mean</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>U_bar    <span class="ot">&lt;-</span> <span class="fu">Reduce</span>(<span class="st">`</span><span class="at">+</span><span class="st">`</span>, Us) <span class="sc">/</span> M                  <span class="co"># within-imputation covariance</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>dev      <span class="ot">&lt;-</span> betas <span class="sc">-</span> beta_bar</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>B        <span class="ot">&lt;-</span> (dev <span class="sc">%*%</span> <span class="fu">t</span>(dev)) <span class="sc">/</span> (M <span class="sc">-</span> <span class="dv">1</span>)           <span class="co"># between-imputation covariance</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>T_MI     <span class="ot">&lt;-</span> U_bar <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span><span class="sc">/</span>M) <span class="sc">*</span> B                <span class="co"># EQ-TMI</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(beta_bar), <span class="fu">unname</span>(tg<span class="sc">$</span>beta_bar)) <span class="co"># TRUE</span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(U_bar),    <span class="fu">unname</span>(tg<span class="sc">$</span>U_bar))    <span class="co"># TRUE</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(B),        <span class="fu">unname</span>(tg<span class="sc">$</span>B))        <span class="co"># TRUE</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(T_MI),     <span class="fu">unname</span>(tg<span class="sc">$</span>T_MI))     <span class="co"># TRUE</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>All four reconstructions reproduce the stored target — the package’s
+<code>beta_bar</code>, <code>U_bar</code>, <code>B</code>, and
+<code>T_MI</code> are exactly the Rubin combining rules applied to the
+per-PV pieces. The fraction of missing information follows the same way,
+from <span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span>:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>fmi <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span><span class="sc">/</span>M) <span class="sc">*</span> <span class="fu">diag</span>(B) <span class="sc">/</span> <span class="fu">diag</span>(T_MI)          <span class="co"># EQ-FMI</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(fmi), <span class="fu">unname</span>(tg<span class="sc">$</span>fmi))           <span class="co"># TRUE</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>Finally, read the target’s FMI, relative increase in variance, and
+degrees of freedom together with the df method — exactly the regime
+block of Section 4:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">term      =</span> tg<span class="sc">$</span>fe_names,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">fmi       =</span> <span class="fu">round</span>(tg<span class="sc">$</span>fmi, <span class="dv">3</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">riv       =</span> <span class="fu">round</span>(tg<span class="sc">$</span>riv, <span class="dv">2</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">df        =</span> <span class="fu">round</span>(tg<span class="sc">$</span>df,  <span class="dv">2</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">df_method =</span> tg<span class="sc">$</span>df_method</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>)</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">term</th>
+<th align="right">fmi</th>
+<th align="right">riv</th>
+<th align="right">df</th>
+<th align="left">df_method</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="left">b_Intercept</td>
+<td align="right">0.990</td>
+<td align="right">94.86</td>
+<td align="right">1.02</td>
+<td align="left">classic</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="left">b_x</td>
+<td align="right">0.844</td>
+<td align="right">5.43</td>
+<td align="right">1.40</td>
+<td align="left">classic</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="left">b_female</td>
+<td align="right">0.993</td>
+<td align="right">146.17</td>
+<td align="right">1.01</td>
+<td align="left">classic</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Two things to read off this table. First, the FMI values (~0.84–0.99)
+and the df (~1) are the small-<span class="math inline">\(M\)</span>
+mechanics of Section 5: little information per coefficient, df at the
+floor. Second — and this is the point of D-1 above —
+<code>df_method</code> is <code>&quot;classic&quot;</code> for every term. The
+<code>df</code> shown is the classic Rubin value; the Barnard–Rubin
+<span class="math inline">\(\nu_{\text{BR}}\)</span> of Section 4 is
+<strong>not</strong> what appears here, and the complete-data df it
+would need is absent:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>tg<span class="sc">$</span>df_complete   <span class="co"># NA for every term -&gt; the classic path, not Barnard–Rubin</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;          NA          NA          NA</span></span></code></pre></div>
+<div class="alert alert-warning">
+<p><strong>This target is descriptive, not coverage-claimable.</strong>
+The agreements above are <em>algebraic</em> — the Rubin rules reproduced
+from their inputs — and confirm only that the pooling is internally
+consistent, not that the intervals cover. The fixture is
+<strong>descriptive-classic</strong>
+(<code>coverage_claim_allowed == FALSE</code>; A3 §4): classic df, no
+complete-data df, so no Barnard–Rubin small-sample correction. We make
+no “verified to machine precision” coverage claim and report no <span class="math inline">\(\nu_{\text{BR}}\)</span> number — both would
+over-read a synthetic fixture built to demonstrate the object surface,
+not to establish coverage.</p>
+</div>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>8. Where to next</h2>
+<p>You now hold the external target in full — the BRR–Fay sandwich
+(EQ-BRRFAY) that builds each <span class="math inline">\(\hat
+U_m\)</span>, the Rubin rules (EQ-TMI) that combine them into <span class="math inline">\(T_{\text{MI}}\)</span>, the two degrees-of-freedom
+regimes (EQ-BARNARD vs classic), and the fraction of missing information
+(EQ-FMI) that drives the df. The target is the variance answer; the rest
+of the Method track is about <em>delivering</em> it from a single
+fit.</p>
+<ul>
+<li><strong>M3 · The stacked fractional bridge</strong> — the natural
+next step: it shows that one model fit on the stacked <span class="math inline">\(N\cdot M\)</span> rows, each weighted <span class="math inline">\(1/M\)</span>, recovers the Rubin mean <span class="math inline">\(\bar\beta\)</span> derived here (Theorem 2.2), and
+is explicit that this is a fixed-effect <em>point</em> identity, not the
+variance answer — that answer is this page’s <span class="math inline">\(T_{\text{MI}}\)</span>.</li>
+<li>Then <strong>M4</strong> (the CCC calibration that makes the stacked
+draw cloud’s covariance equal this target’s <span class="math inline">\(T_{\text{MI}}\)</span>) and <strong>M5</strong>
+(why coverage-claimability rests on an external design-based BRR-Fay
+target with Barnard-Rubin degrees of freedom, plus validation evidence
+rather than CCC arithmetic alone) complete the chain.</li>
+</ul>
+<p>To see this target from the reporting side — how its fields surface
+in the estimate table, what the interval-metadata columns mean, and how
+FMI and the classic-vs-Barnard–Rubin df read in practice — return to
+<strong>A3 · Reading results</strong> (§5–§6).</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-barnard1999small" class="csl-entry">
+Barnard, John, and Donald B. Rubin. 1999. <span>“Small-Sample Degrees of
+Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
+948–55. <a href="https://doi.org/10.1093/biomet/86.4.948">https://doi.org/10.1093/biomet/86.4.948</a>.
+</div>
+<div id="ref-judkins1990fay" class="csl-entry">
+Judkins, David R. 1990. <span>“Fay’s Method for Variance
+Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
+223–39.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

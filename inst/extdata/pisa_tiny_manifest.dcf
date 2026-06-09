@@ -1,0 +1,51 @@
+Fixture-ID: pisa_tiny
+Fixture-Version: 0.1.0
+Schema-Version: 0.1.0
+Data-Origin: synthetic
+Real-PISA-Data: false
+License-Clean: true
+Data-License-Note: package-owned synthetic fixture; no OECD/PISA
+        records or OECD-distributed files are included
+Claims-Scope: API smoke tests and examples only
+Claims-Not-Supported: real PISA inference; coverage claims; performance
+        benchmarking
+N: 12
+M: 2
+R: 4
+Fay-K: 0.5
+PV-Cols: PV1READ,PV2READ
+PV-Prefix: PV
+PV-Suffix: READ
+Weight-Col: W_FSTUWT
+Rep-Weight-Cols: W_FSTURWT1,W_FSTURWT2,W_FSTURWT3,W_FSTURWT4
+Rep-Weight-Prefix: W_FSTURWT
+ID-Cols: CNTSTUID
+Covariate-Cols: x,female
+Formula: OUTCOME ~ x + female
+Method: stack_direct
+Target-Engine: lm
+Backend: injected
+Seed: 20260607
+Control-Iter: 20
+Control-Warmup: 10
+Control-Chains: 2
+Return-Draws: FALSE
+Keep-Data: FALSE
+Keep-Backend-Fit: FALSE
+Keep-Log-Lik: FALSE
+Builder: dev/build-fixtures.R
+Generated-At: omitted_for_deterministic_fixture
+CSV-SHA256:
+        7dc9e8e013fd21b5ffd284bf28713edfc092873ad7be02f73e475d0372f66777
+RDS-SHA256:
+        5c9bdcf63c0071bac03e127d34e37f45626ce0ab4cb811106070bce82673ba4c
+Data-Hash: d1e9941d
+Row-Support-Hash: 5af32aa2
+PV-Value-Hash: a29f24e4
+Weight-Design-Hash: 69584370
+Design-Hash: 4776c0f1
+Target-Hash: 4a4d40f8
+Long-Data-Hash: b17ea992
+Draws-Hash: aae99bde
+Estimates-Hash: 80f22617
+Canonical-Fit-Hash: 20835208

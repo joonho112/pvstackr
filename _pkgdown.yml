@@ -1,0 +1,128 @@
+url: https://joonho112.github.io/pvstackr
+
+template:
+  bootstrap: 5
+  bootswatch: cosmo
+  math-rendering: mathjax
+  bslib:
+    primary: "#1f6f9c"
+    info: "#f2c14e"
+
+development:
+  mode: auto
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: Applied Track
+        - text: "A1 · Getting started"
+          href: articles/a1-getting-started.html
+        - text: "A2 · The end-to-end workflow"
+          href: articles/a2-the-workflow.html
+        - text: "A3 · Reading results & what to report"
+          href: articles/a3-reading-results.html
+        - text: "A4 · Comparing methods"
+          href: articles/a4-comparing-methods.html
+        - text: "A5 · Real PISA data guidance"
+          href: articles/a5-real-pisa-guidance.html
+        - text: "---"
+        - text: Method Track
+        - text: "M1 · Foundations and notation"
+          href: articles/m1-foundations-and-notation.html
+        - text: "M2 · The BRR–Fay fixed-effect target"
+          href: articles/m2-brr-fay-target.html
+        - text: "M3 · The stacked fractional bridge"
+          href: articles/m3-stacked-bridge.html
+        - text: "M4 · CCC: Cholesky Calibration Correction"
+          href: articles/m4-ccc-calibration.html
+        - text: "M5 · Methods, PSIS, and coverage"
+          href: articles/m5-methods-and-coverage.html
+
+reference:
+  - title: Package overview
+    desc: >
+      Orientation plus the formal object and interval contracts.
+    contents:
+      - pvstackr-package
+      - pvstackr_object_contracts
+
+  - title: Declare the design
+    desc: >
+      Describe a PISA-style PV design and detect PV / BRR replicate columns.
+    contents:
+      - pv_design
+      - detect_pisa_pv_columns
+      - detect_pisa_brr_replicate_weights
+
+  - title: Assemble the target
+    desc: >
+      Build the external Rubin / BRR-Fay fixed-effect target.
+    contents:
+      - pv_brr_target
+
+  - title: Fit a method
+    desc: >
+      The dispatcher, the three method engines, and fitting controls.
+    contents:
+      - pv_fit
+      - pv_fit_direct
+      - pv_fit_reference
+      - pv_fit_stack_psis
+      - pv_control
+
+  - title: Compare methods
+    desc: >
+      Aligned fixed-effect comparison across methods with agreement diagnostics.
+    contents:
+      - pv_compare_methods
+
+  - title: Read results
+    desc: >
+      Stable accessors for the reportable estimate table, target, draws, and
+      diagnostics.
+    contents:
+      - get_estimates
+      - get_target
+      - get_draws
+      - get_diagnostics
+
+  - title: Display methods
+    desc: >
+      Compact console displays for all object types; summary methods for fit and
+      comparison objects.
+    contents:
+      - pvstackr_fit_summary
+      - pvstackr_method_comparison_summary
+
+articles:
+  - title: Applied track
+    navbar: ~
+    contents:
+      - a1-getting-started
+      - a2-the-workflow
+      - a3-reading-results
+      - a4-comparing-methods
+      - a5-real-pisa-guidance
+
+  - title: Method track
+    navbar: ~
+    contents:
+      - m1-foundations-and-notation
+      - m2-brr-fay-target
+      - m3-stacked-bridge
+      - m4-ccc-calibration
+      - m5-methods-and-coverage
+
+authors:
+  JoonHo Lee:
+    href: https://github.com/joonho112
+
+footer:
+  structure:
+    left: developed_by
+    right: built_with

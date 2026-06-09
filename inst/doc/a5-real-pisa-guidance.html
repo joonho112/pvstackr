@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>A5: Real PISA data — licensing, memory, and reproducibility</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">A5: Real PISA data — licensing, memory, and
+reproducibility</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>How to connect pvstackr to real PISA data without bundling licensed
+survey files. This guidance covers licensing and non-affiliation,
+declaring the plausible-value design on a real cycle, the target and fit
+shape, the memory and runtime footprint (about N times M stacked rows,
+and about M times R-plus-one target fits), and a reproducibility
+checklist. It is guidance, not a worked substantive analysis; the
+package ships no real PISA records.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#purpose" id="toc-purpose">1. Purpose</a></li>
+<li><a href="#data-access-and-licensing" id="toc-data-access-and-licensing">2. Data access and licensing</a>
+<ul>
+<li><a href="#download-only-from-an-authorized-source" id="toc-download-only-from-an-authorized-source">2.1 Download only from
+an authorized source</a></li>
+<li><a href="#the-package-license-does-not-license-your-data" id="toc-the-package-license-does-not-license-your-data">2.2 The package
+license does not license your data</a></li>
+<li><a href="#keep-microdata-extracts-and-caches-out-of-the-repository" id="toc-keep-microdata-extracts-and-caches-out-of-the-repository">2.3
+Keep microdata, extracts, and caches out of the repository</a></li>
+<li><a href="#read-with-the-reader-for-your-format-and-keep-only-what-you-need" id="toc-read-with-the-reader-for-your-format-and-keep-only-what-you-need">2.4
+Read with the reader for your format, and keep only what you
+need</a></li>
+</ul></li>
+<li><a href="#design-declaration" id="toc-design-declaration">3. Design
+declaration</a></li>
+<li><a href="#target-and-fit-shape" id="toc-target-and-fit-shape">4.
+Target and fit shape</a>
+<ul>
+<li><a href="#stack_direct-requires-an-external-brrfay-target" id="toc-stack_direct-requires-an-external-brrfay-target">4.1
+stack_direct requires an external BRR–Fay target</a></li>
+<li><a href="#fit-shape-center-target-and-the-backend-adapter" id="toc-fit-shape-center-target-and-the-backend-adapter">4.2 Fit shape —
+<code>center = &quot;target&quot;</code> and the backend adapter</a></li>
+<li><a href="#how-to-read-the-result" id="toc-how-to-read-the-result">4.3 How to read the result</a></li>
+</ul></li>
+<li><a href="#memory-and-runtime" id="toc-memory-and-runtime">5. Memory
+and runtime</a></li>
+<li><a href="#reproducibility-checklist" id="toc-reproducibility-checklist">6. Reproducibility checklist</a></li>
+<li><a href="#the-companion-methods-paper-qualitative" id="toc-the-companion-methods-paper-qualitative">7. The companion
+methods paper (qualitative)</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">8. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<div id="purpose" class="section level2">
+<h2>1. Purpose</h2>
+<p>Vignettes A1–A4 ran end to end on the bundled
+<strong>synthetic</strong> <code>pisa_tiny</code> fixture: you loaded a
+cached fit (A1), built the pipeline that creates one (A2), read what is
+safe to report (A3), and compared the three methods (A4). This article
+is different in kind. It is <strong>guidance</strong> for pointing the
+same workflow at a <strong>real</strong> PISA cycle on your own machine
+— it is not a worked substantive analysis, and it computes no real-data
+numbers.</p>
+<p>The reason is deliberate and worth stating plainly:</p>
+<ul>
+<li><strong>pvstackr does not ship real PISA records.</strong> The only
+example data in the package is the synthetic <code>pisa_tiny</code>
+fixture (one make-believe country <code>CNT == &quot;SYN&quot;</code>, <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights), built solely so
+examples and package checks run offline without licensed files. Nothing
+in this vignette bundles, mirrors, or reproduces genuine PISA
+microdata.</li>
+<li><strong>pvstackr is not affiliated with or endorsed by
+OECD/PISA.</strong> In package documentation “PISA” is used
+<strong>descriptively</strong>, for the survey-data and column-name
+conventions that applied users bring to their own authorized analyses
+(<code>PV1MATH</code>, <code>W_FSTUWT</code>, <code>W_FSTURWT1</code>,
+<code>CNTSTUID</code>, and so on) <span class="citation">(OECD
+2024)</span>.</li>
+</ul>
+<p>Because the package has no real data to run, <strong>every real-PISA
+code chunk below is <code>eval = FALSE</code></strong>: it shows the
+<em>shape</em> of the call you would make on your own authorized
+extract, never a live result. Only the setup, the <code>library()</code>
+line, and the closing session-info chunk actually execute.</p>
+<p>The road map for this article: data access and licensing → declare
+the design on a real cycle → the target and fit shape → memory and
+runtime → a reproducibility checklist → the companion methods paper,
+described qualitatively.</p>
+</div>
+<div id="data-access-and-licensing" class="section level2">
+<h2>2. Data access and licensing</h2>
+<div id="download-only-from-an-authorized-source" class="section level3">
+<h3>2.1 Download only from an authorized source</h3>
+<p>Obtain real PISA files <strong>only</strong> from an authorized
+source — the official OECD PISA release portal or an institutionally
+approved mirror. Before you use a file, review the <strong>license,
+citation, redistribution, and privacy terms</strong> for the
+<strong>specific cycle and files</strong> you download: these vary by
+cycle and release, and the terms attached to the files govern, not any
+convention assumed here <span class="citation">(OECD 2024)</span>. The
+plausible-value design that the data encode — <span class="math inline">\(M\)</span> draws per student from a
+latent-proficiency posterior — is itself a property of how PISA is
+constructed and scored <span class="citation">(Mislevy 1991; Davier et
+al. 2009)</span>.</p>
+</div>
+<div id="the-package-license-does-not-license-your-data" class="section level3">
+<h3>2.2 The package license does not license your data</h3>
+<p>The <strong>MIT license for <code>pvstackr</code> does not license
+users’ real PISA data</strong>, derived extracts, or any third-party
+files you process with it. The package license covers the
+<em>software</em>; your <em>data</em> are governed by the cycle- and
+file-specific terms of your source. Follow those terms in full —
+attribution requirements, redistribution limits, third-party-rights
+rules, and privacy obligations all remain yours to honour.</p>
+</div>
+<div id="keep-microdata-extracts-and-caches-out-of-the-repository" class="section level3">
+<h3>2.3 Keep microdata, extracts, and caches out of the repository</h3>
+<p>Do <strong>not</strong> commit real PISA microdata, large derived
+extracts, or backend caches to a source-controlled package or project
+repository. Keep them outside the source tree — for example under a
+local directory referenced by an environment variable, so paths never
+leak into version control:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>pisa_dir <span class="ot">&lt;-</span> <span class="fu">Sys.getenv</span>(<span class="st">&quot;PISA_DATA_DIR&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">nzchar</span>(pisa_dir))</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>student_file <span class="ot">&lt;-</span> <span class="fu">file.path</span>(pisa_dir, <span class="st">&quot;student_file_for_your_cycle&quot;</span>)</span></code></pre></div>
+</div>
+<div id="read-with-the-reader-for-your-format-and-keep-only-what-you-need" class="section level3">
+<h3>2.4 Read with the reader for your format, and keep only what you
+need</h3>
+<p>File names and formats vary by cycle and release. Use the reader that
+matches your <strong>authorized</strong> file format — an SPSS, SAS,
+transport, or converted local extract — and then select only the columns
+the model needs: the country filter, the plausible values, the final
+weight, the replicate weights, the identifiers, and the covariates.
+Narrowing the columns at read time is the single cheapest thing you can
+do for the memory footprint discussed in Section 5.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Example only: replace this with the reader for YOUR authorized file format,</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># e.g. haven::read_sav() for SPSS, a SAS/transport reader, or a converted CSV.</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># pvstackr does not ship a PISA reader and does not bundle any real PISA file.</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>pisa_raw <span class="ot">&lt;-</span> haven<span class="sc">::</span><span class="fu">read_sav</span>(student_file)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>pisa_country <span class="ot">&lt;-</span> <span class="fu">subset</span>(pisa_raw, CNT <span class="sc">==</span> <span class="st">&quot;USA&quot;</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>pisa_country <span class="ot">&lt;-</span> pisa_country[</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  ,</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="fu">c</span>(</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>    <span class="st">&quot;CNT&quot;</span>,</span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>    <span class="st">&quot;CNTSCHID&quot;</span>,</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>    <span class="st">&quot;CNTSTUID&quot;</span>,</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>    <span class="st">&quot;ESCS&quot;</span>,</span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>    <span class="st">&quot;ST004D01T&quot;</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;PV&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">10</span>, <span class="st">&quot;MATH&quot;</span>),   <span class="co"># M = 10 plausible values (mathematics)</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a>    <span class="st">&quot;W_FSTUWT&quot;</span>,                    <span class="co"># final student weight</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a>    <span class="fu">paste0</span>(<span class="st">&quot;W_FSTURWT&quot;</span>, <span class="dv">1</span><span class="sc">:</span><span class="dv">80</span>)     <span class="co"># R = 80 BRR replicate weights</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a>  )</span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a>]</span></code></pre></div>
+</div>
+</div>
+<div id="design-declaration" class="section level2">
+<h2>3. Design declaration</h2>
+<p>Declare the plausible-value design <strong>before</strong> fitting,
+exactly as in A2 — only now the arguments describe a real cycle. The
+single most important habit here is to <strong>verify every structural
+argument against the official technical documentation for that
+cycle</strong>: the plausible-value suffix, the plausible-value count
+<code>expected_M</code>, the replicate-weight count
+<code>expected_R</code>, the Fay coefficient <code>fay_k</code>, and the
+identifier columns <code>id_cols</code>. PISA mathematics commonly uses
+M = 10, R = 80, and Fay <span class="math inline">\(k = 0.5\)</span>
+<span class="citation">(OECD 2024; Judkins 1990)</span>, but you confirm
+these per cycle rather than assume them — <code>pv_design()</code>
+asserts the counts you pass, so a mismatch surfaces immediately instead
+of silently mis-pooling.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>design <span class="ot">&lt;-</span> <span class="fu">pv_design</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">data       =</span> pisa_country,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">formula    =</span> OUTCOME <span class="sc">~</span> ESCS <span class="sc">+</span> ST004D01T,   <span class="co"># OUTCOME is a placeholder</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">pv_suffix  =</span> <span class="st">&quot;MATH&quot;</span>,                        <span class="co"># matches PV1MATH ... PV10MATH</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">expected_M =</span> <span class="dv">10</span><span class="dt">L</span>,                           <span class="co"># assert exactly 10 plausible values</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">expected_R =</span> <span class="dv">80</span><span class="dt">L</span>,                           <span class="co"># assert exactly 80 replicate weights</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="at">fay_k      =</span> <span class="fl">0.5</span>,                           <span class="co"># Fay coefficient for this cycle</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="at">id_cols    =</span> <span class="st">&quot;CNTSTUID&quot;</span>                     <span class="co"># column(s) identifying a unique row</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>design</span></code></pre></div>
+<p>Three points about the call shape, carried over from A2 and
+specialised to a real cycle:</p>
+<ul>
+<li><strong><code>OUTCOME</code> is a placeholder, not a
+column.</strong> pvstackr substitutes each plausible-value column
+(<code>PV1MATH</code>, …, <code>PV10MATH</code>) in turn when it builds
+the target and the stacked data, so you write the model once rather than
+<span class="math inline">\(M\)</span> times <span class="citation">(Mislevy 1991; Davier et al. 2009)</span>.</li>
+<li><strong><code>pv_suffix = &quot;MATH&quot;</code> selects the domain.</strong>
+Modern subject-suffixed columns such as <code>PV1MATH</code> require the
+matching suffix. Leaving <code>pv_suffix = &quot;&quot;</code> (the bare names
+such as <code>PV1</code>, <code>PV2</code>, … default) is appropriate
+<strong>only</strong> when your analytic extract has <em>intentionally
+renamed</em> the plausible values to bare names; on an official file it
+would fail to detect the domain block.</li>
+<li><strong>No <code>weights()</code> in the formula.</strong> Survey
+weights are <em>design</em> information, not model terms. Pass the final
+weight and the replicate weights through the design and target arguments
+(auto-detected here from the <code>W_FSTUWT</code> /
+<code>W_FSTURWT*</code> columns), never inside the formula.</li>
+</ul>
+</div>
+<div id="target-and-fit-shape" class="section level2">
+<h2>4. Target and fit shape</h2>
+<p>This section mirrors A2 (§3–6) and A3, specialised to a real cycle;
+consult those vignettes for the line-by-line reading of the objects.</p>
+<div id="stack_direct-requires-an-external-brrfay-target" class="section level3">
+<h3>4.1 stack_direct requires an external BRR–Fay target</h3>
+<p>In the v0.1 method stage, a reportable <code>stack_direct</code> fit
+requires an <strong>external</strong> Rubin / BRR–Fay fixed-effect
+target built by <code>pv_brr_target()</code>. The target is
+<strong>fixed-effect-only</strong>: it forms a BRR–Fay sandwich
+covariance per plausible value and pools the <span class="math inline">\(M\)</span> results with Rubin’s rules into the
+total <span class="math inline">\(T_{\text{MI}} = \bar U + (1 +
+1/M)\,B\)</span> <span class="citation">(Rubin 1987; Barnard and Rubin
+1999)</span>. Random-effect (group) terms such as
+<code>(1 | CNTSCHID)</code> or <code>(1 || CNTSCHID)</code> are
+<strong>not accepted by the v0.1 BRR-Fay target engine</strong>, by
+design — see A2 §3 for the error this raises.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>target <span class="ot">&lt;-</span> <span class="fu">pv_brr_target</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">data            =</span> design<span class="sc">$</span>data,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">formula         =</span> design<span class="sc">$</span>formula,</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">pv_cols         =</span> design<span class="sc">$</span>pv_cols,</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">weight_col      =</span> design<span class="sc">$</span>weight_col,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">rep_weight_cols =</span> design<span class="sc">$</span>rep_weight_cols,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="at">fay_k           =</span> design<span class="sc">$</span>fay_k,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="at">id_cols         =</span> design<span class="sc">$</span>id_cols</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>)</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>target</span></code></pre></div>
+</div>
+<div id="fit-shape-center-target-and-the-backend-adapter" class="section level3">
+<h3>4.2 Fit shape — <code>center = &quot;target&quot;</code> and the backend
+adapter</h3>
+<p>With a design and a target in hand,
+<code>pv_fit(method = &quot;stack_direct&quot;)</code> fits <strong>one</strong>
+stacked model on the N * M rows and calibrates it (via CCC) to the
+external target. On real data you supply a live Bayesian backend through
+the two adapter slots (<code>fit_function</code>,
+<code>draws_function</code>); this vignette runs <strong>no</strong>
+live backend, so the chunk shows only the shape — the adapter contracts
+are sketched in A2 §7.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">pv_fit</span>(</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">data           =</span> design<span class="sc">$</span>data,</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">formula        =</span> design<span class="sc">$</span>formula,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>  <span class="at">target         =</span> target,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">method         =</span> <span class="st">&quot;stack_direct&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">control        =</span> <span class="fu">pv_control</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                     <span class="at">method           =</span> <span class="st">&quot;stack_direct&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>                     <span class="at">backend          =</span> <span class="st">&quot;injected&quot;</span>,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>                     <span class="at">center           =</span> <span class="st">&quot;target&quot;</span>,     <span class="co"># required for a reportable fit</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>                     <span class="at">iter             =</span> <span class="dv">2000</span><span class="dt">L</span>,</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a>                     <span class="at">warmup           =</span> <span class="dv">1000</span><span class="dt">L</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>                     <span class="at">chains           =</span> <span class="dv">4</span><span class="dt">L</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>                     <span class="at">cores            =</span> <span class="dv">4</span><span class="dt">L</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>                     <span class="at">seed             =</span> <span class="dv">20260607</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>                     <span class="at">return_draws     =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>                     <span class="at">keep_data        =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>                     <span class="at">keep_backend_fit =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>                     <span class="at">keep_log_lik     =</span> <span class="cn">FALSE</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                   ),</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">fit_function   =</span> your_fit_function,    <span class="co"># your modelling backend (see A2 §7)</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">draws_function =</span> your_draws_function   <span class="co"># extract posterior draws for CCC</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>)</span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="fu">get_estimates</span>(fit)</span></code></pre></div>
+</div>
+<div id="how-to-read-the-result" class="section level3">
+<h3>4.3 How to read the result</h3>
+<p>Read <code>get_estimates(fit)</code> exactly as in A3. For the
+default <code>control$center = &quot;target&quot;</code> path, the reportable
+fixed-effect estimate and standard error are the external target values:
+the estimate is the target coefficient after CCC centering, and the
+standard error is <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>
+with the target’s degrees of freedom and interval metadata. The stacked
+fit supplies the calibrated draw cloud (when retained) and the
+center-separation agreement diagnostics — it is <strong>not</strong> the
+source of the headline fixed-effect numbers, and must not be read as
+replacing the external target. Reportable <code>stack_direct</code> fits
+require <code>control$center = &quot;target&quot;</code>; posterior-centered CCC
+output is diagnostic/exploratory only, because it keeps the raw stacked
+posterior center while borrowing the external covariance (A2 §6).</p>
+<p>Use the interval-metadata columns when interpreting results (A3 §4).
+In this package stage, <code>coverage_claim_allowed = TRUE</code> is
+reserved for external Barnard–Rubin BRR–Fay <code>stack_direct</code>
+target rows <span class="citation">(Barnard and Rubin 1999; Rubin 1987;
+Judkins 1990)</span>; <code>per_pv</code> and <code>stack_psis</code>
+intervals are descriptive/reference intervals even when their Rubin
+pooling uses Barnard–Rubin df and <code>df_complete</code>. Read the
+<code>coverage_claim_allowed</code> column rather than inferring from
+the method name.</p>
+</div>
+</div>
+<div id="memory-and-runtime" class="section level2">
+<h2>5. Memory and runtime</h2>
+<p>Start with <strong>one country, one domain, and a small fixed-effect
+formula</strong>, and keep only the columns the analysis needs (Section
+2.4). Two footprint facts then let you size a job before you launch it.
+Both are statements about the <strong>footprint and topology</strong> of
+the computation — <em>not</em> speed or “faster” claims (the honesty
+triad, Section 7).</p>
+<p><strong>Stacked-data preparation expands the row count.</strong> Each
+plausible value contributes a copy of the data at weight <span class="math inline">\(1/M\)</span>, so a design with <code>N</code> rows
+and <code>M</code> plausible values produces about <code>N * M</code>
+stacked rows before the live Bayesian fit. A modest national sample at M
+= 10 therefore presents the backend with roughly ten times its raw row
+count.</p>
+<p><strong>The target step runs many weighted fixed-effect
+fits.</strong> <code>pv_brr_target()</code> estimates a weighted
+fixed-effect fit for the point and for each of the <code>R</code>
+replicate weights, across all <code>M</code> plausible values: about
+<code>M * (R + 1)</code> weighted fits per model. With common PISA
+settings (M = 10, R = 80) that is about <code>10 * 81 = 810</code>
+weighted least-squares fits before any live Bayesian sampling. This
+stage is ordinary weighted regression, but on a large national extract
+it is still worth validating on a reduced country/domain slice
+first.</p>
+<p>The live backend usually dominates the footprint. Practise backend
+hygiene:</p>
+<ul>
+<li><strong>set a seed and record every control setting</strong>
+(Section 6), so a run is exactly reproducible;</li>
+<li><strong>write backend caches outside the repository</strong>,
+alongside the microdata (Section 2.3);</li>
+<li>keep <strong><code>keep_data = FALSE</code></strong>,
+<strong><code>keep_backend_fit = FALSE</code></strong>, and
+<strong><code>keep_log_lik = FALSE</code></strong> unless you
+specifically need those artifacts — each one can dominate the size of a
+saved fit;</li>
+<li>use <strong><code>return_draws = FALSE</code></strong> for
+lightweight reporting when calibrated draws are not needed downstream
+(the fixed-effect report is fully determined by the target, A3 §6);</li>
+<li><strong>increase <code>chains</code>, <code>iter</code>, and
+<code>cores</code> only after the design and target hashes are
+stable</strong> — scaling the backend before the inputs are frozen
+wastes the most expensive part of the run.</li>
+</ul>
+</div>
+<div id="reproducibility-checklist" class="section level2">
+<h2>6. Reproducibility checklist</h2>
+<p>Record these items with each real-data analysis, so a reviewer can
+tell a reproducible applied workflow from the tiny synthetic examples
+used in package tests. The hashes are stable content fingerprints
+carried on the design, target, and estimate objects (A2 §2–3, A3 §3) —
+recording them lets you prove which inputs produced which numbers.</p>
+<ul>
+<li><strong>Cycle provenance.</strong> PISA cycle and release date; the
+authorized data source.</li>
+<li><strong>Filters.</strong> Country / domain filters applied to the
+extract.</li>
+<li><strong>Variables.</strong> The model variables and the
+plausible-value suffix (<code>pv_suffix</code>).</li>
+<li><strong>Weights.</strong> The final weight, the replicate-weight
+prefix and count, and the Fay coefficient <code>fay_k</code>.</li>
+<li><strong>Package.</strong> The <code>pvstackr</code> package version
+(<code>utils::packageVersion(&quot;pvstackr&quot;)</code>).</li>
+<li><strong>Design / target hashes.</strong> <code>design_hash</code>,
+<code>row_support_hash</code>, <code>pv_value_hash</code>,
+<code>weight_design_hash</code>, and the target’s
+<code>target_hash</code>.</li>
+<li><strong>Backend.</strong> The backend, the seed, and
+<code>chains</code>, <code>iter</code>, <code>warmup</code>, and
+<code>cores</code>.</li>
+<li><strong>Retention flags.</strong> Whether reportable draws, backend
+fits, data, or log-likelihoods were retained (<code>return_draws</code>,
+<code>keep_backend_fit</code>, <code>keep_data</code>,
+<code>keep_log_lik</code>).</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># Sketch only (eval = FALSE): assemble a compact provenance record from the</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co"># objects above. Adapt the field names to your project&#39;s logging conventions.</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>provenance <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">pisa_cycle         =</span> <span class="st">&quot;2022&quot;</span>,                  <span class="co"># cycle + release date</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="at">data_source        =</span> <span class="st">&quot;OECD PISA portal&quot;</span>,      <span class="co"># authorized source</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>  <span class="at">filters            =</span> <span class="st">&quot;CNT == &#39;USA&#39;; domain = MATH&quot;</span>,</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  <span class="at">variables          =</span> <span class="fu">all.vars</span>(design<span class="sc">$</span>formula),</span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="at">pv_suffix          =</span> <span class="st">&quot;MATH&quot;</span>,</span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a>  <span class="at">weight_col         =</span> design<span class="sc">$</span>weight_col,</span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a>  <span class="at">rep_weight_prefix  =</span> <span class="st">&quot;W_FSTURWT&quot;</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>  <span class="at">R                  =</span> <span class="fu">length</span>(design<span class="sc">$</span>rep_weight_cols),</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>  <span class="at">fay_k              =</span> design<span class="sc">$</span>fay_k,</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>  <span class="at">pkg_version        =</span> <span class="fu">as.character</span>(utils<span class="sc">::</span><span class="fu">packageVersion</span>(<span class="st">&quot;pvstackr&quot;</span>)),</span>
+<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a>  <span class="at">design_hash        =</span> design<span class="sc">$</span>design_hash,</span>
+<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a>  <span class="at">row_support_hash   =</span> design<span class="sc">$</span>row_support_hash,</span>
+<span id="cb7-16"><a href="#cb7-16" tabindex="-1"></a>  <span class="at">pv_value_hash      =</span> design<span class="sc">$</span>pv_value_hash,</span>
+<span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a>  <span class="at">weight_design_hash =</span> design<span class="sc">$</span>weight_design_hash,</span>
+<span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  <span class="at">target_hash        =</span> target<span class="sc">$</span>target_hash,</span>
+<span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>  <span class="at">backend            =</span> <span class="st">&quot;injected&quot;</span>,</span>
+<span id="cb7-20"><a href="#cb7-20" tabindex="-1"></a>  <span class="at">seed               =</span> <span class="dv">20260607</span>,</span>
+<span id="cb7-21"><a href="#cb7-21" tabindex="-1"></a>  <span class="at">chains             =</span> <span class="dv">4</span><span class="dt">L</span>,</span>
+<span id="cb7-22"><a href="#cb7-22" tabindex="-1"></a>  <span class="at">iter               =</span> <span class="dv">2000</span><span class="dt">L</span>,</span>
+<span id="cb7-23"><a href="#cb7-23" tabindex="-1"></a>  <span class="at">warmup             =</span> <span class="dv">1000</span><span class="dt">L</span>,</span>
+<span id="cb7-24"><a href="#cb7-24" tabindex="-1"></a>  <span class="at">cores              =</span> <span class="dv">4</span><span class="dt">L</span>,</span>
+<span id="cb7-25"><a href="#cb7-25" tabindex="-1"></a>  <span class="at">return_draws       =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb7-26"><a href="#cb7-26" tabindex="-1"></a>  <span class="at">keep_backend_fit   =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb7-27"><a href="#cb7-27" tabindex="-1"></a>  <span class="at">keep_data          =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb7-28"><a href="#cb7-28" tabindex="-1"></a>  <span class="at">keep_log_lik       =</span> <span class="cn">FALSE</span></span>
+<span id="cb7-29"><a href="#cb7-29" tabindex="-1"></a>)</span>
+<span id="cb7-30"><a href="#cb7-30" tabindex="-1"></a></span>
+<span id="cb7-31"><a href="#cb7-31" tabindex="-1"></a><span class="fu">str</span>(provenance)</span></code></pre></div>
+<p>These records separate a reproducible applied workflow from the tiny
+synthetic examples used in package tests — and they are what the
+<code>target_hash</code> and friends read off in A3 §3 are ultimately
+<em>for</em>.</p>
+</div>
+<div id="the-companion-methods-paper-qualitative" class="section level2">
+<h2>7. The companion methods paper (qualitative)</h2>
+<p>The substantive PISA findings — the empirical evidence that motivates
+the package — live in a <strong>companion methods paper, currently in
+preparation</strong>, not in <code>pvstackr</code>. The package neither
+bundles real PISA nor presents contested coefficients as its own output,
+so this section describes that work <strong>qualitatively and without a
+formal citation</strong>, and <strong>hard-codes no real-PISA
+coefficient</strong> as a package fact. Treat everything here as
+motivation to read the paper when it appears, not as a result you may
+quote from the package.</p>
+<p>What the paper supports, stated qualitatively:</p>
+<ul>
+<li><strong>Point bridge at real PISA scale.</strong> The companion
+paper checks that the stacked fixed-effect point used by
+<code>stack_direct</code> agrees closely with the orthodox per-PV Rubin
+point under the stated production conditions. The reportable standard
+error in <code>stack_direct</code> is imposed from the external BRR-Fay
+/ Barnard-Rubin target. The package’s <code>per_pv</code> path remains
+model-based and descriptive, so its standard error should not be
+described as matching the design-based target. This is a topology
+statement about one stacked fit rather than <span class="math inline">\(M\)</span> backend fits, never an efficiency or
+“faster” claim.</li>
+<li><strong>Caution 1 — design variance is not optional.</strong> A
+correct <em>weighted point</em> with <em>model-based</em> standard
+errors can under-cover severely under complex PISA sampling; the
+design-based BRR–Fay total <span class="math inline">\(T_{\text{MI}}\)</span> restores nominal coverage.
+This is exactly why <code>stack_direct</code> is the only
+coverage-claimable path (A4 §5; the proof is <strong>M5</strong>).</li>
+<li><strong>Caution 2 — small Pareto-<span class="math inline">\(\hat
+k\)</span> ≠ correct <code>stack_psis</code> variance.</strong> Reusing
+one draw cloud makes the per-PV imputations correlated, so
+<code>stack_psis</code> intervals can run narrow even when <span class="math inline">\(\hat k\)</span> is small; and <span class="math inline">\(\hat k\)</span> is
+<strong>specification-dependent</strong> — small in the simplified
+low-dimensional reading demo but well above the reliability threshold in
+the full paper specification, where Pipeline B is unreliable. Treat
+<code>stack_psis</code> as a cross-check, never the deliverable (A4 §6;
+<strong>M5</strong>).</li>
+<li><strong>The “PISA reversal” headline.</strong> The paper’s
+cautionary empirical result is that proper PISA <strong>two-stage survey
+weighting overturns a naive between-school SES-gap conclusion</strong>:
+a between-school socioeconomic gap that looks large and significant
+under naive weighting shrinks and loses significance once the exact
+two-stage weights are applied. This is a <em>survey-weighting</em>
+lesson about the <strong>target</strong> — complementary to, and
+independent of, the stacked-calibration machinery the package implements
+(the target is the subject of <strong>M2</strong>).</li>
+</ul>
+<p>Three things this section must <strong>not</strong> do, and does
+not:</p>
+<ul>
+<li>it does <strong>not</strong> cite any single coefficient as “the
+result” — the naive <em>before</em> value is precisely what the reversal
+overturns, so hard-coding it would contradict the paper’s own
+point;</li>
+<li>it makes <strong>no</strong> speed or efficiency claim — “one fit”
+is a statement about the <em>topology</em> of the method, not a
+benchmarked runtime; and</li>
+<li>it makes <strong>no</strong> “verified” simulation claim — the
+mathematical identities are stated as results <em>under their stated
+conditions</em>, not as established simulation runs.</li>
+</ul>
+<p>For the underlying theory the paper rests on, the <strong>Method
+track</strong> carries the derivations this section only gestures at:
+<strong>M2</strong> (the external BRR–Fay target), <strong>M4</strong>
+(CCC calibration), and <strong>M5</strong> (the precise method contrast,
+PSIS, and why only <code>stack_direct</code> is coverage-claimable).
+Start the track at <strong>M1 · Foundations and notation</strong>.</p>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>8. Where to next</h2>
+<ul>
+<li><strong>A1 · Getting started</strong> and <strong>A2 · The
+end-to-end workflow</strong> — the same <code>pv_design()</code> →
+<code>pv_brr_target()</code> → <code>pv_fit()</code> pipeline, run end
+to end on the synthetic fixture (and the conceptual live-backend sketch
+in A2 §7).</li>
+<li><strong>A3 · Reading results</strong> — the estimate table and the
+interval-metadata columns whose hashes the checklist above records.</li>
+<li><strong>A4 · Comparing methods</strong> —
+<code>pv_compare_methods()</code> and the two cautions, on which Section
+7 draws.</li>
+</ul>
+<p>For the mathematics — the BRR–Fay target (<strong>M2</strong>), the
+stacked fractional bridge (<strong>M3</strong>), CCC
+(<strong>M4</strong>), and why only <code>stack_direct</code> is
+coverage-claimable (<strong>M5</strong>) — start the Method track at
+<strong>M1 · Foundations and notation</strong>.</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; [1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8</span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-barnard1999small" class="csl-entry">
+Barnard, John, and Donald B. Rubin. 1999. <span>“Small-Sample Degrees of
+Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
+948–55. <a href="https://doi.org/10.1093/biomet/86.4.948">https://doi.org/10.1093/biomet/86.4.948</a>.
+</div>
+<div id="ref-vondavier2009plausible" class="csl-entry">
+Davier, Matthias von, Eugenio Gonzalez, and Robert J. Mislevy. 2009.
+<span>“What Are Plausible Values and Why Are They Useful?”</span>
+<em>IERI Monograph Series</em> 2: 9–36.
+</div>
+<div id="ref-judkins1990fay" class="csl-entry">
+Judkins, David R. 1990. <span>“Fay’s Method for Variance
+Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
+223–39.
+</div>
+<div id="ref-mislevy1991randomization" class="csl-entry">
+Mislevy, Robert J. 1991. <span>“Randomization-Based Inference about
+Latent Variables from Complex Samples.”</span> <em>Psychometrika</em> 56
+(2): 177–96. <a href="https://doi.org/10.1007/BF02294457">https://doi.org/10.1007/BF02294457</a>.
+</div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. OECD Publishing.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

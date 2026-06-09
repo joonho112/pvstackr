@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>M1: Foundations and notation — the plausible-value setting, model, and estimand</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">M1: Foundations and notation — the
+plausible-value setting, model, and estimand</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>The opening page of the Method track, and the dictionary the rest of
+it cites by tag. This vignette fixes the vocabulary every later method
+page reuses without redefinition: what a plausible value is and why a
+survey publishes M of them per student, the
+balanced-repeated-replication weight design and its Fay variance
+multiplier, the two-level within-between model, the fixed-effect
+estimand, and the per-plausible-value likelihood that the stacked bridge
+later averages. It displays one equation in full and lists the other
+nine by tag, then orients you on the bundled synthetic fixture so the
+symbols have something concrete to point at. It is a lookup, not a
+derivation; the workflow lives in the Applied track.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#why-a-notation-track" id="toc-why-a-notation-track">1. Why
+a notation track</a></li>
+<li><a href="#the-plausible-value-survey-setting" id="toc-the-plausible-value-survey-setting">2. The plausible-value
+survey setting</a>
+<ul>
+<li><a href="#the-replicate-weight-design-and-the-fay-coefficient" id="toc-the-replicate-weight-design-and-the-fay-coefficient">2.1 The
+replicate-weight design and the Fay coefficient</a></li>
+</ul></li>
+<li><a href="#the-two-level-hybrid-model" id="toc-the-two-level-hybrid-model">3. The two-level hybrid
+model</a></li>
+<li><a href="#the-fixed-effect-estimand-and-the-per-pv-likelihood" id="toc-the-fixed-effect-estimand-and-the-per-pv-likelihood">4. The
+fixed-effect estimand and the per-PV likelihood</a></li>
+<li><a href="#symbol-table-equation-inventory-at-a-glance" id="toc-symbol-table-equation-inventory-at-a-glance">5. Symbol table
+&amp; equation inventory at a glance</a>
+<ul>
+<li><a href="#symbol-table" id="toc-symbol-table">5.1 Symbol
+table</a></li>
+<li><a href="#equation-inventory" id="toc-equation-inventory">5.2
+Equation inventory</a></li>
+</ul></li>
+<li><a href="#orientation-panel" id="toc-orientation-panel">6.
+Orientation panel</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">7. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<div id="why-a-notation-track" class="section level2">
+<h2>1. Why a notation track</h2>
+<p>The Applied track (A1–A5) shows you <em>how to run</em> a pvstackr
+analysis: load a fit, read its intervals, compare methods, point the
+workflow at real PISA files. This Method track (M1–M5) is the other half
+— it ties each piece of machinery back to the mathematics and, wherever
+the light path allows, checks the identity in code.</p>
+<p>This page is the <strong>dictionary</strong> for that track. It
+establishes a <em>vocabulary contract</em>: every symbol and every
+displayed equation introduced here is reused <strong>verbatim</strong>
+by M2–M5. No later page redefines a symbol, re-letters an equation, or
+invents a synonym for a quantity already named here. When M2 needs the
+BRR–Fay sandwich it writes “see EQ-BRRFAY”; when M3 invokes the
+stacked-MLE identity it writes “Theorem 2.2 / EQ-THM22”. So a reader who
+has internalised M1 should never meet an undefined symbol
+downstream.</p>
+<p>That division of labour means M1 is deliberately <strong>a lookup,
+not a derivation</strong>. It displays exactly one equation in full —
+the model itself — and catalogues the other nine by tag, with a one-line
+gloss and a pointer to the page that derives each. The derivations live
+where they belong:</p>
+<ul>
+<li><strong>M2</strong> — the external BRR–Fay fixed-effect
+<em>target</em> (Rubin combining, the Fay sandwich, small-sample degrees
+of freedom, the fraction of missing information).</li>
+<li><strong>M3</strong> — the <em>stacked fractional bridge</em> and the
+point identity (Theorem 2.2).</li>
+<li><strong>M4</strong> — <em>CCC</em>, the Cholesky Calibration
+Correction, and its center-separation diagnostics.</li>
+<li><strong>M5</strong> — the precise contrast of the three methods,
+PSIS tail-shape thresholds, and what makes a fit
+coverage-claimable.</li>
+</ul>
+<div class="alert alert-info">
+<p><strong>Scope of this page.</strong> M1 fixes notation and orients
+you on the bundled fixture. It estimates nothing — there is no MCMC
+anywhere below, only the synthetic data table and read-only accessor
+calls. If you want to <em>run</em> a fit first, start with <strong>A1
+(getting started)</strong> and <strong>A2 (the end-to-end
+workflow)</strong>, then return here for the mathematics those pages
+defer to.</p>
+</div>
+</div>
+<div id="the-plausible-value-survey-setting" class="section level2">
+<h2>2. The plausible-value survey setting</h2>
+<p>Large-scale assessments such as PISA never observe a student’s
+proficiency directly: it is a latent trait. Rather than publish a single
+point score (which would hide the measurement uncertainty), the survey
+publishes a set of <strong>plausible values</strong> — <span class="math inline">\(M\)</span> draws from each student’s posterior
+proficiency distribution, conditioning on their item responses and
+background variables <span class="citation">(Mislevy 1991; Davier et al.
+2009)</span>. A single plausible value is therefore not “the score”; it
+is one imputation of an unobserved quantity, and the spread
+<em>across</em> the <span class="math inline">\(M\)</span> values
+encodes how much the assessment leaves uncertain.</p>
+<p>The practical consequence is the rule that organises this entire
+track: an analysis must fit its model <strong>once per plausible
+value</strong> and then combine the <span class="math inline">\(M\)</span> results with multiple-imputation rules
+<span class="citation">(Rubin 1987)</span>. Using only <code>PV1</code>
+and stopping silently throws away the between-imputation variance and
+reports intervals that are too narrow.</p>
+<div id="the-replicate-weight-design-and-the-fay-coefficient" class="section level3">
+<h3>2.1 The replicate-weight design and the Fay coefficient</h3>
+<p>PISA also supplies its sampling-variance machinery as
+<strong>balanced repeated replication (BRR)</strong> weights: alongside
+each student’s final survey weight <span class="math inline">\(W_{ij}\)</span> come <span class="math inline">\(R\)</span> replicate weights <span class="math inline">\(W_{ij}^{(r)}\)</span>, each obtained by perturbing
+the sample in a balanced way. Re-estimating a quantity on every
+replicate and measuring how much it moves gives a design-based sampling
+variance.</p>
+<p>PISA uses <strong>Fay’s</strong> variant of BRR, which shrinks the
+perturbation by a coefficient <span class="math inline">\(k\)</span>
+rather than zeroing out half-samples. The replicate spread is then
+rescaled by the <strong>BRR–Fay multiplier</strong></p>
+<p><span class="math display">\[
+a_d=\frac{1}{R\,(1-k)^2},
+\]</span></p>
+<p>so that the sandwich estimator returns the correct sampling variance
+(M2 assembles the full estimator as EQ-BRRFAY). Two sets of constants
+matter for this track:</p>
+<table>
+<colgroup>
+<col width="15%" />
+<col width="21%" />
+<col width="21%" />
+<col width="21%" />
+<col width="21%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Setting</th>
+<th align="center"><span class="math inline">\(M\)</span> (PVs)</th>
+<th align="center"><span class="math inline">\(R\)</span>
+(replicates)</th>
+<th align="center"><span class="math inline">\(k\)</span> (Fay)</th>
+<th align="center"><span class="math inline">\(a_d=\tfrac{1}{R(1-k)^2}\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>PISA reading</strong> (reference)</td>
+<td align="center"><span class="math inline">\(10\)</span></td>
+<td align="center"><span class="math inline">\(80\)</span></td>
+<td align="center"><span class="math inline">\(0.5\)</span></td>
+<td align="center"><span class="math inline">\(0.05\)</span></td>
+</tr>
+<tr class="even">
+<td><strong>Bundled fixture</strong> <code>pisa_tiny</code></td>
+<td align="center"><span class="math inline">\(2\)</span></td>
+<td align="center"><span class="math inline">\(4\)</span></td>
+<td align="center"><span class="math inline">\(0.5\)</span></td>
+<td align="center"><span class="math inline">\(1\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The PISA-reading row is the design the package is built to serve
+<span class="citation">(OECD 2024)</span>; the fixture row is the
+deliberately tiny synthetic design that makes every example here run
+offline.</p>
+<div class="alert alert-warning">
+<p><strong>The fixture’s <span class="math inline">\(a_d=1\)</span> is
+an arithmetic coincidence — do not generalise.</strong> With <span class="math inline">\(R=4\)</span> and <span class="math inline">\(k=0.5\)</span> the multiplier works out to <span class="math inline">\(1/[4\,(1-0.5)^2]=1/(4\cdot
+0.25)=1\)</span>. That is a quirk of this one tiny design (it equals the
+<code>fay_variance_multiplier</code> field you will read in Section 6),
+<strong>not</strong> a typical value. Real PISA reading has <span class="math inline">\(a_d=0.05\)</span>. Never carry the fixture’s <span class="math inline">\(a_d=1\)</span> into a real-data setting.</p>
+</div>
+</div>
+</div>
+<div id="the-two-level-hybrid-model" class="section level2">
+<h2>3. The two-level hybrid model</h2>
+<p>Students (<span class="math inline">\(i\)</span>) are nested in
+schools or clusters (<span class="math inline">\(j\)</span>), so the
+model is two-level. For each plausible value <span class="math inline">\(m\)</span> — <strong>tag EQ-MODEL</strong>, the
+one equation this page displays in full:</p>
+<p><span class="math display">\[
+y_{ij}^{(m)} = \beta_0 + \beta^{W}\big(x_{ij}-\bar x_{\cdot j}\big) +
+\beta^{B}\,\bar x_{\cdot j} + \zeta_j + \varepsilon_{ij}^{(m)},\quad
+\zeta_j\sim N(0,\sigma^2_{\text{sch}}),\ \varepsilon\sim N(0,\sigma^2).
+\]</span></p>
+<p>Here <span class="math inline">\(y_{ij}^{(m)}\)</span> is the <span class="math inline">\(m\)</span>-th plausible value for student <span class="math inline">\(ij\)</span>, <span class="math inline">\(\zeta_j\)</span> is a school random effect, and
+<span class="math inline">\(\varepsilon_{ij}^{(m)}\)</span> is the
+student-level residual.</p>
+<p>The defining feature is the <strong>within–between (Mundlak /
+hybrid)</strong> split of the covariate <span class="math inline">\(x\)</span> <span class="citation">(Mundlak
+1978)</span>. Rather than entering <span class="math inline">\(x_{ij}\)</span> with a single slope, the model
+separates it into:</p>
+<ul>
+<li>a <strong>within-cluster</strong> deviation <span class="math inline">\(\big(x_{ij}-\bar x_{\cdot j}\big)\)</span> with
+slope <span class="math inline">\(\beta^{W}\)</span> — how an outcome
+moves with a student’s standing <em>relative to their own school’s
+mean</em>; and</li>
+<li>a <strong>between-cluster</strong> mean <span class="math inline">\(\bar x_{\cdot j}\)</span> with slope <span class="math inline">\(\beta^{B}\)</span> — how the outcome moves with
+the <em>school’s average</em> level of <span class="math inline">\(x\)</span>.</li>
+</ul>
+<p>This is what lets a single specification distinguish a student-level
+association from a school-level one. The cluster means <span class="math inline">\(\bar x_{\cdot j}\)</span> are computed
+<strong>once</strong> from the full sample and reused across every
+plausible value; they are <strong>PV-invariant</strong>, so they are not
+recomputed for each <span class="math inline">\(m\)</span>. That
+invariance is one of the regularity conditions behind the stacking
+identity in M3.</p>
+<p>Two scope facts, stated here and inherited by the whole track:</p>
+<ul>
+<li><strong>Reportable scope is <span class="math inline">\(\beta_{\text{FE}}\)</span> only.</strong> The
+fixed-effect block — the intercept and the slopes — is the calibrated,
+reportable output. The variance components <span class="math inline">\((\sigma^2,\sigma^2_{\text{sch}})\)</span> are
+<em>fit</em> but <strong>not</strong> calibrated, and are deferred to
+later work.</li>
+</ul>
+<div class="alert alert-warning">
+<p><strong>The fixture’s <code>b_x</code> is a single-covariate demo,
+not a within/between pair.</strong> EQ-MODEL above shows the general
+hybrid parameterization with both <span class="math inline">\(\beta^{W}\)</span> and <span class="math inline">\(\beta^{B}\)</span>. The bundled
+<code>pisa_tiny</code> fit, however, uses the simpler formula
+<code>OUTCOME ~ x + female</code> and reports fixed-effect terms
+<code>b_Intercept</code>, <code>b_x</code>, <code>b_female</code>. That
+single <code>b_x</code> slope is the <em>simplest</em> instance of
+EQ-MODEL — it does <strong>not</strong> exercise the explicit
+within/between split. Read <code>b_x</code> as a plain single-covariate
+stand-in, not as a <span class="math inline">\((\beta^{W},\beta^{B})\)</span> pair.</p>
+</div>
+</div>
+<div id="the-fixed-effect-estimand-and-the-per-pv-likelihood" class="section level2">
+<h2>4. The fixed-effect estimand and the per-PV likelihood</h2>
+<p>The estimand this package calibrates and reports is the fixed-effect
+block <span class="math inline">\(\beta_{\text{FE}}\)</span> from
+EQ-MODEL — and only that block. Everything in M2–M4 is in service of
+getting <span class="math inline">\(\beta_{\text{FE}}\)</span> and its
+uncertainty right.</p>
+<p>Working one plausible value at a time gives the per-PV building
+blocks. Fitting EQ-MODEL to plausible value <span class="math inline">\(m\)</span> yields a fixed-effect estimate <span class="math inline">\(\hat\beta_m\)</span> and an estimated covariance
+<span class="math inline">\(\hat U_m\)</span>. Combining these across
+<span class="math inline">\(m=1,\dots,M\)</span> with the Rubin rules
+produces the reportable quantities — the Rubin mean <span class="math inline">\(\bar\beta\)</span>, the within- and
+between-imputation covariances <span class="math inline">\(\bar
+U\)</span> and <span class="math inline">\(B\)</span>, and the total
+<span class="math inline">\(T_{\text{MI}}\)</span> — which
+<strong>M2</strong> assembles as EQ-TMI, with the design-based <span class="math inline">\(\hat
+U_m\)</span> coming from the BRR–Fay sandwich (EQ-BRRFAY).</p>
+<p>There is one more object to name now, because the stacked machinery
+downstream is built on it. For each plausible value <span class="math inline">\(m\)</span>, write <span class="math inline">\(L_m^{0}(\psi)\)</span> for the <strong>unweighted
+per-PV likelihood</strong> — the likelihood of the parameters <span class="math inline">\(\psi\)</span> under EQ-MODEL fit to plausible
+value <span class="math inline">\(m\)</span> alone, with no survey
+weighting applied. M1 only <em>names</em> it. Its role is what matters
+for the rest of the track: <strong>M3</strong> shows that stacking all
+<span class="math inline">\(M\)</span> plausible values into one model
+with a <span class="math inline">\(1/M\)</span> weight per row makes the
+stacked objective the <em>average</em> of these per-PV likelihoods (the
+bridge EQ-BRIDGE), and that the resulting fixed-effect estimate
+coincides with the Rubin mean <span class="math inline">\(\bar\beta\)</span> under stated conditions
+(Theorem 2.2 / EQ-THM22). In other words, <span class="math inline">\(L_m^{0}\)</span> is the term the stacked bridge
+averages — keep it in view as you read M3.</p>
+<p>Two pointers, no derivations here: the <em>variance</em> answer (not
+just the point) comes from the external target of <strong>M2</strong>,
+mapped onto the stacked fit by the calibration of <strong>M4</strong>
+(EQ-CCC); and which fits may carry a coverage claim is the subject of
+<strong>M5</strong>.</p>
+</div>
+<div id="symbol-table-equation-inventory-at-a-glance" class="section level2">
+<h2>5. Symbol table &amp; equation inventory at a glance</h2>
+<p>This section is the reference card. The first table is the symbol
+lock; the second is the catalogue of tagged equations. <strong>M1 prints
+only EQ-MODEL (Section 3) in full</strong> — every other equation is
+listed here by tag and derived on the page named in the last column.
+This is the “lookup, not a derivation” promise made concrete. The math
+typeset in the cells renders via MathJax.</p>
+<div id="symbol-table" class="section level3">
+<h3>5.1 Symbol table</h3>
+<table>
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(i,j\)</span></td>
+<td>student <span class="math inline">\(i\)</span> in school/cluster
+<span class="math inline">\(j\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(M\)</span></td>
+<td>number of plausible values (PVs); PISA reading <span class="math inline">\(M=10\)</span>; <strong>fixture <span class="math inline">\(M=2\)</span></strong></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(R\)</span></td>
+<td>number of BRR replicate weights; PISA <span class="math inline">\(R=80\)</span>; <strong>fixture <span class="math inline">\(R=4\)</span></strong></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(k\)</span></td>
+<td>Fay coefficient; PISA <span class="math inline">\(k=0.5\)</span>;
+<strong>fixture <span class="math inline">\(k=0.5\)</span></strong></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(a_d\)</span></td>
+<td>BRR–Fay multiplier <span class="math inline">\(=\dfrac{1}{R(1-k)^2}\)</span>; PISA <span class="math inline">\(\Rightarrow a_d=0.05\)</span>; <strong>fixture
+<span class="math inline">\(\Rightarrow a_d=1\)</span></strong>
+(arithmetic coincidence of <span class="math inline">\(R{=}4,k{=}0.5\)</span>; matches
+<code>fay_variance_multiplier == 1</code>; <strong>do not
+generalize</strong>)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(y_{ij}^{(m)}\)</span></td>
+<td>the <span class="math inline">\(m\)</span>-th plausible value for
+student <span class="math inline">\(ij\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\beta_{\text{FE}}\)</span></td>
+<td>fixed-effect parameter block (the <strong>only</strong>
+calibrated/reportable block)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\beta^{W},\beta^{B}\)</span></td>
+<td>within- and between-cluster slopes (hybrid/Mundlak
+parameterization)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(W_{ij}\)</span>, <span class="math inline">\(W_{ij}^{(r)}\)</span></td>
+<td>final survey weight and <span class="math inline">\(r\)</span>-th
+replicate weight</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\hat\beta_m,\hat U_m\)</span></td>
+<td>per-PV fixed-effect estimate and its covariance</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\bar\beta,\bar U,B\)</span></td>
+<td>Rubin mean, within-, and between-imputation covariance</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(T_{\text{MI}}\)</span></td>
+<td>Rubin total (the external target covariance)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\nu_{\text{BR}}\)</span></td>
+<td>Barnard–Rubin degrees of freedom</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\gamma_k\)</span></td>
+<td>fraction of missing information for coefficient <span class="math inline">\(k\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\hat k\)</span> (or <span class="math inline">\(\hat\kappa\)</span>)</td>
+<td>PSIS Pareto tail-shape diagnostic (<code>stack_psis</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>A few <strong>auxiliary symbols</strong> appear inside individual
+equations downstream; they are listed here once so M2–M5 may cite them
+without reintroduction:</p>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+<th>First used</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\hat\beta_m^{(r)}\)</span></td>
+<td>per-PV estimate on the <span class="math inline">\(r\)</span>-th
+replicate weight</td>
+<td>EQ-BRRFAY (M2)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(L,\ L L^\top=\Sigma\)</span></td>
+<td>lower-triangular Cholesky factor of a covariance <span class="math inline">\(\Sigma\)</span></td>
+<td>EQ-CCC (M4)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(L_{\text{raw}},L_{\text{tgt}}\)</span></td>
+<td>Cholesky factors of <span class="math inline">\(\Sigma_{\text{raw}}\)</span> (raw draw covariance)
+and <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>
+(target)</td>
+<td>EQ-CCC (M4)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\beta_s,\
+\beta_s^{\text{cal}}\)</span></td>
+<td>the <span class="math inline">\(s\)</span>-th raw posterior draw and
+its CCC-calibrated image</td>
+<td>EQ-CCC (M4)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(c,\ \bar\beta^{\text{raw}}\)</span></td>
+<td>target center the calibrated draws are shifted to (<span class="math inline">\(c=\bar\beta\)</span> for reporting), and the mean
+of the raw draw cloud</td>
+<td>EQ-CCC (M4)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\Delta_c\)</span></td>
+<td>center-separation diagnostic (raw center vs <span class="math inline">\(\bar\beta\)</span>, on the target-SE scale)</td>
+<td>EQ-DELTAC (M4)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(L_m^{0}(\psi),\
+q_{\text{SWL}}(\psi)\)</span></td>
+<td>unweighted per-PV likelihood for PV <span class="math inline">\(m\)</span>, and the stacked fractional
+objective</td>
+<td>EQ-BRIDGE (M3)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\hat\beta_{\text{FE}}^{q}\)</span></td>
+<td>fixed-effect estimate from maximizing the stacked objective</td>
+<td>EQ-THM22 (M3)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(B_{kk},\,T_{\text{MI},kk}\)</span></td>
+<td>the <span class="math inline">\(k\)</span>-th diagonal entries of
+<span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span></td>
+<td>EQ-FMI (M2)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(N\)</span></td>
+<td>number of students (the stacked design has <span class="math inline">\(N\cdot M\)</span> rows)</td>
+<td>EQ-BRIDGE (M3)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="equation-inventory" class="section level3">
+<h3>5.2 Equation inventory</h3>
+<p>Each row names a tagged equation, glosses it in one plain-English
+line, and points to the vignette that derives it. Only EQ-MODEL is
+displayed in full on this page (Section 3).</p>
+<table>
+<colgroup>
+<col width="30%" />
+<col width="30%" />
+<col width="40%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tag</th>
+<th>What it says (one line)</th>
+<th align="center">Derived in</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>EQ-MODEL</strong></td>
+<td>the two-level within–between (hybrid) model for each plausible
+value</td>
+<td align="center"><strong>M1</strong> (Section 3)</td>
+</tr>
+<tr class="even">
+<td><strong>EQ-TMI</strong></td>
+<td>Rubin combining: <span class="math inline">\(\bar\beta\)</span>,
+<span class="math inline">\(\bar U\)</span>, <span class="math inline">\(B\)</span>, and the external total <span class="math inline">\(T_{\text{MI}}=\bar U+(1+1/M)B\)</span></td>
+<td align="center"><strong>M2</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>EQ-BRRFAY</strong></td>
+<td>the BRR–Fay replicate-weight sandwich for each per-PV covariance
+<span class="math inline">\(\hat U_m\)</span></td>
+<td align="center"><strong>M2</strong></td>
+</tr>
+<tr class="even">
+<td><strong>EQ-BARNARD</strong></td>
+<td>Barnard–Rubin small-sample degrees of freedom <span class="math inline">\(\nu_{\text{BR}}\)</span></td>
+<td align="center"><strong>M2</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>EQ-FMI</strong></td>
+<td>fraction of missing information <span class="math inline">\(\gamma_k\)</span> for each coefficient</td>
+<td align="center"><strong>M2</strong></td>
+</tr>
+<tr class="even">
+<td><strong>EQ-BRIDGE</strong></td>
+<td>the stacked fractional objective: one fit on <span class="math inline">\(N\cdot M\)</span> rows, weight <span class="math inline">\(1/M\)</span> per row, averaging the <span class="math inline">\(L_m^{0}\)</span></td>
+<td align="center"><strong>M3</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>EQ-THM22</strong></td>
+<td>Theorem 2.2: under regularity R0–R5 the stacked fixed-effect
+estimate equals <span class="math inline">\(\bar\beta\)</span></td>
+<td align="center"><strong>M3</strong></td>
+</tr>
+<tr class="even">
+<td><strong>EQ-CCC</strong></td>
+<td>the Cholesky Calibration Correction — an affine map matching the
+draw cloud’s first two moments to the target</td>
+<td align="center"><strong>M4</strong></td>
+</tr>
+<tr class="odd">
+<td><strong>EQ-DELTAC</strong></td>
+<td>the center-separation diagnostic <span class="math inline">\(\Delta_c\)</span> that gates the calibrated
+fit</td>
+<td align="center"><strong>M4</strong></td>
+</tr>
+<tr class="even">
+<td><strong>EQ-PSIS</strong></td>
+<td>Pareto-smoothed importance-sampling tail-shape <span class="math inline">\(\hat k\)</span> and its good/borderline/unreliable
+thresholds</td>
+<td align="center"><strong>M5</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="alert alert-info">
+<p><strong>How to read a tag downstream.</strong> When M3 writes “by
+EQ-THM22”, it means the identity in the row above, derived in M3. M1
+does not prove any of these; it only fixes their names and symbols so
+the later pages need not.</p>
+</div>
+</div>
+</div>
+<div id="orientation-panel" class="section level2">
+<h2>6. Orientation panel</h2>
+<p>Now we attach the symbols to something concrete. The package ships a
+tiny <strong>synthetic</strong> PISA-shaped table,
+<code>pisa_tiny</code>, and a cached <code>stack_direct</code> fit on
+it, so that every example runs offline and deterministically. The panel
+below reads only — it detects the design and reads the fitted target’s
+metadata. <strong>Nothing is estimated.</strong></p>
+<p>First, load the raw table and see its shape:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>pisa_tiny <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;pisa_tiny.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">dim</span>(pisa_tiny)        <span class="co"># 12 rows x 12 columns</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; [1] 12 12</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">names</span>(pisa_tiny)</span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;CNT&quot;        &quot;CNTSCHID&quot;   &quot;CNTSTUID&quot;   &quot;x&quot;          &quot;female&quot;    </span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;  [6] &quot;PV1READ&quot;    &quot;PV2READ&quot;    &quot;W_FSTUWT&quot;   &quot;W_FSTURWT1&quot; &quot;W_FSTURWT2&quot;</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co">#&gt; [11] &quot;W_FSTURWT3&quot; &quot;W_FSTURWT4&quot;</span></span></code></pre></div>
+<p>It is one make-believe country with 12 students: a continuous
+covariate <code>x</code>, a binary <code>female</code> indicator,
+<strong>two</strong> plausible reading values <code>PV1READ</code> /
+<code>PV2READ</code>, <strong>four</strong> BRR replicate weights
+<code>W_FSTURWT1</code>–<code>W_FSTURWT4</code>, a final weight
+<code>W_FSTUWT</code>, and student / school identifiers.</p>
+<p>The detectors recover the design constants from the column names. The
+plausible values carry a <code>READ</code> suffix, so you must pass
+<code>suffix = &quot;READ&quot;</code>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">detect_pisa_pv_columns</span>(pisa_tiny, <span class="at">suffix =</span> <span class="st">&quot;READ&quot;</span>)   <span class="co"># -&gt; c(&quot;PV1READ&quot;,&quot;PV2READ&quot;)  =&gt; M = 2</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;PV1READ&quot; &quot;PV2READ&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="fu">detect_pisa_brr_replicate_weights</span>(pisa_tiny)         <span class="co"># -&gt; 4 W_FSTURWT* cols        =&gt; R = 4</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;W_FSTURWT1&quot; &quot;W_FSTURWT2&quot; &quot;W_FSTURWT3&quot; &quot;W_FSTURWT4&quot;</span></span></code></pre></div>
+<div class="alert alert-warning">
+<p><strong>The bare detector call errors on this fixture.</strong>
+Calling <code>detect_pisa_pv_columns(pisa_tiny)</code> <em>without</em>
+the suffix raises “No plausible-value columns detected …”, because the
+default looks for unsuffixed <code>PV</code> columns and this fixture’s
+columns are subject-suffixed (<code>PV1READ</code>,
+<code>PV2READ</code>). You must pass <code>suffix = &quot;READ&quot;</code>, as
+above. Modern PISA files are suffixed this way, so this is the common
+case, not an edge case.</p>
+</div>
+<p>Finally, read the design straight off the cached fit’s external
+target. The same two constants (<span class="math inline">\(M=2\)</span>, <span class="math inline">\(R=4\)</span>) reappear, together with the Fay
+coefficient and the fixed-effect term names:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>)<span class="sc">$</span>fit</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>tg <span class="ot">&lt;-</span> <span class="fu">get_target</span>(fit)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">c</span>(<span class="at">M =</span> tg<span class="sc">$</span>M, <span class="at">R =</span> tg<span class="sc">$</span>R, <span class="at">fay_k =</span> tg<span class="sc">$</span>fay_k)   <span class="co"># 2, 4, 0.5</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;     M     R fay_k </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;   2.0   4.0   0.5</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>tg<span class="sc">$</span>fe_names                               <span class="co"># &quot;b_Intercept&quot; &quot;b_x&quot; &quot;b_female&quot;</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; [1] &quot;b_Intercept&quot; &quot;b_x&quot;         &quot;b_female&quot;</span></span></code></pre></div>
+<p>So the fixture realises <span class="math inline">\(M=2\)</span>,
+<span class="math inline">\(R=4\)</span>, <span class="math inline">\(k=0.5\)</span> — and therefore the BRR–Fay
+multiplier <span class="math inline">\(a_d=1/[4\,(1-0.5)^2]=1\)</span>,
+exactly the <code>fay_variance_multiplier</code> field. The three
+fixed-effect terms are <code>b_Intercept</code>, <code>b_x</code>, and
+<code>b_female</code>, the reportable <span class="math inline">\(\beta_{\text{FE}}\)</span> block from Section
+4.</p>
+<div class="alert alert-warning">
+<p><strong>Honesty notes for this fixture (carried by the whole
+track).</strong></p>
+<ul>
+<li><strong>It is synthetic and illustrative.</strong> One make-believe
+country (<code>CNT == &quot;SYN&quot;</code>), 12 students, <span class="math inline">\(M=2\)</span>, <span class="math inline">\(R=4\)</span>. The numbers are included only so
+examples and package checks run without licensed data — they are
+<strong>not</strong> real PISA results and must never be cited as such.
+The package is <strong>not</strong> OECD-affiliated and bundles no real
+PISA.</li>
+<li><strong><code>b_x</code> is a single-covariate demo</strong>, not a
+within/between <span class="math inline">\((\beta^{W},
+\beta^{B})\)</span> pair (Section 3).</li>
+<li><strong><span class="math inline">\(a_d=1\)</span> is the
+tiny-design coincidence</strong> of <span class="math inline">\(R=4,k=0.5\)</span> — distinct from PISA’s <span class="math inline">\(a_d=0.05\)</span>. Do not generalise it (Section
+2.1).</li>
+<li><strong>Fixed-effect-only scope.</strong> Variance components are
+fit but not calibrated and are not part of the reportable output
+(Section 3).</li>
+</ul>
+</div>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>7. Where to next</h2>
+<p>You now hold the vocabulary the rest of the Method track cites by
+tag. From here:</p>
+<ul>
+<li><strong>M2 · The BRR–Fay fixed-effect target</strong> — the natural
+next step: it derives EQ-TMI, EQ-BRRFAY, EQ-BARNARD, and EQ-FMI,
+building the external target that <span class="math inline">\(\beta_{\text{FE}}\)</span> is calibrated against,
+and re-derives Rubin pooling on the cached target in code.</li>
+<li>Then <strong>M3</strong> (the stacked fractional bridge and Theorem
+2.2), <strong>M4</strong> (CCC and the center-separation diagnostics),
+and <strong>M5</strong> (the three methods, PSIS, and what makes a fit
+coverage-claimable) complete the provenance chain.</li>
+</ul>
+<p>To see the workflow these equations sit underneath, the Applied track
+is the place: <strong>A1 · Getting started</strong> (load a fit and read
+it three ways) and <strong>A2 · The end-to-end workflow</strong>
+(declare the design, assemble the target, run the fit, report).</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; [1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-vondavier2009plausible" class="csl-entry">
+Davier, Matthias von, Eugenio Gonzalez, and Robert J. Mislevy. 2009.
+<span>“What Are Plausible Values and Why Are They Useful?”</span>
+<em>IERI Monograph Series</em> 2: 9–36.
+</div>
+<div id="ref-mislevy1991randomization" class="csl-entry">
+Mislevy, Robert J. 1991. <span>“Randomization-Based Inference about
+Latent Variables from Complex Samples.”</span> <em>Psychometrika</em> 56
+(2): 177–96. <a href="https://doi.org/10.1007/BF02294457">https://doi.org/10.1007/BF02294457</a>.
+</div>
+<div id="ref-mundlak1978pooling" class="csl-entry">
+Mundlak, Yair. 1978. <span>“On the Pooling of Time Series and Cross
+Section Data.”</span> <em>Econometrica</em> 46 (1): 69–85. <a href="https://doi.org/10.2307/1913646">https://doi.org/10.2307/1913646</a>.
+</div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. OECD Publishing.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">M4: CCC — Cholesky Calibration Correction
+and the center-separation diagnostics</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>The fourth page of the Method track derives the calibration map that
+makes a single stacked fit report the external variance answer. M3
+matched the point — the stacked fixed-effect estimate equals the Rubin
+mean; M4 matches the variance, forcing the first two moments of the raw
+stacked draw cloud to equal the external target’s center and covariance
+through an affine Cholesky map. It states the map in full, distinguishes
+the reportable target-centering convention from the diagnostic posterior
+one, describes the deterministic algorithm and its conditioning
+diagnostic, and defines the center-separation diagnostic with both
+summaries the package tracks. A self-contained synthetic panel verifies
+the moment-match invariant to machine precision. Throughout it is
+explicit that CCC is an affine moment match, not a coverage theorem: the
+invariants are algebraic by construction, and coverage comes from the
+provenance of the target, never from the calibration itself.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#what-ccc-is-for" id="toc-what-ccc-is-for">1. What CCC is
+for</a></li>
+<li><a href="#the-map" id="toc-the-map">2. The map</a></li>
+<li><a href="#centering-conventions" id="toc-centering-conventions">3.
+Centering conventions</a></li>
+<li><a href="#the-deterministic-algorithm" id="toc-the-deterministic-algorithm">4. The deterministic
+algorithm</a></li>
+<li><a href="#center-separation-diagnostics" id="toc-center-separation-diagnostics">5. Center-separation
+diagnostics</a></li>
+<li><a href="#verify-the-ccc-invariant-in-code" id="toc-verify-the-ccc-invariant-in-code">6. Verify the CCC invariant in
+code</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">7. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<p>M3 settled the <strong>point</strong>. Its stacked fractional bridge
+showed that one model fit on the <span class="math inline">\(N\cdot
+M\)</span> stacked rows, each weighted <span class="math inline">\(1/M\)</span>, recovers the Rubin mean <span class="math inline">\(\bar\beta\)</span> under the regularity conditions
+of Theorem 2.2 (EQ-THM22) — but it was emphatic that this is a
+fixed-effect <em>point</em> identity and says <strong>nothing</strong>
+about the variance. The variance answer is a separate object: M2’s
+external Rubin / BRR–Fay total <span class="math inline">\(T_{\text{MI}}\)</span> (EQ-TMI), built from the
+<em>design</em>, not from the fit <span class="citation">(Rubin
+1987)</span>. This page closes the gap. CCC — the <strong>Cholesky
+Calibration Correction</strong> — is the deterministic affine map that
+takes the raw stacked draw cloud and forces its first two moments to
+equal that external target’s. Where Theorem 2.2 matched the point, CCC
+matches the <strong>variance</strong>.</p>
+<p>The shared light-path load — the same one used across the Method
+track — gives us the cached fit and its external target to point at. As
+in A3 §6.2, this fit was produced with
+<code>return_draws = FALSE</code>, so it retains <strong>no</strong>
+posterior draws and <code>get_draws(fit)</code> is
+<code>NULL</code>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)<span class="sc">$</span>fit</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>tg <span class="ot">&lt;-</span> <span class="fu">get_target</span>(fit)   <span class="co"># external Rubin / BRR–Fay target (M2&#39;s object); Sigma_tgt = T_MI</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">c</span>(<span class="at">M =</span> tg<span class="sc">$</span>M, <span class="at">R =</span> tg<span class="sc">$</span>R, <span class="at">fay_k =</span> tg<span class="sc">$</span>fay_k)   <span class="co"># 2, 4, 0.5</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;     M     R fay_k </span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;   2.0   4.0   0.5</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="fu">is.null</span>(<span class="fu">get_draws</span>(fit))                   <span class="co"># TRUE -- no retained draws to calibrate</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The design is the tiny synthetic one M1 introduced: <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights, Fay coefficient
+<span class="math inline">\(k = 0.5\)</span>. The empty draw matrix is
+the reason Section 6’s invariant must be <strong>self-contained
+synthetic</strong> — there are no real draws on this fixture to run the
+map on. We can still read the <em>realized</em> calibration diagnostics
+off the fit, and we do so in Section 6.</p>
+<div class="alert alert-info">
+<p><strong>Scope of this page.</strong> M4 derives the calibration map
+(EQ-CCC) and the center-separation diagnostic (EQ-DELTAC), and verifies
+the moment-match invariant on a self-contained synthetic draw cloud. It
+estimates nothing — there is no MCMC below, only base-R linear algebra
+and read-only accessor calls against the bundled synthetic fixture. M4
+is the only Method vignette with any randomness, and that is confined to
+the synthetic cloud of Section 6 (with a fixed <code>set.seed</code>).
+The <em>point</em> side is <strong>M3</strong> (EQ-THM22); the
+provenance of <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> is
+<strong>M2</strong>; which fits may carry a coverage claim is
+<strong>M5</strong>.</p>
+</div>
+<div id="what-ccc-is-for" class="section level2">
+<h2>1. What CCC is for</h2>
+<p>The raw stacked fit hands you a posterior draw cloud for the fixed
+effects — call its draws <span class="math inline">\(\beta_1,\dots,\beta_S\)</span>. That cloud has
+<em>some</em> mean <span class="math inline">\(\bar\beta^{\text{raw}}\)</span> and <em>some</em>
+covariance <span class="math inline">\(\Sigma_{\text{raw}}\)</span>, but
+neither is the answer you want to report. Its mean is the raw stacked
+posterior center — close to <span class="math inline">\(\bar\beta\)</span> under the bridge (M3), but not
+the external object — and its covariance is the model’s nominal
+posterior spread, which M2 §6 warned can <strong>under-cover</strong>
+because it never sees the survey’s clustering and weighting. The
+variance you are entitled to report lives outside the fit: the
+design-based <span class="math inline">\(T_{\text{MI}}\)</span> from M2
+<span class="citation">(Rubin 1987)</span>.</p>
+<p>CCC reconciles the two. It is the map that takes the raw cloud and
+<strong>moves its first two moments onto the external target’s</strong>:
+it shifts the mean to a target center <span class="math inline">\(c\)</span> and stretches the covariance to <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. After
+CCC, the calibrated draw cloud has — by construction — exactly the
+center and covariance of the external target, so a fit that reports the
+calibrated cloud’s moments <em>reports the external answer</em>. That is
+the whole purpose: M3’s bridge makes one stacked fit recover the right
+<strong>point</strong>; CCC makes that same fit carry the right
+<strong>variance</strong>. Together they are the “one fit instead of
+<span class="math inline">\(M\)</span>” machinery the package’s honest
+headline rests on (facts §5) — an algebraic equivalence, never a speed
+claim.</p>
+<p>Two pieces of the division of labour are worth stating now, because
+the rest of the page keeps returning to them. First, CCC supplies an
+<em>algebraic</em> match of moments; the <em>coverage</em> that match is
+useful for comes entirely from the <strong>provenance</strong> of <span class="math inline">\(\Sigma_{\text{tgt}}\)</span> (Section 5, and the
+central caveat). Second, the match is of the <strong>first two moments
+only</strong> — center and covariance — not of the full distributional
+shape; CCC is an affine map, and affine maps preserve, they do not
+create, higher-order structure.</p>
+</div>
+<div id="the-map" class="section level2">
+<h2>2. The map</h2>
+<p>The map itself is one line. Writing <span class="math inline">\(\beta_s\)</span> for the <span class="math inline">\(s\)</span>-th raw posterior draw and <span class="math inline">\(\beta_s^{\text{cal}}\)</span> for its calibrated
+image, <strong>CCC — tag EQ-CCC — is</strong></p>
+<p><span class="math display">\[
+\beta_s^{\text{cal}}=c+L_{\text{tgt}}L_{\text{raw}}^{-1}\big(\beta_s-\bar\beta^{\text{raw}}\big),\qquad
+L L^\top=\Sigma\ \text{(lower-triangular)},
+\]</span></p>
+<p>so by construction <span class="math inline">\(\operatorname{mean}\{\beta_s^{\text{cal}}\}=c\)</span>
+and <span class="math inline">\(\operatorname{Cov}\{\beta_s^{\text{cal}}\}=\Sigma_{\text{tgt}}\)</span>
+(to machine precision, when <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is positive
+definite).</p>
+<p>Read it as three moves applied to every draw, right to left:</p>
+<ul>
+<li><strong>Recenter.</strong> <span class="math inline">\(\big(\beta_s-\bar\beta^{\text{raw}}\big)\)</span>
+subtracts the raw cloud’s own mean, so the recentered draws are centered
+at the origin. This strips off whatever the raw center happened to be,
+leaving only the cloud’s <em>shape</em> about its mean.</li>
+<li><strong>Linear map.</strong> <span class="math inline">\(L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span> is the
+affine transform that converts the raw covariance into the target
+covariance. Here <span class="math inline">\(L_{\text{raw}}\)</span> and
+<span class="math inline">\(L_{\text{tgt}}\)</span> are the
+<strong>lower-triangular Cholesky factors</strong> of, respectively, the
+raw covariance <span class="math inline">\(\Sigma_{\text{raw}}\)</span>
+and the target <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> — each
+satisfies <span class="math inline">\(L L^\top=\Sigma\)</span>. Applying
+<span class="math inline">\(L_{\text{raw}}^{-1}\)</span> “whitens” the
+recentered draws (turns their covariance into the identity), and
+applying <span class="math inline">\(L_{\text{tgt}}\)</span> then
+“colours” them to have exactly the target covariance.</li>
+<li><strong>Shift to <span class="math inline">\(c\)</span>.</strong>
+Adding <span class="math inline">\(c\)</span> relocates the
+now-correctly-shaped cloud so its mean is the target center <span class="math inline">\(c\)</span> (the reportable choice <span class="math inline">\(c=\bar\beta\)</span> is Section 3).</li>
+</ul>
+<p>The covariance claim is a one-line consequence of how covariance
+transforms under a linear map. For a linear transform <span class="math inline">\(\beta\mapsto A\beta\)</span>, the covariance
+becomes <span class="math inline">\(A\,\Sigma_{\text{raw}}\,A^\top\)</span>. With
+<span class="math inline">\(A=L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span>
+and <span class="math inline">\(\Sigma_{\text{raw}}=L_{\text{raw}}L_{\text{raw}}^\top\)</span>,</p>
+<p><span class="math display">\[
+A\,\Sigma_{\text{raw}}\,A^\top
+=
+L_{\text{tgt}}L_{\text{raw}}^{-1}\,\big(L_{\text{raw}}L_{\text{raw}}^\top\big)\,L_{\text{raw}}^{-\top}L_{\text{tgt}}^\top
+= L_{\text{tgt}}L_{\text{tgt}}^\top
+= \Sigma_{\text{tgt}},
+\]</span></p>
+<p>the internal <span class="math inline">\(L_{\text{raw}}^{-1}L_{\text{raw}}\)</span> and
+<span class="math inline">\(L_{\text{raw}}^\top
+L_{\text{raw}}^{-\top}\)</span> collapsing to identities. The mean claim
+is even simpler: the recenter makes the pre-shift mean zero, the linear
+map sends zero to zero, and the shift sets the mean to <span class="math inline">\(c\)</span>. Both invariants are therefore
+<em>exact by construction</em> — which is precisely the fact Section 6
+checks numerically and the central caveat insists must
+<strong>not</strong> be over-read as coverage.</p>
+</div>
+<div id="centering-conventions" class="section level2">
+<h2>3. Centering conventions</h2>
+<p>EQ-CCC leaves one quantity to choose: the center <span class="math inline">\(c\)</span> the calibrated draws are shifted to.
+The choice is what separates a <strong>reportable</strong> fit from a
+merely <strong>diagnostic</strong> one, and it is the single most
+important control in this whole chapter — exactly the point A2 §6 makes
+from the workflow side.</p>
+<p><strong><code>center = &quot;target&quot;</code> is the reportable
+convention.</strong> It sets <span class="math inline">\(c=\bar\beta\)</span> — the external target’s
+pooled point from EQ-TMI, the same <span class="math inline">\(\bar\beta\)</span> M3’s Theorem 2.2 recovers. With
+<span class="math inline">\(c=\bar\beta\)</span> the calibrated cloud’s
+mean is the external point and its covariance is the external <span class="math inline">\(T_{\text{MI}}\)</span>, so the fit reports the
+external answer in full. This is the convention the bundled fixture
+uses, recorded in <code>fit$control$center</code>, and the one A2 §6 and
+A3 §3 both insist on for any reportable result.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>fit<span class="sc">$</span>control<span class="sc">$</span>center   <span class="co"># &quot;target&quot; -- the reportable convention (c = beta_bar)</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;target&quot;</span></span></code></pre></div>
+<p><strong><code>center = &quot;posterior&quot;</code> is diagnostic
+only.</strong> It leaves the fixed-effect center at the raw stacked
+<em>posterior</em> mean <span class="math inline">\(\bar\beta^{\text{raw}}\)</span> while still
+applying the covariance calibration and computing the center-separation
+diagnostics. That hybrid is a useful CCC sanity check — it lets you
+<em>see</em> how far the raw center sat from <span class="math inline">\(\bar\beta\)</span> — but it is
+<strong>not</strong> a reportable <code>stack_direct</code> result;
+<code>pv_fit_direct()</code> refuses to emit a reportable estimate table
+from it (A2 §6). Treat <code>&quot;posterior&quot;</code> as a diagnostic, never a
+deliverable.</p>
+<p>The reportable choice <span class="math inline">\(c=\bar\beta\)</span> is exactly why M3’s
+verification panel found the stacked estimate term-by-term equal to
+<span class="math inline">\(\bar\beta\)</span> and A3 §6.1 found the
+estimate column equal to the target’s pooled <code>beta</code>: under
+target centering the reported point <em>is</em> the external point by
+construction. M4 is the variance counterpart of that same construction —
+the covariance leg of EQ-CCC is what makes the SE column equal <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>.</p>
+</div>
+<div id="the-deterministic-algorithm" class="section level2">
+<h2>4. The deterministic algorithm</h2>
+<p>CCC is an <strong>algorithm</strong>, not a sampler: given the raw
+cloud and the target, every quantity in EQ-CCC is computed by
+deterministic linear algebra, and re-running it on the same inputs
+returns bit-identical output. There is no Monte Carlo step inside the
+map. Three implementation facts complete the picture beyond the bare
+equation.</p>
+<p><strong>Lower-triangular Cholesky factors.</strong> Both <span class="math inline">\(L_{\text{raw}}\)</span> and <span class="math inline">\(L_{\text{tgt}}\)</span> are the
+<em>lower-triangular</em> Cholesky factors of their covariances (<span class="math inline">\(LL^\top=\Sigma\)</span>). The triangular structure
+is what makes the map cheap and stable to apply: solving with a
+triangular factor is a back-substitution rather than a general inverse,
+and the factorization is unique for a positive-definite <span class="math inline">\(\Sigma\)</span>. EQ-CCC’s parenthetical
+“(lower-triangular)” is fixing this convention so that “<span class="math inline">\(L\)</span>” is unambiguous wherever the track
+cites it.</p>
+<p><strong>Positive-definite inputs, fail-fast — no automatic
+repair.</strong> The map needs <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>, which exists only if
+<span class="math inline">\(\Sigma_{\text{raw}}\)</span> is positive
+definite, and <span class="math inline">\(L_{\text{tgt}}\)</span>
+likewise requires a positive-definite <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. In
+v0.1.0, CCC factors both covariances <strong>as given</strong> and
+applies <strong>no</strong> automatic Tikhonov or near-PD repair to
+either. When the raw draw cloud is <strong>ill-conditioned</strong> —
+near-collinear fixed effects, or too few effective draws relative to the
+dimension — that condition surfaces in one of two ways rather than being
+silently patched: a matrix that is <em>not</em> positive definite is
+rejected outright on the Cholesky path (the factorization aborts with a
+“must be positive definite for CCC calibration” error), while a matrix
+that is positive definite but poorly conditioned clears the Cholesky and
+is instead flagged by the <span class="math inline">\(\kappa_A\)</span>
+conditioning diagnostic below. The remedy is upstream — increase
+effective draws, reduce collinearity, or simplify the fixed-effect block
+before reporting — never an internal ridge.</p>
+<p><strong>The conditioning diagnostic <span class="math inline">\(\kappa_A\)</span>.</strong> Because the map’s
+stability hinges on <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>, the package records
+a conditioning diagnostic, <strong><span class="math inline">\(\kappa_A\)</span></strong> — a numerical-stability
+summary of the transform <span class="math inline">\(A=L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span> (it
+lives in the <code>ccc</code> diagnostic block as <code>kappa_A</code>).
+A well-conditioned raw cloud gives a small <span class="math inline">\(\kappa_A\)</span> and a trustworthy map; a large
+<span class="math inline">\(\kappa_A\)</span> flags that the inverse was
+delicate and the calibration should be read with care. It is a
+<em>trust</em> diagnostic for the algorithm, read alongside the
+center-separation numbers of the next section — never a coverage
+statistic.</p>
+</div>
+<div id="center-separation-diagnostics" class="section level2">
+<h2>5. Center-separation diagnostics</h2>
+<p>The covariance leg of EQ-CCC is exact by construction, but the
+<strong>center</strong> leg carries information worth auditing: <em>how
+far apart were the raw stacked center and the external point <span class="math inline">\(\bar\beta\)</span> before CCC shifted things?</em>
+If the bridge (M3) is behaving, the raw stacked posterior mean should
+already sit close to <span class="math inline">\(\bar\beta\)</span>; a
+large gap is a warning that the stacked fit and the external target
+disagree on the point, which no amount of covariance calibration would
+fix. The center-separation diagnostic measures exactly that gap.</p>
+<p><strong>EQ-DELTAC — the center-separation diagnostic.</strong> <span class="math inline">\(\Delta_c\)</span> is the <strong>relative gap
+between the raw stacked center and <span class="math inline">\(\bar\beta\)</span>, measured on the target-SE
+scale</strong> — the per-coefficient difference <span class="math inline">\(\big(\text{raw center}-\bar\beta\big)\)</span>
+divided by that coefficient’s target standard error <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>,
+then summarised across terms. Putting it on the SE scale makes it
+dimensionless and comparable across coefficients on wildly different
+scales (an intercept near 458 versus a slope near 2). The summary is
+then read against <strong>green / yellow / red tiers</strong> that gate
+the fit: green is a negligible separation (the bridge and target agree
+on the point), yellow warns, and red blocks a reportable result.</p>
+<p>The package computes <strong>two summaries</strong> of the per-term
+gaps:</p>
+<ul>
+<li><strong><code>delta_c_rel</code></strong> is the root-mean-square
+(RMS) target-SE-scaled separation across terms. It is a descriptive
+diagnostic that summarizes the overall size of the center shift.</li>
+<li><strong><code>delta_c_max</code></strong> is the maximum absolute
+target-SE-scaled separation — the single worst-separated coefficient.
+This is the reportable <strong>NO-SEND gate</strong> used for the green
+/ yellow / red center-separation bands.</li>
+</ul>
+<p>So when this vignette says “the reportable gate,” it means
+<strong><code>delta_c_max</code></strong>. A3 §6.3 previews the same
+pair: an RMS diagnostic (<code>delta_c_rel</code>) and a max-over-terms
+gate (<code>delta_c_max</code>).</p>
+<div class="alert alert-warning">
+<p><strong><span class="math inline">\(\Delta_c\)</span> has two
+summaries — state both.</strong> <code>delta_c_rel</code> is the RMS
+diagnostic; <code>delta_c_max</code> is the reportable <strong>NO-SEND
+gate</strong>. Center-separation bands are keyed to
+<code>delta_c_max</code>: green below <code>1e-2</code>, yellow from
+<code>1e-2</code> to below <code>5e-2</code>, and red at or above
+<code>5e-2</code>. Neither summary is a coverage statistic; they are
+algorithmic trust diagnostics for deciding whether the calibrated fit
+may be reported.</p>
+</div>
+</div>
+<div id="verify-the-ccc-invariant-in-code" class="section level2">
+<h2>6. Verify the CCC invariant in code</h2>
+<p>The natural way to demonstrate EQ-CCC would be to apply it to the
+fit’s own raw draws and confirm the calibrated cloud has mean <span class="math inline">\(c\)</span> and covariance <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>. We cannot do that
+here for a concrete reason stated at the top of the page: <strong>this
+fixture retains no draws</strong> — it was produced with
+<code>return_draws = FALSE</code>, so <code>get_draws(fit)</code> is
+<code>NULL</code> (A3 §6.2), and there is no raw cloud to calibrate. The
+invariant is therefore demonstrated on a <strong>self-contained
+synthetic</strong> draw cloud, built only to exercise the algebra of the
+map. This is the only randomness in the Method track, and it is
+seeded.</p>
+<p>We manufacture an arbitrary raw cloud with a non-trivial mean and
+covariance, choose target moments to impose (standing in for <span class="math inline">\(c=\bar\beta\)</span> and <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>), and
+apply EQ-CCC exactly as written:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">5104</span>)                      <span class="co"># M4 is the only Method vignette with randomness</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="dv">3</span><span class="dt">L</span>; S <span class="ot">&lt;-</span> <span class="dv">4000</span><span class="dt">L</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="do">## an arbitrary raw draw cloud with a non-trivial mean and covariance</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>Sigma_raw_true <span class="ot">&lt;-</span> <span class="fu">crossprod</span>(<span class="fu">matrix</span>(<span class="fu">rnorm</span>(p <span class="sc">*</span> p), p, p)) <span class="sc">+</span> <span class="fu">diag</span>(p)</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>raw <span class="ot">&lt;-</span> <span class="fu">sweep</span>(<span class="fu">matrix</span>(<span class="fu">rnorm</span>(S <span class="sc">*</span> p), S, p) <span class="sc">%*%</span> <span class="fu">chol</span>(Sigma_raw_true),</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>             <span class="dv">2</span><span class="dt">L</span>, <span class="fu">c</span>(<span class="dv">10</span>, <span class="sc">-</span><span class="dv">3</span>, <span class="fl">0.5</span>), <span class="st">`</span><span class="at">+</span><span class="st">`</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="do">## target moments to impose (stand in for c = beta_bar and Sigma_tgt = T_MI)</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>c_tgt     <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">458</span>, <span class="dv">47</span>, <span class="dv">2</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>Sigma_tgt <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="fl">4.0</span>, <span class="fl">0.5</span>, <span class="fl">0.0</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>                      <span class="fl">0.5</span>, <span class="fl">2.0</span>, <span class="fl">0.3</span>,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>                      <span class="fl">0.0</span>, <span class="fl">0.3</span>, <span class="fl">1.5</span>), <span class="dv">3</span>, <span class="dv">3</span>, <span class="at">byrow =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="do">## EQ-CCC: beta_cal = c + L_tgt L_raw^{-1} (beta - colMeans(raw))</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>L_tgt <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">chol</span>(Sigma_tgt))         <span class="co"># lower-triangular Cholesky factor of the target</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>L_raw <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">chol</span>(<span class="fu">cov</span>(raw)))          <span class="co"># lower-triangular Cholesky factor of the (empirical) raw cov</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>A     <span class="ot">&lt;-</span> L_tgt <span class="sc">%*%</span> <span class="fu">solve</span>(L_raw)     <span class="co"># the affine transform L_tgt L_raw^{-1}</span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>cal <span class="ot">&lt;-</span> <span class="fu">sweep</span>(raw, <span class="dv">2</span><span class="dt">L</span>, <span class="fu">colMeans</span>(raw), <span class="st">`</span><span class="at">-</span><span class="st">`</span>) <span class="sc">%*%</span> <span class="fu">t</span>(A)   <span class="co"># recenter, then linear map</span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>cal <span class="ot">&lt;-</span> <span class="fu">sweep</span>(cal, <span class="dv">2</span><span class="dt">L</span>, c_tgt, <span class="st">`</span><span class="at">+</span><span class="st">`</span>)                    <span class="co"># shift to the target center</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(<span class="fu">colMeans</span>(cal)), c_tgt)      <span class="co"># TRUE  (max|diff| ~ 1e-13)</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="fu">all.equal</span>(<span class="fu">unname</span>(<span class="fu">cov</span>(cal)),      Sigma_tgt)  <span class="co"># TRUE  (max|diff| ~ 1e-15)</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>Both invariants hold: the calibrated cloud’s mean equals the imposed
+center <span class="math inline">\(c\)</span> and its covariance equals
+the imposed target <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>, each to machine
+precision. That is EQ-CCC realised — the affine map does exactly what
+Section 2’s algebra said it must.</p>
+<div class="alert alert-info">
+<p><strong>Construction note — why these hit machine precision, and what
+production requires.</strong> In this panel <span class="math inline">\(L_{\text{raw}}\)</span> is the Cholesky factor of
+the <strong>empirical</strong> <code>cov(raw)</code> and the draws are
+recentered on the <strong>empirical</strong> <code>colMeans(raw)</code>
+— the very same cloud’s own moments. Because the map is built from and
+applied to the identical empirical moments, the cancellation in Section
+2’s covariance derivation is exact and both invariants land at ~<span class="math inline">\(10^{-14}\)</span>. Production CCC adds no ridge to
+this: it factors <span class="math inline">\(\Sigma_{\text{raw}}\)</span> exactly as this panel
+does, by plain Cholesky, and <strong>requires</strong> only that <span class="math inline">\(\Sigma_{\text{raw}}\)</span> and the external
+target both be positive definite (Section 4). The difference is one of
+guardrails, not arithmetic — in production a non-positive-definite <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is rejected on the
+Cholesky path and a poorly conditioned one is flagged through <span class="math inline">\(\kappa_A\)</span>, whereas this synthetic cloud is
+well-conditioned by construction (<code>Sigma_raw_true</code> is
+positive-definite with a <code>+ diag(p)</code> term), so those
+guardrails never fire. The plain inverse used here is exactly the
+production map, not a simplified stand-in for it.</p>
+</div>
+<p>We can still read the fit’s <strong>realized</strong>
+center-separation numbers directly off the fixture, even though there
+are no draws — they were recorded in the <code>ccc</code> diagnostic
+block when the fixture was calibrated. This is read-only:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>dg <span class="ot">&lt;-</span> <span class="fu">get_diagnostics</span>(fit)</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">names</span>(dg)                                                    <span class="co"># preflight, stack_fit, stack_fit_warnings, ccc</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot;</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;ccc&quot;</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>dg<span class="sc">$</span>ccc[<span class="fu">c</span>(<span class="st">&quot;center_status&quot;</span>, <span class="st">&quot;delta_c_rel&quot;</span>, <span class="st">&quot;delta_c_max&quot;</span>)]</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; $center_status</span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ok&quot;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; $delta_c_rel</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; [1] 2.549387e-14</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; $delta_c_max</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; [1] 4.415668e-14</span></span></code></pre></div>
+<p><code>center_status == &quot;ok&quot;</code> says the center separation fell in
+the green tier — the raw stacked center and <span class="math inline">\(\bar\beta\)</span> agree. The two summaries are
+both effectively zero: <code>delta_c_rel</code> (the
+<strong>RMS</strong> diagnostic of Section 5) is about <span class="math inline">\(2.5\times10^{-14}\)</span> and
+<code>delta_c_max</code> (the <strong>max-over-terms reportable
+gate</strong>) about <span class="math inline">\(4.4\times10^{-14}\)</span>. Both are reported, and
+the green / yellow / red gate is keyed to <code>delta_c_max</code>. The
+same <code>ccc</code> block carries the conditioning diagnostic
+<code>kappa_A</code> of Section 4 and a per-term breakdown
+<code>delta_c_by_term</code>, should you wish to inspect the algorithm’s
+behaviour further.</p>
+<div class="alert alert-warning">
+<p><strong>CCC is an affine moment match, NOT a coverage
+theorem.</strong> This is the central honesty point of the page, and it
+mirrors A3 §4’s warning exactly. Everything verified above is
+<strong>algebraic by construction</strong>: EQ-CCC <em>forces</em> <span class="math inline">\(\operatorname{mean}=c\)</span> and <span class="math inline">\(\operatorname{Cov}=\Sigma_{\text{tgt}}\)</span>,
+so the ~<span class="math inline">\(10^{-14}\)</span> agreement merely
+confirms the linear algebra <strong>ran cleanly</strong> — it is not,
+and must never be read as, evidence that the resulting intervals
+<em>cover</em>. Coverage comes from the <strong>provenance</strong> of
+<span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> —
+external, design-based, BRR–Fay <span class="citation">(Judkins
+1990)</span>, pooled by the Rubin rules <span class="citation">(Rubin
+1987)</span> (M2) — together with the companion paper’s simulation
+oracle, <strong>not</strong> from CCC. Concretely, this fixture’s
+near-zero <span class="math inline">\(\Delta_c\)</span> sits alongside
+<code>coverage_claim_allowed == FALSE</code> (it carries classic Rubin
+df, not Barnard–Rubin; A3 §4, M5): the calibration ran perfectly and the
+fit is still, honestly, <strong>descriptive</strong>. A clean CCC is
+necessary plumbing, not a coverage certificate.</p>
+</div>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>7. Where to next</h2>
+<p>You now have the variance counterpart to M3’s point identity in full:
+the CCC affine map (EQ-CCC) that forces the raw stacked draw cloud’s
+first two moments onto the external target’s <span class="math inline">\(c=\bar\beta\)</span> and <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>, the
+target-versus-posterior centering convention that decides whether a fit
+is reportable, the deterministic fail-fast Cholesky algorithm and its
+<span class="math inline">\(\kappa_A\)</span> conditioning check, and
+the center-separation diagnostic (EQ-DELTAC) with both the RMS
+diagnostic (<code>delta_c_rel</code>) and the max-over-terms gate
+(<code>delta_c_max</code>). And its hard boundary: an algebraic moment
+match, exact by construction, that confers <strong>no</strong> coverage
+on its own.</p>
+<ul>
+<li><strong>M5 · Methods, PSIS, and coverage</strong> — the natural next
+step, and where the caveat of this page is cashed out. CCC’s clean
+moment match is <em>not</em> the source of coverage; M5 states precisely
+why only <code>stack_direct</code> — calibrated by CCC to an external
+design-based target — is coverage-claimable, while <code>per_pv</code>
+and <code>stack_psis</code> carry model-based covariance and are
+descriptive always.</li>
+<li><strong>M2 · The BRR–Fay fixed-effect target</strong> — the
+provenance of <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> that
+this page imposes: the BRR–Fay sandwich (EQ-BRRFAY) and Rubin pooling
+(EQ-TMI) that build the external object, and the design-variance
+coverage result that — unlike CCC — actually licenses coverage.</li>
+<li><strong>M3 · The stacked fractional bridge</strong> — the
+<em>point</em> leg this page’s variance leg completes: Theorem 2.2
+(EQ-THM22) matched <span class="math inline">\(\bar\beta\)</span>, CCC
+matches the covariance, and the two together are the “one fit instead of
+<span class="math inline">\(M\)</span>” machinery.</li>
+</ul>
+<p>To see these diagnostics from the reporting side — the
+<code>get_diagnostics(fit)$ccc</code> peek, the
+<code>center_status</code> / <code>delta_c_rel</code> /
+<code>delta_c_max</code> fields, and the reminder that their tiny values
+do not confer coverage — return to <strong>A3 · Reading results</strong>
+(§6.3).</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb6-28"><a href="#cb6-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-judkins1990fay" class="csl-entry">
+Judkins, David R. 1990. <span>“Fay’s Method for Variance
+Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
+223–39.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

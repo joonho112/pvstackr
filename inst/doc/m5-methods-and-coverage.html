@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>M5: Methods, PSIS, and coverage — choosing a path and what may be claimed</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">M5: Methods, PSIS, and coverage — choosing
+a path and what may be claimed</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>The capstone of the Method track, where the preceding four pages
+converge into a single contract: which of the three fitting methods may
+carry a coverage claim, and why only one of them can. It states the
+precise contrast between stack_direct, per_pv, and stack_psis, displays
+the Pareto-smoothed importance-sampling tail-shape thresholds that
+diagnose stack_psis, and argues that coverage is conferred by the
+design-based provenance of the external target alone — the M2 target
+reached through the M3 point identity and the M4 calibration — not by
+any model-based covariance and not by a clean diagnostic. It is emphatic
+that a small Pareto tail-shape is necessary but not sufficient for a
+correct stack_psis variance, that the diagnostic is
+specification-dependent, and that the one-fit topology is an
+architecture statement and never a speed claim. A base-R classifier and
+a read-only flag check verify the rules on the bundled synthetic
+fixture.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#the-three-methods-precisely" id="toc-the-three-methods-precisely">1. The three methods,
+precisely</a></li>
+<li><a href="#psis-in-stack_psis" id="toc-psis-in-stack_psis">2. PSIS in
+<code>stack_psis</code></a></li>
+<li><a href="#why-only-stack_direct-is-coverage-claimable" id="toc-why-only-stack_direct-is-coverage-claimable">3. Why only
+<code>stack_direct</code> is coverage-claimable</a></li>
+<li><a href="#caution-small-hat-k-correct-stack_psis-variance" id="toc-caution-small-hat-k-correct-stack_psis-variance">4. Caution —
+small <span class="math inline">\(\hat k\)</span> ≠ correct
+<code>stack_psis</code> variance</a></li>
+<li><a href="#the-costbenefit-m-fits-1" id="toc-the-costbenefit-m-fits-1">5. The cost/benefit — <code>M</code>
+fits → 1</a></li>
+<li><a href="#verify-in-code" id="toc-verify-in-code">6. Verify in
+code</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">7. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<p>The first four pages built the machinery one piece at a time. M2
+derived the <strong>external variance answer</strong> — the design-based
+BRR–Fay sandwich pooled by the Rubin rules into <span class="math inline">\(T_{\text{MI}}\)</span> (EQ-TMI, EQ-BRRFAY), with
+the small-sample Barnard–Rubin degrees of freedom (EQ-BARNARD) the path
+a coverage-claimable target takes <span class="citation">(Judkins 1990;
+Rubin 1987; Barnard and Rubin 1999)</span>. M3 showed that one stacked,
+<span class="math inline">\(1/M\)</span>-weighted fit recovers the Rubin
+<strong>point</strong> <span class="math inline">\(\bar\beta\)</span>
+under the regularity conditions of Theorem 2.2 (EQ-THM22) — a
+fixed-effect point identity, no more. M4 showed how the CCC affine map
+(EQ-CCC) forces that one fit’s draw cloud to carry the target’s
+<strong>variance</strong> too. This capstone closes the loop. It asks
+the question the whole track has been circling: given three ways to fit
+the model, <em>which one may carry a coverage claim, and why only that
+one?</em> The answer is a contract about <strong>provenance</strong>,
+and the discriminator is where each method gets its covariance.</p>
+<p>Two warnings up front, because they bound everything below. First,
+coverage is a property of <strong>one path only</strong> —
+<code>stack_direct</code> calibrated to the external, design-based
+target — and even that path is descriptive under classic degrees of
+freedom, exactly as the bundled fixture is. Second, the Pareto
+tail-shape diagnostic this page introduces is a check on the
+<em>importance-sampling step</em>, not a certificate that the resulting
+variance is right; reading it as the latter is the single most seductive
+error in the chapter.</p>
+<div class="alert alert-info">
+<p><strong>Scope of this page.</strong> M5 states the three-method
+contrast, derives the PSIS tail-shape thresholds (EQ-PSIS), and gives
+the coverage contract. It estimates nothing — there is no MCMC anywhere
+below, only a pure base-R classifier and read-only accessor calls
+against the bundled synthetic fixture. The full three-method
+<em>comparison</em> — building three fits and running
+<code>pv_compare_methods()</code> on injected draws — is
+<strong>A4</strong>’s job, and this page cross-references it rather than
+duplicating its construction. The target is <strong>M2</strong>, the
+point identity is <strong>M3</strong>, the calibration is
+<strong>M4</strong>; M5 is where their provenance is cashed out as the
+<code>coverage_claim_allowed</code> flag.</p>
+</div>
+<p>The shared light-path load — the same one used across the Method
+track — gives us the cached fit and its external target to point at:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)<span class="sc">$</span>fit</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>tg <span class="ot">&lt;-</span> <span class="fu">get_target</span>(fit)   <span class="co"># external Rubin / BRR–Fay target (M2&#39;s object)</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">c</span>(<span class="at">M =</span> tg<span class="sc">$</span>M, <span class="at">R =</span> tg<span class="sc">$</span>R, <span class="at">fay_k =</span> tg<span class="sc">$</span>fay_k)   <span class="co"># 2, 4, 0.5</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co">#&gt;     M     R fay_k </span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt;   2.0   4.0   0.5</span></span></code></pre></div>
+<p>The design is the tiny synthetic one M1 introduced: <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights, Fay coefficient
+<span class="math inline">\(k = 0.5\)</span>.</p>
+<div id="the-three-methods-precisely" class="section level2">
+<h2>1. The three methods, precisely</h2>
+<p>pvstackr ships three fitting methods. They answer the <em>same</em>
+question — what is the fixed-effect block <span class="math inline">\(\beta_{\text{FE}}\)</span>? — but they get their
+<strong>variance</strong> from different places, and that difference is
+the entire story of when a row may carry a coverage claim. The locked
+method ↔︎ pipeline map (facts §4) lays them side by side:</p>
+<table>
+<colgroup>
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Package method</th>
+<th>Blueprint pipeline</th>
+<th>Covariance basis</th>
+<th>Intervals</th>
+<th>MCMC fits</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>stack_direct</code> <em>(default)</em></td>
+<td>C-Direct</td>
+<td><strong>design-based</strong> external <span class="math inline">\(T_{\text{MI}}\)</span></td>
+<td><strong>conditional</strong> — coverage-claimable only with an
+external Barnard–Rubin BRR–Fay target; descriptive under classic df</td>
+<td>1</td>
+</tr>
+<tr class="even">
+<td><code>per_pv</code></td>
+<td>A (orthodox)</td>
+<td>model-based (posterior)</td>
+<td>descriptive/reference</td>
+<td><span class="math inline">\(M\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>stack_psis</code></td>
+<td>B</td>
+<td>model-based (posterior)</td>
+<td>descriptive/reference</td>
+<td>1 (+PSIS)</td>
+</tr>
+</tbody>
+</table>
+<p>In one sentence each:</p>
+<ul>
+<li><strong><code>stack_direct</code></strong> fits one stacked model
+and calibrates it — via CCC (M4, EQ-CCC) — to the <strong>external,
+design-based</strong> Rubin / BRR–Fay target (M2, EQ-TMI). Its point is
+the Rubin mean by the stacked bridge (M3, EQ-THM22) and its covariance
+is the design-based <span class="math inline">\(T_{\text{MI}}\)</span>.
+Because that covariance is design-based, <code>stack_direct</code> rows
+are the only ones the package ever marks
+<code>coverage_claim_allowed = TRUE</code> <span class="citation">(Judkins 1990; Rubin 1987)</span>.</li>
+<li><strong><code>per_pv</code></strong> is the orthodox
+multiple-imputation path: fit the model once per plausible value and
+pool the <span class="math inline">\(M\)</span> model-based results with
+Rubin’s rules. It is the natural <strong>reference</strong> against
+which <code>stack_direct</code>’s point is sanity-checked, but its
+covariance is <em>model-based</em> (the posterior’s own spread), so its
+intervals stay descriptive.</li>
+<li><strong><code>stack_psis</code></strong> reweights a single stacked
+draw cloud with per-PV Pareto-smoothed importance sampling <span class="citation">(Vehtari et al. 2017, 2024)</span> and pools the
+reweighted summaries. One fit, model-based covariance — a
+<strong>cross-check</strong>, never the deliverable.</li>
+</ul>
+<p><strong>The covariance basis is the discriminator.</strong> Read the
+third column, not the first: two of the three methods carry a
+<em>model-based</em> covariance (the posterior’s nominal spread), and
+only <code>stack_direct</code> carries the <em>design-based</em>
+external <span class="math inline">\(T_{\text{MI}}\)</span>. Everything
+in this page follows from that one column — the “Intervals” column is a
+<em>consequence</em> of the “Covariance basis” column, never an
+independent property. The remaining columns are secondary: the “MCMC
+fits” count is a topology fact (Section 5), and the “Blueprint pipeline”
+labels (C-Direct, A, B) are the companion paper’s internal names, given
+here only so a reader of that work can line the two vocabularies up. A4
+§1 prints the same map from the workflow side; this page supplies the
+reason the column that matters is the covariance basis.</p>
+</div>
+<div id="psis-in-stack_psis" class="section level2">
+<h2>2. PSIS in <code>stack_psis</code></h2>
+<p><code>stack_psis</code> is the one method that needs a diagnostic of
+its own, because it does something the other two do not: it makes a
+<strong>single</strong> stacked draw cloud stand in for all <span class="math inline">\(M\)</span> plausible values by
+<em>reweighting</em> it. The reweighting is Pareto-smoothed importance
+sampling (PSIS), and its health is read off a single number with
+published thresholds.</p>
+<p>The mechanism, in one line. To make one cloud represent plausible
+value <span class="math inline">\(m\)</span>, <code>stack_psis</code>
+forms <strong>per-PV importance weights</strong> — how much each draw
+should count when standing in for PV <span class="math inline">\(m\)</span> — and then <strong>smooths the
+tail</strong> of those weights by fitting a <strong>generalized Pareto
+distribution</strong> to the largest of them <span class="citation">(Vehtari et al. 2017, 2024)</span>. Raw importance
+weights have notoriously heavy, unstable tails; the generalized-Pareto
+fit replaces the extreme weights with fitted order statistics, taming
+that instability. The single diagnostic that falls out of the fit is the
+estimated <strong>tail-shape</strong> <span class="math inline">\(\hat
+k\)</span> — the shape parameter of the fitted Pareto tail — and it is
+read against the Vehtari et al. thresholds.</p>
+<p><strong>EQ-PSIS — the PSIS Pareto tail-shape thresholds.</strong>
+Per-PV importance weights are smoothed by a generalized-Pareto fit; the
+tail-shape <span class="math inline">\(\hat k\)</span> is read against
+the Vehtari et al. thresholds:</p>
+<p><span class="math display">\[
+\hat k &lt; 0.5 \ \text{(good)};\qquad 0.5 \le \hat k &lt; 0.7 \
+\text{(borderline)};\qquad \hat k \ge 0.7 \ \text{(unreliable)}.
+\]</span></p>
+<p>Read the tiers as a statement about the <strong>importance-sampling
+step</strong>, and only that step:</p>
+<ul>
+<li><span class="math inline">\(\hat k &lt; 0.5\)</span> —
+<strong>good.</strong> The fitted tail is light enough that the
+importance-sampling estimate has finite variance and converges at the
+usual rate; the reweighting is trustworthy.</li>
+<li><span class="math inline">\(0.5 \le \hat k &lt; 0.7\)</span> —
+<strong>borderline.</strong> The tail is heavy enough that convergence
+slows and the estimate should be treated with caution.</li>
+<li><span class="math inline">\(\hat k \ge 0.7\)</span> —
+<strong>unreliable.</strong> The tail is so heavy that the
+importance-sampling estimate is no longer dependable; the reweighting
+has effectively broken down.</li>
+</ul>
+<p>The thresholds are <em>boundaries between tiers</em>, and they are
+<strong>right-open</strong>: <span class="math inline">\(\hat
+k = 0.5\)</span> is the first borderline value (not the last good one),
+and <span class="math inline">\(\hat k = 0.7\)</span> is the first
+unreliable value. Section 6’s classifier encodes exactly that
+convention. What <span class="math inline">\(\hat k\)</span> tells you
+is whether the <strong>weights are well-behaved</strong> — nothing more.
+The leap from “the weights are well-behaved” to “the resulting variance
+is correct” is precisely the trap Section 4 dismantles.</p>
+</div>
+<div id="why-only-stack_direct-is-coverage-claimable" class="section level2">
+<h2>3. Why only <code>stack_direct</code> is coverage-claimable</h2>
+<p>Now the contract. A coverage claim is the assertion that a method’s
+nominal-95% intervals actually capture the truth about 95% of the time.
+The package licenses that assertion on <strong>one path only</strong>,
+and the reason is provenance, assembled across the whole track.</p>
+<p>The chain is exactly the four pages you have read:</p>
+<ol style="list-style-type: decimal">
+<li><strong>The variance has the right provenance (M2).</strong> The
+interval’s covariance is <span class="math inline">\(T_{\text{MI}}\)</span>, built from the
+<em>design</em> — the BRR–Fay replicate-weight sandwich (EQ-BRRFAY)
+pooled by the Rubin rules (EQ-TMI) — not from the model’s nominal
+posterior. M2 §6 stated the empirical result qualitatively: a correct
+weighted point paired with <em>model-based</em> standard errors can
+<strong>under-cover</strong> severely, and substituting the design-based
+<span class="math inline">\(T_{\text{MI}}\)</span> <strong>restores
+nominal coverage</strong>. Provenance, not arithmetic, is what licenses
+the claim <span class="citation">(Judkins 1990; Rubin 1987)</span>.</li>
+<li><strong>The right point reaches one fit (M3).</strong> The stacked
+fractional bridge means that single fit reports the Rubin mean <span class="math inline">\(\bar\beta\)</span> as its point (EQ-THM22), so the
+calibrated answer is centred where the orthodox <span class="math inline">\(M\)</span>-fit recipe would centre it.</li>
+<li><strong>The right variance reaches that fit (M4).</strong> CCC’s
+affine map (EQ-CCC) forces the stacked draw cloud’s covariance to equal
+that same external <span class="math inline">\(T_{\text{MI}}\)</span>,
+so the one fit <em>reports the external answer in full</em>.</li>
+<li><strong>The degrees of freedom are small-sample correct
+(M2).</strong> A coverage-claimable interval needs the
+<strong>Barnard–Rubin</strong> degrees of freedom <span class="math inline">\(\nu_{\text{BR}}\)</span> (EQ-BARNARD) <span class="citation">(Barnard and Rubin 1999)</span>, not the classic Rubin
+formula — the small-<span class="math inline">\(M\)</span> correction
+the tails of the reference distribution require.</li>
+</ol>
+<p><code>per_pv</code> and <code>stack_psis</code> fail at the very
+first link: their covariance is <strong>model-based</strong>, the
+posterior’s own spread, which never sees the survey’s clustering and
+weighting. However sensible their points, their intervals cannot bear a
+<em>design</em>-coverage claim, so the package marks them
+<strong>descriptive always</strong> — regardless of which degrees of
+freedom they happen to use. This is the H3 rule, and the package
+enforces it through metadata, not trust: the licensing decision lives in
+the <code>coverage_claim_allowed</code> column, which Section 6 reads
+off the fixture.</p>
+<div class="alert alert-warning">
+<p><strong>Coverage is <code>stack_direct</code>-only — and even
+<code>stack_direct</code> is descriptive under classic df.</strong> A
+row is <code>coverage_claim_allowed = TRUE</code> <strong>only</strong>
+when the fit is <code>stack_direct</code> <em>and</em> it was calibrated
+to an external <strong>Barnard–Rubin</strong> BRR–Fay target <span class="citation">(Barnard and Rubin 1999; Rubin 1987; Judkins
+1990)</span>. <code>per_pv</code> and <code>stack_psis</code> are
+<strong>always</strong> descriptive, whatever their df. And a
+<code>stack_direct</code> fit built on <strong>classic</strong> Rubin df
+— like the bundled fixture — is descriptive too, because classic df does
+not deliver the small-sample calibration the claim rests on. The lesson
+A3 §4 stated for practitioners holds here as a rule: <strong>read the
+flag, never infer coverage from the method name.</strong> This fixture
+<em>is</em> <code>stack_direct</code> and is still, honestly,
+descriptive (Section 6).</p>
+</div>
+<p>It is worth being explicit about what does <strong>not</strong>
+confer coverage, because the preceding pages each carried a version of
+this caveat. The stacked point identity (M3) is a <em>point</em>
+statement and says nothing about variance. The CCC moment match (M4) is
+<em>algebraic by construction</em> — it forces the calibrated cloud’s
+mean and covariance to equal the target’s, so its near-perfect agreement
+(the <span class="math inline">\(\sim10^{-14}\)</span> center-separation
+numbers of M4 §6) confirms only that the linear algebra ran cleanly,
+<strong>not</strong> that the intervals cover. Coverage comes from the
+<em>provenance</em> of <span class="math inline">\(T_{\text{MI}}\)</span> and the companion paper’s
+simulation oracle, never from a clean diagnostic. M5 collects those
+caveats into a single contract: coverage is licensed by the whole
+design-based chain, certified by the flag.</p>
+</div>
+<div id="caution-small-hat-k-correct-stack_psis-variance" class="section level2">
+<h2>4. Caution — small <span class="math inline">\(\hat k\)</span> ≠
+correct <code>stack_psis</code> variance</h2>
+<p>The most dangerous misreading in this track concerns
+<code>stack_psis</code>, and it is dangerous precisely because the
+diagnostic that looks reassuring is reassuring about the <em>wrong
+thing</em>. This is the H4 caution, and it has two parts.</p>
+<p><strong>A small <span class="math inline">\(\hat k\)</span> certifies
+the weights, not the variance.</strong> Section 2 was careful: <span class="math inline">\(\hat k\)</span> diagnoses the
+<strong>importance-sampling step</strong> — a small <span class="math inline">\(\hat k\)</span> says the weights are well-behaved
+and the reweighting is stable. It says <strong>nothing</strong> about
+whether the resulting <strong>between-imputation variance</strong> is
+right. The reason is structural. <code>stack_psis</code> reweights
+<strong>one</strong> stacked draw cloud to stand in for all <span class="math inline">\(M\)</span> plausible values, so the per-PV
+“imputations” are all drawn from the <em>same</em> cloud and are
+therefore <strong>correlated</strong>. But Rubin’s between-imputation
+covariance <span class="math inline">\(B\)</span> (EQ-TMI) assumes the
+imputations are <strong>independent</strong>; correlated ones make <span class="math inline">\(B\)</span> shrink, and a shrunk <span class="math inline">\(B\)</span> shrinks the pooled total <span class="math inline">\(T_{\text{MI}} = \bar U +
+(1+1/M)B\)</span>. The <code>stack_psis</code> interval can therefore
+run <strong>narrow even when <span class="math inline">\(\hat k\)</span>
+is small</strong> — the importance sampling is stable, and the variance
+is still wrong. A green <span class="math inline">\(\hat k\)</span> is
+<strong>necessary but not sufficient</strong> for a trustworthy
+interval.</p>
+<p><strong>And <span class="math inline">\(\hat k\)</span> is
+specification-dependent.</strong> The diagnostic is not a fixed property
+of the method; it depends on the model you actually fit. It can sit
+comfortably in the <em>good</em> tier on a simplified, low-dimensional
+model and climb into the <em>unreliable</em> tier on a full production
+specification — the regime where PSIS is formally broken. A green <span class="math inline">\(\hat k\)</span> on a toy model is no guarantee of
+a green <span class="math inline">\(\hat k\)</span> on the model you
+report.</p>
+<div class="alert alert-warning">
+<p><strong>Small Pareto-<span class="math inline">\(\hat k\)</span> ≠
+correct <code>stack_psis</code> variance; and <span class="math inline">\(\hat k\)</span> is
+specification-dependent.</strong> Two distinct failures: (i) the
+correlated-imputation narrowing above means a stable importance-sampling
+step can sit on top of a <em>too small</em> between-imputation variance;
+and (ii) the tail-shape itself is <strong>not</strong> a stable number —
+it is small in the simplified two-covariate reading demo but climbs
+<strong>above 1</strong> in the full paper specification, where Pipeline
+B is unreliable. Both behaviours are described
+<strong>qualitatively</strong> in the <strong>companion methods paper
+(in preparation)</strong>; the package hard-codes <strong>no</strong>
+<span class="math inline">\(\hat k\)</span> value as a fact (the <span class="math inline">\(\hat k\)</span> values in Section 6’s classifier
+are an <em>illustration of the thresholds</em>, exactly as A4 §6 treats
+its injected <code>pareto_k = 0.2</code>). The standing instruction
+follows: <strong>treat <code>stack_psis</code> as a cross-check, never
+the deliverable</strong> <span class="citation">(Vehtari et al. 2017,
+2024)</span>.</p>
+</div>
+<p>This is why the rule of thumb is unambiguous (A4 §7): report
+<code>stack_direct</code>, keep <code>stack_psis</code> as a one-fit
+cross-check while watching <span class="math inline">\(\hat k\)</span> —
+and <em>not trusting a small <span class="math inline">\(\hat k\)</span>
+alone</em> — and use <code>per_pv</code> as the orthodox reference for
+the point.</p>
+</div>
+<div id="the-costbenefit-m-fits-1" class="section level2">
+<h2>5. The cost/benefit — <code>M</code> fits → 1</h2>
+<p>The map’s “MCMC fits” column records a genuine difference between the
+methods, and it is worth reading correctly because it is the one column
+most easily misread as a performance claim. It is <strong>not</strong>
+one.</p>
+<p>The orthodox <code>per_pv</code> path fits the model <strong><span class="math inline">\(M\)</span> separate times</strong> — once per
+plausible value — and pools afterward. The two stacked methods fit the
+model <strong>once</strong>, on the <span class="math inline">\(N\cdot
+M\)</span> stacked rows with the <span class="math inline">\(1/M\)</span> row weighting M3 derived
+(<code>stack_psis</code> adds the PSIS reweighting on top of that single
+fit). For PISA reading, where <span class="math inline">\(M =
+10\)</span> <span class="citation">(OECD 2024)</span>, that is the
+contrast between <strong>ten</strong> model fits and
+<strong>one</strong> — “10 fits → 1”.</p>
+<div class="alert alert-warning">
+<p><strong>“<span class="math inline">\(M\)</span> fits → 1” is
+topology, not speed.</strong> The fit count describes the <strong>shape
+of the computation</strong> — how many model fits a method’s
+architecture requires — not a benchmarked runtime. “One stacked fit
+instead of <span class="math inline">\(M\)</span>” is an
+<strong>architecture / topology</strong> statement; the “10 fits → 1”
+figure is the <span class="math inline">\(M = 10\)</span> count for PISA
+reading <span class="citation">(OECD 2024)</span>, <strong>not</strong>
+a claim that the stacked path is faster. v0.1 reports no timings and
+makes <strong>no</strong> efficiency or “faster” claim (the H5
+guardrail; A4 §7’s honesty triad). The single stacked fit can be larger
+and slower per fit than one per-PV fit — it carries <span class="math inline">\(M\)</span> times the rows — so the count is
+genuinely a statement about <em>number of fits</em>, not wall-clock
+time.</p>
+</div>
+<p>The benefit, then, is <em>not</em> “it runs faster.” It is that the
+stacked architecture collapses the multiple-imputation point recovery
+(M3) and the variance calibration (M4) into a <strong>single</strong>
+object that can be calibrated to the external target and licensed for
+coverage — the algebraic-equivalence headline the package may honestly
+claim (facts §5), stated as an identity under stated conditions and
+<em>never</em> as a speedup.</p>
+</div>
+<div id="verify-in-code" class="section level2">
+<h2>6. Verify in code</h2>
+<p>Two read-only panels close the page: a pure base-R classifier that
+encodes the EQ-PSIS thresholds, and a flag read that confirms the
+coverage contract on the fixture. Neither estimates anything.</p>
+<p><strong>Panel 1 — the EQ-PSIS classifier.</strong> This is the
+threshold logic of Section 2 in one base-R function. The
+<code>right = FALSE</code> argument is what makes the tier boundaries
+<strong>right-open</strong>, so <span class="math inline">\(\hat k =
+0.5\)</span> lands in <em>borderline</em> and <span class="math inline">\(\hat k = 0.7\)</span> in <em>unreliable</em>,
+matching EQ-PSIS exactly:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="do">## PSIS Pareto-k threshold classification (EQ-PSIS), pure base-R</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>classify_k <span class="ot">&lt;-</span> <span class="cf">function</span>(k) {</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="fu">cut</span>(k, <span class="at">breaks =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="cn">Inf</span>, <span class="fl">0.5</span>, <span class="fl">0.7</span>, <span class="cn">Inf</span>),</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">&quot;good&quot;</span>, <span class="st">&quot;borderline&quot;</span>, <span class="st">&quot;unreliable&quot;</span>), <span class="at">right =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>}</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="at">k       =</span> <span class="fu">c</span>(<span class="fl">0.04</span>, <span class="fl">0.20</span>, <span class="fl">0.49</span>, <span class="fl">0.50</span>, <span class="fl">0.69</span>, <span class="fl">0.70</span>),</span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>  <span class="at">verdict =</span> <span class="fu">classify_k</span>(<span class="fu">c</span>(<span class="fl">0.04</span>, <span class="fl">0.20</span>, <span class="fl">0.49</span>, <span class="fl">0.50</span>, <span class="fl">0.69</span>, <span class="fl">0.70</span>))</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>)</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="right">k</th>
+<th align="left">verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">0.04</td>
+<td align="left">good</td>
+</tr>
+<tr class="even">
+<td align="right">0.20</td>
+<td align="left">good</td>
+</tr>
+<tr class="odd">
+<td align="right">0.49</td>
+<td align="left">good</td>
+</tr>
+<tr class="even">
+<td align="right">0.50</td>
+<td align="left">borderline</td>
+</tr>
+<tr class="odd">
+<td align="right">0.69</td>
+<td align="left">borderline</td>
+</tr>
+<tr class="even">
+<td align="right">0.70</td>
+<td align="left">unreliable</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The verdicts are good / good / good / borderline / borderline /
+unreliable: the three values below <span class="math inline">\(0.5\)</span> are good, <span class="math inline">\(0.50\)</span> and <span class="math inline">\(0.69\)</span> are borderline, and <span class="math inline">\(0.70\)</span> is unreliable. The boundary cases
+(<span class="math inline">\(0.50\)</span>, <span class="math inline">\(0.70\)</span>) fall into the <em>higher-risk</em>
+tier, which is the conservative reading EQ-PSIS intends.</p>
+<div class="alert alert-warning">
+<p><strong>These <span class="math inline">\(\hat k\)</span> values are
+an illustration of the thresholds, not package-measured facts.</strong>
+The numbers above are hand-chosen to exercise each tier boundary of
+EQ-PSIS — they are <em>not</em> read from any fit, and the package
+hard-codes no <span class="math inline">\(\hat k\)</span> as a result
+(H4; facts §7). This is the same posture A4 §6 takes with its injected
+<code>pareto_k = 0.2</code>: a value supplied to demonstrate the
+<em>machinery</em>, never asserted as a measurement. On a real
+<code>stack_psis</code> fit you would read the realized
+<code>pareto_k_max</code> off the comparison diagnostics (A4 §4) and
+classify <em>that</em> — and, per Section 4, you would still not trust a
+small value on its own.</p>
+</div>
+<p><strong>Panel 2 — read the coverage flag, not the method
+name.</strong> The fixture is a <code>stack_direct</code> fit, yet the
+licensing decision is recorded in the estimate table’s metadata, and it
+is <code>FALSE</code>. We read the flag directly (this is the H3 rule
+made concrete, mirroring A3 §4):</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>est <span class="ot">&lt;-</span> <span class="fu">get_estimates</span>(fit)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">unique</span>(est<span class="sc">$</span>interval_role)            <span class="co"># &quot;descriptive_classic_rubin&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;descriptive_classic_rubin&quot;</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">unique</span>(est<span class="sc">$</span>coverage_claim_allowed)   <span class="co"># FALSE -- even though method == &quot;stack_direct&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;interval_role&quot;</span>, <span class="st">&quot;df_method&quot;</span>, <span class="st">&quot;coverage_claim_allowed&quot;</span>)]</span></code></pre></div>
+<div class="kable-table">
+<table>
+<colgroup>
+<col width="16%" />
+<col width="36%" />
+<col width="14%" />
+<col width="32%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="left">interval_role</th>
+<th align="left">df_method</th>
+<th align="left">coverage_claim_allowed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="left">FALSE</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Every row reads
+<code>interval_role == &quot;descriptive_classic_rubin&quot;</code>,
+<code>df_method == &quot;classic&quot;</code>, and
+<code>coverage_claim_allowed == FALSE</code> — across all three
+fixed-effect terms. This is the contract of Section 3 made visible: the
+fit <em>is</em> <code>stack_direct</code> (the default,
+coverage-<em>capable</em> method), but because it carries
+<strong>classic</strong> Rubin df rather than the Barnard–Rubin
+correction, it is descriptive, and the flag says so. Read the column,
+never the method name.</p>
+<p>For the <strong>full three-method comparison</strong> — building a
+<code>per_pv</code> reference and a <code>stack_psis</code> cross-check
+from injected draws, aligning all three with
+<code>pv_compare_methods()</code>, and reading
+<code>interval_role</code> / <code>coverage_claim_allowed</code> /
+<code>pareto_k_max</code> per method — see <strong>A4 §3–§6</strong>,
+which already does exactly that on the light path. This page
+deliberately does <strong>not</strong> rebuild it: M5 states the
+coverage <em>rules</em>; A4 runs the worked comparison.</p>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>7. Where to next</h2>
+<p>You now hold the coverage contract in full — the three-method map
+whose discriminator is the <strong>covariance basis</strong> (Section
+1), the PSIS tail-shape thresholds that diagnose <code>stack_psis</code>
+(EQ-PSIS), the provenance chain that makes <strong>only</strong>
+<code>stack_direct</code> coverage-claimable (Section 3), the trap that
+a small <span class="math inline">\(\hat
+k\)</span> is necessary but not sufficient and is
+specification-dependent (Section 4), and the topology — not speed —
+reading of “<span class="math inline">\(M\)</span> fits → 1” (Section
+5). That contract is the capstone the whole Method track was built
+toward: M2’s target, M3’s point, and M4’s calibration converge here into
+the single flag the package reports.</p>
+<p><strong>The Method track is complete.</strong> From here the natural
+move is back to the Applied track, where these rules are put to
+work:</p>
+<ul>
+<li><strong>A4 · Comparing methods</strong> — the worked three-method
+comparison this page states the rules for:
+<code>pv_compare_methods()</code> on the light path, the agreement
+diagnostics, and the two cautions (design variance is not optional;
+small Pareto-<span class="math inline">\(\hat k\)</span> is not enough),
+with its proofs forwarded to this page and to M3.</li>
+<li><strong>A5 · Real PISA data guidance</strong> — pointing the same
+workflow at a genuine PISA cycle: licensing and non-affiliation, the
+design declaration, the <span class="math inline">\(M(R+1)\)</span>
+replicate-fit footprint, and the reproducibility checklist — the place
+the <span class="math inline">\(M = 10\)</span> scale behind “10 fits →
+1” becomes a real job to size.</li>
+</ul>
+<p>To see the licensing flag itself from the reporting side — the
+<code>interval_role</code>, <code>coverage_claim_allowed</code>,
+<code>df_method</code>, and <code>df_complete</code> columns, and the
+rule to read the flag rather than the method name — return to <strong>A3
+· Reading results</strong> (§4).</p>
+<p>And for the provenance behind the contract: <strong>M2 · The BRR–Fay
+fixed-effect target</strong> (the design-based <span class="math inline">\(T_{\text{MI}}\)</span> and the Barnard–Rubin df
+that license coverage), <strong>M3 · The stacked fractional
+bridge</strong> (the point identity), and <strong>M4 · CCC: Cholesky
+Calibration Correction</strong> (the variance match that is <em>not</em>
+the source of coverage).</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-barnard1999small" class="csl-entry">
+Barnard, John, and Donald B. Rubin. 1999. <span>“Small-Sample Degrees of
+Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
+948–55. <a href="https://doi.org/10.1093/biomet/86.4.948">https://doi.org/10.1093/biomet/86.4.948</a>.
+</div>
+<div id="ref-judkins1990fay" class="csl-entry">
+Judkins, David R. 1990. <span>“Fay’s Method for Variance
+Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
+223–39.
+</div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. OECD Publishing.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+<div id="ref-vehtari2017practical" class="csl-entry">
+Vehtari, Aki, Andrew Gelman, and Jonah Gabry. 2017. <span>“Practical
+<span>Bayesian</span> Model Evaluation Using Leave-One-Out
+Cross-Validation and <span>WAIC</span>.”</span> <em>Statistics and
+Computing</em> 27 (5): 1413–32. <a href="https://doi.org/10.1007/s11222-016-9696-4">https://doi.org/10.1007/s11222-016-9696-4</a>.
+</div>
+<div id="ref-vehtari2024pareto" class="csl-entry">
+Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah
+Gabry. 2024. <span>“Pareto Smoothed Importance Sampling.”</span>
+<em>Journal of Machine Learning Research</em> 25 (72): 1–58.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

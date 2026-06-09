@@ -1,0 +1,32 @@
+Package: pvstackr
+Title: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values
+Version: 0.1.0
+Authors@R:
+    person("JoonHo", "Lee", , "jlee296@ua.edu", role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0009-0006-4019-8703"))
+Description: Provides tools for Bayesian-backend fixed-effect calibration and
+    reporting with plausible-value survey data. The package supports
+    one-stacked-fit workflows for Bayesian backends while assembling external
+    Rubin/BRR-Fay fixed-effect targets and calibrating fixed-effect draws to
+    those targets.
+License: MIT + file LICENSE
+URL: https://joonho112.github.io/pvstackr/,
+    https://github.com/joonho112/pvstackr
+BugReports: https://github.com/joonho112/pvstackr/issues
+Encoding: UTF-8
+Language: en-US
+Roxygen: list(markdown = TRUE)
+Depends:
+    R (>= 4.3.0)
+Suggests:
+    knitr,
+    rmarkdown,
+    survey,
+    testthat (>= 3.0.0)
+SystemRequirements: Optional CmdStan and a C++ toolchain for live cmdstanr/brms
+    workflows; sufficient memory for real PISA-scale data. These are not
+    required for installation, loading, examples, or default tests.
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/testthat/parallel: false
+Config/roxygen2/version: 8.0.0

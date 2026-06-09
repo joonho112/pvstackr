@@ -1,0 +1,170 @@
+guidance_pkg_root <- function() {
+  normalizePath(file.path(testthat::test_path(), "..", ".."), mustWork = TRUE)
+}
+
+skip_if_no_guidance_source <- function() {
+  skip_if_not(
+    file.exists(file.path(guidance_pkg_root(), "DESCRIPTION")),
+    "real-data guidance checks run only from package source"
+  )
+}
+
+# The real-data guidance now lives in the Applied track as
+# `a5-real-pisa-guidance.Rmd` (renamed from the former `real-pisa-guidance.Rmd`
+# in the documentation overhaul; see log/056).
+guidance_path <- function() {
+  file.path(guidance_pkg_root(), "vignettes", "a5-real-pisa-guidance.Rmd")
+}
+
+test_that("real PISA guidance records licensing and scope boundaries", {
+  skip_if_no_guidance_source()
+  path <- guidance_path()
+  expect_true(file.exists(path))
+
+  guidance <- paste(readLines(path, warn = FALSE), collapse = "\n")
+
+  # Scope and non-affiliation.
+  expect_match(guidance, "does not ship real PISA records", fixed = TRUE)
+  expect_match(guidance, "synthetic", fixed = TRUE)
+  expect_match(guidance, "not affiliated with or endorsed by OECD/PISA", fixed = TRUE)
+
+  # Access and licensing.
+  expect_match(guidance, "authorized source", fixed = TRUE)
+  expect_match(guidance, "license, citation, redistribution, and privacy terms", fixed = TRUE)
+  expect_match(guidance, "MIT license for `pvstackr` does not license users' real PISA data", fixed = TRUE)
+  expect_match(guidance, "commit real PISA microdata", fixed = TRUE)
+  expect_match(guidance, "PISA_DATA_DIR", fixed = TRUE)
+  expect_match(guidance, "SPSS, SAS, transport, or converted local", fixed = TRUE)
+
+  # Method scope and the reportable / coverage rules.
+  expect_match(guidance, "fixed-effect-only", fixed = TRUE)
+  expect_match(guidance, "not accepted by the v0.1 BRR-Fay target engine", fixed = TRUE)
+  expect_match(guidance, "control$center = \"target\"", fixed = TRUE)
+  expect_match(guidance, "center-separation agreement", fixed = TRUE)
+  expect_match(guidance, "diagnostic/exploratory only", fixed = TRUE)
+  expect_match(guidance, "coverage_claim_allowed", fixed = TRUE)
+
+  # Memory / runtime footprint facts.
+  expect_match(guidance, "N * M", fixed = TRUE)
+  expect_match(guidance, "M * (R + 1)", fixed = TRUE)
+  expect_match(guidance, "M = 10", fixed = TRUE)
+  expect_match(guidance, "R = 80", fixed = TRUE)
+  expect_match(guidance, "810", fixed = TRUE)
+  expect_match(guidance, "return_draws = FALSE", fixed = TRUE)
+
+  # Design declaration and the reproducibility checklist.
+  expect_match(guidance, "PV1MATH", fixed = TRUE)
+  expect_match(guidance, "pv_suffix = \"MATH\"", fixed = TRUE)
+  expect_match(guidance, "Reproducibility checklist", fixed = TRUE)
+
+  # No overclaims.
+  expect_false(grepl("replicates PISA results", guidance, fixed = TRUE))
+  expect_false(grepl("real PISA benchmark", guidance, fixed = TRUE))
+})
+
+test_that("real PISA guidance does not equate package per_pv SEs with stack_direct", {
+  skip_if_no_guidance_source()
+
+  guidance <- paste(readLines(guidance_path(), warn = FALSE), collapse = "\n")
+  facts_path <- file.path(guidance_pkg_root(), "dev", "facts-and-notation.md")
+  facts <- if (file.exists(facts_path)) {
+    paste(readLines(facts_path, warn = FALSE), collapse = "\n")
+  } else {
+    ""
+  }
+  text <- gsub("[[:space:]]+", " ", paste(guidance, facts, sep = "\n"))
+
+  bad_patterns <- c(
+    "`stack_direct`[^.]{0,240}`per_pv`[^.]{0,240}(standard error|SE)[^.]{0,160}(machine precision|precision)",
+    "`per_pv`[^.]{0,240}`stack_direct`[^.]{0,240}(standard error|SE)[^.]{0,160}(machine precision|precision)",
+    "point estimate and standard error agreeing to about machine precision",
+    "point \\+ SE agreement to ~?machine precision",
+    "reproduces the `per_pv` Rubin-pooled"
+  )
+  for (pattern in bad_patterns) {
+    expect_false(grepl(pattern, text, perl = TRUE, ignore.case = TRUE))
+  }
+
+  expect_true(grepl("orthodox per-PV[^.]{0,180}(Rubin|design)", text, perl = TRUE))
+  expect_true(grepl("package'?s `per_pv`[^.]{0,180}(model-based|descriptive)", text, perl = TRUE))
+})
+
+test_that("real PISA guidance keeps real-data chunks non-evaluated", {
+  skip_if_no_guidance_source()
+  guidance <- paste(readLines(guidance_path(), warn = FALSE), collapse = "\n")
+
+  # The setup chunk disables evaluation globally; the illustrative real-PISA
+  # chunks therefore never run (the package ships no real PISA data).
+  expect_match(guidance, "eval      = FALSE", fixed = TRUE)
+
+  # No real-data-bearing chunk is individually re-enabled with eval = TRUE.
+  # (Only the closing session-info chunk carries eval = TRUE.)
+  expect_false(
+    grepl(
+      "\\{r (data-dir|read-extract|design|target|fit|repro-record)[^}]*eval = TRUE",
+      guidance,
+      perl = TRUE
+    )
+  )
+
+  # No real-data artefacts committed alongside the guidance.
+  expect_false(file.exists(file.path(guidance_pkg_root(), "pisa")))
+  expect_false(file.exists(file.path(guidance_pkg_root(), "data-cache")))
+})
+
+# The prebuilt vignette artifact in inst/doc is a build product (regenerated by
+# R CMD build at the release phase), not a committed source file in the docs
+# overhaul, so this check is render-gated like the live-render check below.
+test_that("prebuilt real PISA guidance vignette artifact is present", {
+  skip_if_no_guidance_source()
+  skip_if_not(
+    identical(Sys.getenv("PVSTACKR_RUN_RENDER_TESTS"), "true"),
+    "inst/doc artifacts are build products; set PVSTACKR_RUN_RENDER_TESTS=true"
+  )
+  html_path <- file.path(guidance_pkg_root(), "inst", "doc", "a5-real-pisa-guidance.html")
+  r_path <- file.path(guidance_pkg_root(), "inst", "doc", "a5-real-pisa-guidance.R")
+  expect_true(file.exists(html_path))
+  expect_true(file.exists(r_path))
+  html <- paste(readLines(html_path, warn = FALSE), collapse = "\n")
+  expect_match(html, "Real PISA data", fixed = TRUE)
+  expect_match(html, "Data access and licensing", fixed = TRUE)
+})
+
+test_that("real PISA guidance vignette renders without real PISA data", {
+  skip_if_no_guidance_source()
+  skip_if_not(
+    identical(Sys.getenv("PVSTACKR_RUN_RENDER_TESTS"), "true"),
+    "render checks are dev-only; set PVSTACKR_RUN_RENDER_TESTS=true"
+  )
+  testthat::skip_if_not_installed("rmarkdown")
+
+  out_dir <- tempfile("pvstackr-a5-real-pisa-guidance-")
+  dir.create(out_dir)
+  on.exit(unlink(out_dir, recursive = TRUE), add = TRUE)
+
+  rendered <- rmarkdown::render(
+    input = guidance_path(),
+    output_file = "a5-real-pisa-guidance.html",
+    output_dir = out_dir,
+    quiet = TRUE,
+    envir = new.env(parent = globalenv())
+  )
+  expect_true(file.exists(rendered))
+  html <- paste(readLines(rendered, warn = FALSE), collapse = "\n")
+  expect_match(html, "Data access and licensing", fixed = TRUE)
+  expect_match(html, "Memory and runtime", fixed = TRUE)
+  expect_match(html, "Reproducibility checklist", fixed = TRUE)
+})
+
+test_that("build hygiene blocks common real-data formats and PISA folders", {
+  skip_if_no_guidance_source()
+  skip_if_not(
+    file.exists(file.path(guidance_pkg_root(), "dev", "check-build-hygiene.R")),
+    "dev/ tooling is not present in this tree (installed or public checkout)"
+  )
+  script <- paste(readLines(file.path(guidance_pkg_root(), "dev", "check-build-hygiene.R"), warn = FALSE), collapse = "\n")
+  expect_match(script, "[Pp][Ii][Ss][Aa]", fixed = TRUE)
+  for (extension in c("sav", "por", "sas7bdat", "sas7bcat", "xpt", "dta", "duckdb", "db")) {
+    expect_match(script, extension, fixed = TRUE)
+  }
+})

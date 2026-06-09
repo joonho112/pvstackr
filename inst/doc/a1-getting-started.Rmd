@@ -1,0 +1,335 @@
+---
+title: "A1: Getting started — your first calibrated plausible-value fit"
+author: "JoonHo Lee"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+abstract: >
+  The fastest path into pvstackr. In a few lines you install the package, see the
+  single `pv_fit(method = "stack_direct")` call shape, load the bundled cached
+  fixture fit, and read it three ways: the console `print()` box, the tidy
+  `get_estimates()` table, and one figure. You leave knowing what a calibrated
+  fixed-effect fit needs, how to read its intervals honestly, and where the full
+  end-to-end workflow lives next.
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    df_print: kable
+vignette: >
+  %\VignetteIndexEntry{A1: Getting started — your first calibrated plausible-value fit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+bibliography: references.bib
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out.width = "85%")
+```
+
+```{r library}
+library(pvstackr)
+```
+
+## 1. Why you are here
+
+Large-scale assessments such as PISA do not report a single test score per
+student. Because proficiency is a latent trait that is never observed directly,
+the score is published as a set of *plausible values* (PVs): $M$ draws from each
+student's posterior proficiency distribution [@mislevy1991randomization;
+@vondavier2009plausible]. To honour the uncertainty those draws encode, an analysis must
+fit the model once per PV and combine the $M$ results with multiple-imputation
+(MI) rules [@rubin1987multiple]. The common shortcut — fit one model to `PV1` and
+stop — silently discards the between-imputation variance and reports intervals
+that are too narrow.
+
+**pvstackr** gives you an honest fixed-effect fit without that shortcut and
+without the bookkeeping. Its default method, `stack_direct`, produces a
+fixed-effect report from **one** stacked model fit that is calibrated to an
+external Rubin / BRR–Fay target. The stacked fit supplies the model-side draw
+cloud and agreement diagnostics; the reportable fixed-effect estimate and
+standard error come from the external target. Intervals are coverage-claimable
+only on the external design-based BRR-Fay / Barnard-Rubin path; otherwise the
+metadata marks them descriptive.
+
+Two scope notes, stated up front so nothing later surprises you:
+
+- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect block
+  $\beta_{\text{FE}}$ (intercept and slopes). Variance components are estimated
+  but **not** calibrated, and are not part of the reportable output.
+- **"One fit" is an architecture statement, not a speed claim.** It describes the
+  *topology* of the method (one stacked fit instead of $M$ separate ones); this
+  vignette makes no benchmarked timing claims.
+
+The road map for this article: install → the one call → load a cached fit →
+read it three ways → read the intervals honestly → where to go next.
+
+## 2. What you will leave with
+
+After this vignette you will be able to:
+
+- recognise the single canonical `pv_fit(method = "stack_direct")` call and name
+  the pieces it needs (an external target and a model backend);
+- load the bundled cached fixture fit and read it three ways — the console
+  `print()` box, the tidy `get_estimates()` table, and one coefficient figure;
+- tell at a glance, from the estimate table itself, whether a row's interval is
+  **coverage-claimable** or merely **descriptive**, and say why;
+- know exactly which companion vignette to open for the full workflow, the
+  accessor tour, method comparison, real PISA data, and the underlying method.
+
+This article runs in **seconds** because it never fits a model: it loads a
+precomputed fit object and reads off it. There is no live MCMC anywhere below.
+
+## 3. Install and load
+
+Once the package is on CRAN:
+
+```{r install-cran, eval = FALSE}
+# install.packages("pvstackr")
+```
+
+Until then, install the development version from GitHub:
+
+```{r install-dev, eval = FALSE}
+# install.packages("pak")
+pak::pak("joonho112/pvstackr")
+```
+
+The one line to remember — already run in the setup above — is:
+
+```{r load-again, eval = FALSE}
+library(pvstackr)
+```
+
+Reading a cached fit (everything in this vignette) needs **no** modelling
+backend and no extra dependencies. A *live* fit on your own data additionally
+needs a fitting engine; that is the subject of vignette A2.
+
+## 4. The one call (conceptual)
+
+Every pvstackr analysis funnels through a single dispatcher, `pv_fit()`. Its
+canonical `stack_direct` form looks like this. The chunk is **not run** here —
+it only shows the *shape* of the call, since a real fit needs an external target
+and a backend that this article does not assemble:
+
+```{r the-one-call, eval = FALSE}
+fit <- pv_fit(
+  data          = your_data,
+  formula       = OUTCOME ~ x + female,           # OUTCOME is a placeholder
+  target        = your_target,                    # from pv_brr_target()
+  method        = "stack_direct",
+  control       = pv_control(method = "stack_direct"),
+  fit_function  = your_fit_function,              # the modelling backend
+  draws_function = your_draws_function            # optional posterior draws
+)
+```
+
+A few words on the pieces:
+
+- **`OUTCOME` is a placeholder.** Internally pvstackr substitutes it with each
+  plausible-value column in turn (`PV1READ`, `PV2READ`, …) so you write the model
+  once, not $M$ times.
+- **`target =`** supplies the external Rubin / BRR–Fay variance target built by
+  `pv_brr_target()`. `stack_direct` intervals are coverage-claimable only when
+  backed by an external design-based BRR-Fay target with Barnard-Rubin degrees of
+  freedom; without that coverage path the fit falls back to descriptive
+  intervals.
+- **`fit_function =`** is the modelling backend that actually estimates the
+  stacked model.
+
+Assembling the target and a backend end to end is the job of **vignette A2 (the
+end-to-end workflow)**. Here we skip straight to a fit that has already been run
+for you.
+
+## 5. Load the cached fixture fit
+
+The package ships a small synthetic dataset and a cached `stack_direct` fit so
+that every example runs offline and deterministically. Load both:
+
+```{r load-fixture}
+pisa_tiny <- read.csv(
+  system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
+)
+
+fit <- readRDS(
+  system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
+              package = "pvstackr")
+)$fit
+```
+
+The fixture is a deliberately tiny, **synthetic** PISA-shaped table — one
+make-believe country (`CNT == "SYN"`), `r nrow(pisa_tiny)` students nested in a
+handful of schools. It carries one continuous covariate `x`, a binary `female`
+indicator, **two** plausible reading values `PV1READ` / `PV2READ` (so $M = 2$),
+**four** BRR replicate weights `W_FSTURWT1`–`W_FSTURWT4` (so $R = 4$), a final
+weight `W_FSTUWT`, and student / school identifiers:
+
+```{r fixture-peek}
+str(pisa_tiny)
+```
+
+::: {.alert .alert-warning}
+These are **synthetic, illustrative** numbers — included only so examples and
+package checks run without licensed data. They are **not** real PISA results and
+must never be cited as such. Real PISA reading uses $M = 10$ plausible values and
+$R = 80$ replicate weights; here $M = 2$ and $R = 4$ keep the object small. For
+working with genuine PISA files, see vignette A5.
+:::
+
+Everything below simply *reads* the `fit` object. Nothing is re-estimated.
+
+## 6. Read it three ways
+
+### 6.1 The console — `print()`
+
+The quickest look is the result-first `print()` box, which leads with the answer
+and the things you most need to know before trusting it:
+
+```{r print-fit}
+print(fit)
+```
+
+It tells you the method (`stack_direct`), that the fit converged (`status: ok`),
+that there are 3 fixed effects, the target it was calibrated against
+(`external_brr_fay_rubin`), that posterior draws were not retained, which
+diagnostics are attached, and — crucially — an interval note. For this fixture
+the note reads that *intervals are descriptive rather than coverage-claimable*;
+Section 7 explains why, and how to change it.
+
+### 6.2 The tidy table — `get_estimates()`
+
+`get_estimates()` returns the reportable data frame: one row per fixed-effect
+term, with the estimate, its standard error, the confidence interval, and the
+metadata that says how far you may trust that interval. The full table is wide;
+here is the compact view most analyses start from:
+
+```{r get-estimates}
+est <- get_estimates(fit)
+
+est[, c("term", "estimate", "se", "df",
+        "conf_low", "conf_high",
+        "interval_role", "coverage_claim_allowed")]
+```
+
+The three terms are `b_Intercept`, `b_x`, and `b_female`. On this synthetic
+fixture the intercept sits near 458 score points, the slope on `x` near 47
+points per unit, and the `female` coefficient near 2 points (with a wide
+interval — see below). The metadata columns (`interval_role`,
+`coverage_claim_allowed`, and the degrees-of-freedom machinery) are the heart of
+honest reporting; the full column-by-column tour, including the *fraction of
+missing information*, lives in **vignette A3**.
+
+### 6.3 One figure
+
+A dot-and-interval plot makes the slope estimates easy to read at a glance. We
+plot **only the slope coefficients** (`b_x` and `b_female`) and drop the
+intercept, whose scale (~458) would otherwise flatten everything else. A
+reference line at zero marks the no-effect value:
+
+```{r coef-figure, fig.width = 7, fig.height = 3, fig.cap = "Slope coefficients from the cached synthetic stack_direct fit, with 95% descriptive intervals. The intercept is omitted because its scale (~458 score points) would dominate the axis. The dashed line marks zero (no effect). These are illustrative synthetic values, not real PISA estimates.", fig.alt = "A horizontal dot-and-interval plot of two slope coefficients from the synthetic fixture fit. The coefficient on x is about 47 score points with a narrow interval well to the right of zero. The coefficient on female is about 2 score points with a wide interval spanning zero from roughly minus 42 to plus 46. A dashed vertical reference line is drawn at zero."}
+slopes <- est[est$term != "b_Intercept", ]
+slopes <- slopes[order(slopes$term), ]
+
+y    <- seq_len(nrow(slopes))
+xlim <- range(c(slopes$conf_low, slopes$conf_high, 0))
+
+op <- par(mar = c(4.5, 7, 1, 1))
+plot(
+  slopes$estimate, y,
+  xlim = xlim, ylim = c(0.5, nrow(slopes) + 0.5),
+  yaxt = "n", ylab = "",
+  xlab = "Coefficient (synthetic reading-score points)",
+  pch = 19, cex = 1.4, col = "#1f6f9c"
+)
+abline(v = 0, lty = 2, col = "grey50")
+segments(slopes$conf_low, y, slopes$conf_high, y, lwd = 2, col = "#1f6f9c")
+points(slopes$estimate, y, pch = 19, cex = 1.4, col = "#1f6f9c")
+axis(2, at = y, labels = slopes$term, las = 1)
+par(op)
+```
+
+The slope on `x` is clearly separated from zero; the `female` coefficient is
+small and its interval comfortably spans zero — unsurprising in a 12-row
+synthetic toy.
+
+For completeness: this fit retained no posterior draws, so the draw accessor
+returns `NULL`. That is expected for a cached `stack_direct` object and does not
+affect the fixed-effect report:
+
+```{r get-draws}
+get_draws(fit)
+```
+
+## 7. How to read the intervals honestly
+
+pvstackr never hides whether an interval can bear a coverage claim — it records
+the answer in the table so you do not have to remember a rule. Read it directly:
+
+```{r honest-columns}
+est[, c("term", "interval_role", "coverage_claim_allowed")]
+```
+
+For this fixture every row shows `interval_role == "descriptive_classic_rubin"`
+and `coverage_claim_allowed == FALSE`. The intervals are still useful for
+*describing* the spread of the estimate — but they are **not** to be reported as
+calibrated confidence intervals.
+
+**The rule** is simple and is enforced by the metadata, not by trust:
+
+> A row is `coverage_claim_allowed = TRUE` **only** when the fit is
+> `stack_direct` *and* it was calibrated against an external **Barnard–Rubin**
+> BRR–Fay target [@barnard1999small; @rubin1987multiple]. The `per_pv` and
+> `stack_psis` methods are always descriptive. The bundled fixture, although
+> `stack_direct`, uses **classic** Rubin degrees of freedom (`df_method ==
+> "classic"`) rather than the Barnard–Rubin small-sample df, so it stays
+> descriptive by design — a faithful demonstration of the object surface, not a
+> coverage-claimable result.
+
+Two practical consequences are visible in the table above:
+
+- **Read the column, do not assume.** `coverage_claim_allowed` is the single
+  field that licenses (or withholds) a confidence claim for each row. Let it
+  decide.
+- **Tiny $M$ means tiny df means wide intervals.** With only $M = 2$ plausible
+  values, the between-imputation degrees of freedom are near 1, so the
+  $t$-multiplier is enormous and the intervals — most visibly for `b_female`
+  in the figure — are very wide. This is the MI machinery being honest about how
+  little information two imputations carry, not a bug.
+
+One related quantity worth a sentence: the **fraction of missing information**
+(FMI) measures how much of a coefficient's uncertainty comes from imputation
+rather than sampling. It drives the degrees of freedom and is reported alongside
+the estimates; its full treatment — and how it interacts with
+`coverage_claim_allowed` — is in **vignette A3**.
+
+## 8. Where to next
+
+You have loaded a fit and read it honestly. From here:
+
+- **A2 · The end-to-end workflow** — declare the design with `pv_design()`,
+  assemble the target with `pv_brr_target()`, run `pv_fit(method =
+  "stack_direct")`, and report; plus the conceptual live-backend sketch and why
+  reportable fits need `center = "target"`.
+- **A3 · Reading results & what to report** — the full accessor family, every
+  estimate-table column, the interval metadata in depth, the fraction of missing
+  information, and a copy-paste reporting checklist.
+- **A4 · Comparing methods** — `pv_compare_methods()` across `stack_direct`,
+  `per_pv`, and `stack_psis`; agreement diagnostics; and the two cautions
+  (design variance is not optional; a small Pareto-$\hat k$ does not guarantee
+  correct variance).
+- **A5 · Real PISA data guidance** — connecting to genuine PISA files without
+  bundling licensed data: licensing and non-affiliation, the design declaration,
+  memory and runtime, and a reproducibility checklist.
+
+For the mathematics skipped here — the PV survey setting, the notation, and the
+fixed-effect estimand — start the **Method track** with **M1 · Foundations and
+notation**.
+
+Bug reports and feature requests:
+<https://github.com/joonho112/pvstackr/issues>.
+
+### Session info
+
+```{r session-info}
+sessionInfo()
+```
+
+## References

@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="JoonHo Lee" />
+
+<meta name="date" content="2026-06-08" />
+
+<title>A3: Reading results — estimates, intervals, and what to report</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+<style type="text/css">
+p.abstract{
+text-align: center;
+font-weight: bold;
+}
+div.abstract{
+margin: auto;
+width: 90%;
+}
+</style>
+
+
+<style type="text/css">
+
+div.csl-bib-body { }
+div.csl-entry {
+clear: both;
+}
+.hanging div.csl-entry {
+margin-left:2em;
+text-indent:-2em;
+}
+div.csl-left-margin {
+min-width:2em;
+float:left;
+}
+div.csl-right-inline {
+margin-left:2em;
+padding-left:1em;
+}
+div.csl-indent {
+margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">A3: Reading results — estimates, intervals,
+and what to report</h1>
+<h4 class="author">JoonHo Lee</h4>
+<h4 class="date">2026-06-08</h4>
+<div class="abstract">
+<p class="abstract">Abstract</p>
+<p>How to read a fitted object and decide what is safe to report. This
+vignette tours the four stable accessors, walks the reportable estimate
+table, and explains the interval-metadata columns —
+<code>interval_role</code>, <code>coverage_claim_allowed</code>,
+<code>df_method</code>, and <code>df_complete</code> — that mark a row
+as coverage-claimable or descriptive. It covers the fraction of missing
+information and closes with a copy-paste reporting checklist.</p>
+</div>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#setup-load-a-fit-to-read" id="toc-setup-load-a-fit-to-read">1. Setup — load a fit to read</a></li>
+<li><a href="#the-four-accessors" id="toc-the-four-accessors">2. The
+four accessors</a></li>
+<li><a href="#the-estimate-table-tour" id="toc-the-estimate-table-tour">3. The estimate table tour</a></li>
+<li><a href="#interval-metadata-coverage-claimable-vs-descriptive" id="toc-interval-metadata-coverage-claimable-vs-descriptive">4. Interval
+metadata — coverage-claimable vs descriptive</a></li>
+<li><a href="#fraction-of-missing-information-fmi" id="toc-fraction-of-missing-information-fmi">5. Fraction of missing
+information (FMI)</a></li>
+<li><a href="#reading-the-target-and-draws" id="toc-reading-the-target-and-draws">6. Reading the target and
+draws</a>
+<ul>
+<li><a href="#the-target-get_target" id="toc-the-target-get_target">6.1
+The target — <code>get_target()</code></a></li>
+<li><a href="#the-draws-get_draws" id="toc-the-draws-get_draws">6.2 The
+draws — <code>get_draws()</code></a></li>
+<li><a href="#the-diagnostics-get_diagnostics" id="toc-the-diagnostics-get_diagnostics">6.3 The diagnostics —
+<code>get_diagnostics()</code></a></li>
+</ul></li>
+<li><a href="#a-reporting-checklist" id="toc-a-reporting-checklist">7. A
+reporting checklist</a></li>
+<li><a href="#where-to-next" id="toc-where-to-next">8. Where to next</a>
+<ul>
+<li><a href="#session-info" id="toc-session-info">Session info</a></li>
+</ul></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<div id="setup-load-a-fit-to-read" class="section level2">
+<h2>1. Setup — load a fit to read</h2>
+<p>Vignettes A1 and A2 produced a fitted object two ways — A1 loaded the
+cached fixture and read it three ways; A2 built the pipeline that
+creates such a fit (<code>pv_design()</code> →
+<code>pv_brr_target()</code> →
+<code>pv_fit(method = &quot;stack_direct&quot;)</code>). This article does
+neither. It assumes you already have a fit in hand and asks the next
+question: <em>what is in it, and what may you safely report?</em></p>
+<p>We reuse the same bundled, synthetic <code>stack_direct</code> fit so
+everything runs offline and deterministically. We only
+<strong>read</strong> it — nothing below re-estimates anything:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>)<span class="sc">$</span>fit</span></code></pre></div>
+<div class="alert alert-warning">
+<p>This is the same tiny <strong>synthetic</strong> PISA-shaped fixture
+used across the Applied track — one make-believe country, 12 students,
+<span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights. The coefficients
+below are <strong>illustrative</strong>, not real PISA results, and must
+never be cited as such. For genuine PISA files see vignette A5.</p>
+</div>
+</div>
+<div id="the-four-accessors" class="section level2">
+<h2>2. The four accessors</h2>
+<p>Everything you report comes from four stable accessors. Each takes
+the fit and returns one well-defined object; together they cover the
+headline table, the external variance answer, the calibrated draws, and
+the diagnostics.</p>
+<p><strong><code>get_estimates(fit)</code></strong> is the headline. It
+returns the reportable tidy table — one row per fixed-effect term, with
+the estimate, standard error, confidence interval, degrees of freedom,
+and the interval metadata that licenses (or withholds) a coverage claim.
+This is the object you turn into a results table. The full column tour
+is Section 3.</p>
+<p><strong><code>get_target(fit)</code></strong> returns the external
+Rubin / BRR–Fay target object (class <code>pvstackr_brr_target</code>)
+that the fit was calibrated against. It carries the pooled coefficients,
+the total covariance <span class="math inline">\(T_{\text{MI}}\)</span>,
+the degrees of freedom, the fraction of missing information, and a
+content hash. Under the reportable convention
+(<code>center = &quot;target&quot;</code>), the headline estimate and SE in
+<code>get_estimates()</code> <em>are</em> values read off this object —
+see Sections 3 and 6.</p>
+<p><strong><code>get_draws(fit)</code></strong> returns the calibrated
+fixed-effect posterior draws <strong>when they were retained</strong> —
+an <span class="math inline">\(S \times \text{(FE terms)}\)</span>
+matrix — and <code>NULL</code> otherwise. The bundled fit was produced
+with <code>return_draws = FALSE</code> to keep the object small, so it
+returns <code>NULL</code>. That is expected and does not affect the
+fixed-effect report, which is fully determined by the target:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">get_draws</span>(fit)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
+<p><strong><code>get_diagnostics(fit)</code></strong> returns a named
+list of fit diagnostics — <code>preflight</code>,
+<code>stack_fit</code>, <code>stack_fit_warnings</code>, and (for
+<code>stack_direct</code>) the <code>ccc</code> calibration block with
+the center-separation agreement numbers. These tell you whether the
+calibration behaved; you read them to <em>trust</em> the fit, not to
+populate a results table. Section 6 takes a peek; the full treatment is
+in the Method track, <strong>M4</strong>.</p>
+</div>
+<div id="the-estimate-table-tour" class="section level2">
+<h2>3. The estimate table tour</h2>
+<p><code>get_estimates()</code> is the workhorse. Pull the whole table
+once, then look at it in slices:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>est <span class="ot">&lt;-</span> <span class="fu">get_estimates</span>(fit)</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="fu">names</span>(est)</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;term&quot;                   &quot;estimate&quot;               &quot;se&quot;                    </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt;  [4] &quot;std.error&quot;              &quot;df&quot;                     &quot;df_method&quot;             </span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;  [7] &quot;df_complete&quot;            &quot;conf_level&quot;             &quot;conf_low&quot;              </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt; [10] &quot;conf_high&quot;              &quot;conf.low&quot;               &quot;conf.high&quot;             </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; [13] &quot;interval_role&quot;          &quot;coverage_claim_allowed&quot; &quot;parameter_scope&quot;       </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt; [16] &quot;target_source&quot;          &quot;target_hash&quot;</span></span></code></pre></div>
+<p>The table is deliberately wide because it carries both the numbers
+and their <em>provenance</em>. Three things to notice before reading any
+value.</p>
+<p><strong>The three terms.</strong> Rows are <code>b_Intercept</code>,
+<code>b_x</code>, and <code>b_female</code> — the fixed-effect block,
+with the <code>b_</code> prefix marking each as a fixed-effect
+coefficient. There are no variance-component rows: v0.1 calibrates and
+reports <span class="math inline">\(\beta_{\text{FE}}\)</span> only, a
+scope reminder carried over from A1/A2 and confirmed by the
+<code>parameter_scope</code> column below.</p>
+<p><strong>Dual snake_case / broom naming.</strong> Several columns
+appear twice under two spellings: the package-native snake_case
+(<code>se</code>, <code>conf_low</code>, <code>conf_high</code>) and the
+<code>broom</code>-style dotted aliases (<code>std.error</code>,
+<code>conf.low</code>, <code>conf.high</code>). They hold identical
+values — the duplication lets pvstackr tables drop into
+<code>broom</code>/<code>tidy</code> pipelines unchanged while keeping a
+tidy snake_case surface for everything else. Use whichever your
+downstream code expects.</p>
+<p>Here is the compact “what is the estimate” slice most analyses start
+from:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;estimate&quot;</span>, <span class="st">&quot;se&quot;</span>, <span class="st">&quot;df&quot;</span>, <span class="st">&quot;df_method&quot;</span>)]</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="right">estimate</th>
+<th align="right">se</th>
+<th align="right">df</th>
+<th align="left">df_method</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="right">457.894088</td>
+<td align="right">1.2873118</td>
+<td align="right">1.021194</td>
+<td align="left">classic</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="right">46.883361</td>
+<td align="right">0.3717929</td>
+<td align="right">1.402308</td>
+<td align="left">classic</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="right">2.143702</td>
+<td align="right">3.5550309</td>
+<td align="right">1.013730</td>
+<td align="left">classic</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>On this synthetic fixture the intercept sits near 458 score points,
+the slope on <code>x</code> near 47 points per unit, and the
+<code>female</code> coefficient near 2 points with a very wide interval
+(Section 4 explains the width). The <code>df</code> values hover near 1
+because <span class="math inline">\(M = 2\)</span> — there is almost no
+between-imputation information to spend.</p>
+<p><strong>Provenance is in the table, not in your memory.</strong>
+Three columns record where each row came from:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;parameter_scope&quot;</span>, <span class="st">&quot;target_source&quot;</span>, <span class="st">&quot;target_hash&quot;</span>)]</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="left">parameter_scope</th>
+<th align="left">target_source</th>
+<th align="left">target_hash</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="left">fixed_effect</td>
+<td align="left">external_brr_fay_rubin</td>
+<td align="left">4a4d40f8</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="left">fixed_effect</td>
+<td align="left">external_brr_fay_rubin</td>
+<td align="left">4a4d40f8</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="left">fixed_effect</td>
+<td align="left">external_brr_fay_rubin</td>
+<td align="left">4a4d40f8</td>
+</tr>
+</tbody>
+</table>
+</div>
+<ul>
+<li><code>parameter_scope == &quot;fixed_effect&quot;</code> confirms every row is
+in the reportable fixed-effect block.</li>
+<li><code>target_source == &quot;external_brr_fay_rubin&quot;</code> is the seal
+that the variance came from an <strong>external, design-based</strong>
+Rubin / BRR–Fay target — the property that governs coverage (Section
+4).</li>
+<li><code>target_hash</code> is a stable fingerprint of that target
+object. Record it: it lets you (or a reviewer) prove which target
+produced these numbers. The same hash appears on the target object
+itself (Section 6) and underpins the reproducibility checklist in
+A5.</li>
+</ul>
+<p><strong>Where the numbers come from.</strong> Because this fit uses
+the reportable convention <code>center = &quot;target&quot;</code> (see A2 §6),
+the reported <code>estimate</code> and <code>se</code> are
+<em>exactly</em> the external target’s pooled coefficients <span class="math inline">\(\bar\beta\)</span> and <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>.
+The single stacked, CCC-calibrated fit is engineered to <em>report the
+external answer</em> — Section 6 shows the same values living on the
+target object, and verifies they coincide.</p>
+</div>
+<div id="interval-metadata-coverage-claimable-vs-descriptive" class="section level2">
+<h2>4. Interval metadata — coverage-claimable vs descriptive</h2>
+<p>The columns that separate an honest report from an over-claim are the
+interval metadata. Read them as a small block:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;interval_role&quot;</span>, <span class="st">&quot;df_method&quot;</span>,</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>        <span class="st">&quot;df_complete&quot;</span>, <span class="st">&quot;coverage_claim_allowed&quot;</span>)]</span></code></pre></div>
+<div class="kable-table">
+<table>
+<colgroup>
+<col width="14%" />
+<col width="31%" />
+<col width="12%" />
+<col width="14%" />
+<col width="27%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="left">interval_role</th>
+<th align="left">df_method</th>
+<th align="right">df_complete</th>
+<th align="left">coverage_claim_allowed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="right">NA</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="right">NA</td>
+<td align="left">FALSE</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="left">descriptive_classic_rubin</td>
+<td align="left">classic</td>
+<td align="right">NA</td>
+<td align="left">FALSE</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>What each column means:</p>
+<ul>
+<li><strong><code>interval_role</code></strong> names the <em>kind</em>
+of interval. Here every row is <code>descriptive_classic_rubin</code>: a
+Rubin interval built on <strong>classic</strong> degrees of freedom,
+suitable for <em>describing</em> the spread of the estimate but not for
+a calibrated coverage claim.</li>
+<li><strong><code>df_method</code></strong> is how the degrees of
+freedom were computed — <code>&quot;classic&quot;</code> (the plain Rubin formula)
+here, as opposed to the small-sample <strong>Barnard–Rubin</strong>
+adjustment that a coverage-claimable interval requires <span class="citation">(Barnard and Rubin 1999; Rubin 1987)</span>.</li>
+<li><strong><code>df_complete</code></strong> is the complete-data
+(large-sample) degrees of freedom the Barnard–Rubin correction needs. It
+is <code>NA</code> for this fixture precisely because the classic path
+does not use it; a Barnard–Rubin target would supply it.</li>
+<li><strong><code>coverage_claim_allowed</code></strong> is the single
+licensing flag. It is <code>FALSE</code> for every row here.</li>
+</ul>
+<p><strong>The rule</strong> — enforced by the metadata, not by
+trust:</p>
+<blockquote>
+<p>A row is <code>coverage_claim_allowed = TRUE</code>
+<strong>only</strong> when the fit is <code>stack_direct</code>
+<em>and</em> it was calibrated against an external
+<strong>Barnard–Rubin</strong> BRR–Fay target <span class="citation">(Barnard and Rubin 1999; Rubin 1987; Judkins
+1990)</span>. The <code>per_pv</code> and <code>stack_psis</code>
+methods are <strong>always</strong> descriptive, regardless of their df.
+And a <code>stack_direct</code> fit that uses <strong>classic</strong>
+Rubin df — like this bundled fixture — is also descriptive, because
+classic df does not deliver the small-sample calibration the coverage
+claim rests on.</p>
+</blockquote>
+<p>Two practical consequences:</p>
+<ul>
+<li><strong>Read the column, do not infer from the method name.</strong>
+“It’s <code>stack_direct</code>, so it must be coverage-claimable” is
+exactly the mistake the metadata exists to prevent. This fixture
+<em>is</em> <code>stack_direct</code> and is still descriptive. Let
+<code>coverage_claim_allowed</code> decide, every time.</li>
+<li><strong>Coverage comes from provenance, not from the calibration
+diagnostics.</strong> It is tempting to read the near-perfect CCC
+center-separation numbers in Section 6 (agreement to ~<span class="math inline">\(10^{-14}\)</span>) as evidence of coverage. They
+are not. CCC is an affine moment match — it guarantees the calibrated
+draws’ mean and covariance equal the target’s, by construction — but
+that algebraic identity is not a coverage theorem. Coverage is conferred
+by the <strong>provenance</strong> of <span class="math inline">\(T_{\text{MI}}\)</span> (external, design-based,
+Barnard–Rubin) and the supporting simulation evidence, not by how
+cleanly CCC ran. The precise statement is in <strong>M4</strong> (the
+CCC map) and <strong>M5</strong> (why only <code>stack_direct</code> is
+coverage-claimable).</li>
+</ul>
+<p>The bundled fixture is therefore a faithful, deliberately
+<em>descriptive</em> demonstration of the object surface — not a
+coverage-claimable result.</p>
+</div>
+<div id="fraction-of-missing-information-fmi" class="section level2">
+<h2>5. Fraction of missing information (FMI)</h2>
+<p>The <strong>fraction of missing information</strong> (FMI) for a
+coefficient is the share of its total uncertainty that comes from
+imputation (the spread <em>between</em> plausible values) rather than
+from sampling. For coefficient <span class="math inline">\(k\)</span>,</p>
+<p><span class="math display">\[
+\gamma_k \;=\; \frac{\bigl(1 +
+\tfrac1M\bigr)\,B_{kk}}{T_{\text{MI},\,kk}},
+\]</span></p>
+<p>where <span class="math inline">\(B\)</span> is the
+between-imputation covariance and <span class="math inline">\(T_{\text{MI}}\)</span> the total target covariance
+from the Rubin combining rules <span class="citation">(Rubin
+1987)</span>. FMI is what drives the degrees of freedom — high FMI means
+little information per coefficient, hence small df and wide
+intervals.</p>
+<p>FMI lives on the <strong>target object</strong>, not in the
+<code>get_estimates()</code> table — it is a property of the variance
+target, so you read it from <code>get_target()</code>. Alongside it the
+target reports the relative increase in variance (<code>riv</code>) and
+the degrees of freedom that FMI drives:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>tg <span class="ot">&lt;-</span> <span class="fu">get_target</span>(fit)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="fu">data.frame</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">term =</span> tg<span class="sc">$</span>fe_names,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="at">fmi  =</span> <span class="fu">round</span>(<span class="fu">as.numeric</span>(tg<span class="sc">$</span>fmi), <span class="dv">3</span>),</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="at">riv  =</span> <span class="fu">round</span>(<span class="fu">as.numeric</span>(tg<span class="sc">$</span>riv), <span class="dv">2</span>),</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="at">df   =</span> <span class="fu">round</span>(<span class="fu">as.numeric</span>(tg<span class="sc">$</span>df),  <span class="dv">2</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>)</span></code></pre></div>
+<div class="kable-table">
+<table>
+<thead>
+<tr class="header">
+<th align="left">term</th>
+<th align="right">fmi</th>
+<th align="right">riv</th>
+<th align="right">df</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">b_Intercept</td>
+<td align="right">0.990</td>
+<td align="right">94.86</td>
+<td align="right">1.02</td>
+</tr>
+<tr class="even">
+<td align="left">b_x</td>
+<td align="right">0.844</td>
+<td align="right">5.43</td>
+<td align="right">1.40</td>
+</tr>
+<tr class="odd">
+<td align="left">b_female</td>
+<td align="right">0.993</td>
+<td align="right">146.17</td>
+<td align="right">1.01</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>These FMI values are very high — roughly 0.84 to 0.99 — which looks
+alarming until you remember why: with only <span class="math inline">\(M
+= 2\)</span> plausible values, the <span class="math inline">\((1 + 1/M)
+= 1.5\)</span> multiplier sits on a between-imputation covariance
+estimated from a single pair of fits, so the between-share dominates and
+the degrees of freedom collapse toward 1 (compare the <code>df</code>
+column in Section 3). This is the MI machinery being <em>honest</em>
+about how little information two imputations carry — not a defect.</p>
+<div class="alert alert-warning">
+<p>Because <span class="math inline">\(M = 2\)</span> here, these FMI
+values illustrate the <strong>mechanics</strong>, not a substantive
+finding. Real PISA reading uses <span class="math inline">\(M =
+10\)</span> plausible values, where FMI is far smaller and the
+small-sample df correction <span class="citation">(Barnard and Rubin
+1999)</span> matters in its intended regime. Do not read this fixture’s
+FMI as a statement about real data.</p>
+</div>
+</div>
+<div id="reading-the-target-and-draws" class="section level2">
+<h2>6. Reading the target and draws</h2>
+<p>The remaining accessors round out the picture: the target supplies
+the headline numbers, draws are absent here, and the diagnostics tell
+you the calibration behaved.</p>
+<div id="the-target-get_target" class="section level3">
+<h3>6.1 The target — <code>get_target()</code></h3>
+<p>The target object carries the external variance answer in full. The
+three fields you reach for most:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">diag</span>(tg<span class="sc">$</span>T_MI)        <span class="co"># total target variance per coefficient</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a><span class="co">#&gt;   1.6571716   0.1382299  12.6382448</span></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="fu">round</span>(tg<span class="sc">$</span>df, <span class="dv">3</span>)      <span class="co"># degrees of freedom per coefficient</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt;       1.021       1.402       1.014</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>tg<span class="sc">$</span>target_hash       <span class="co"># content fingerprint (matches the estimate table)</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;4a4d40f8&quot;</span></span></code></pre></div>
+<p>This is the <em>source</em> of the reportable SE: the standard errors
+in <code>get_estimates()</code> are <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>,
+and the point estimates are the pooled <code>beta_bar</code>. We can
+confirm the identity directly — under <code>center = &quot;target&quot;</code>,
+the table and the target agree to machine precision:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">all.equal</span>(est<span class="sc">$</span>estimate, <span class="fu">unname</span>(tg<span class="sc">$</span>beta_bar))            <span class="co"># estimates == pooled beta</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a><span class="fu">all.equal</span>(est<span class="sc">$</span>se,       <span class="fu">unname</span>(<span class="fu">sqrt</span>(<span class="fu">diag</span>(tg<span class="sc">$</span>T_MI))))    <span class="co"># SEs == sqrt(diag T_MI)</span></span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The target also carries <code>lambda</code>, the <code>fmi</code> of
+Section 5, the Fay variance multiplier
+(<code>fay_variance_multiplier == 1</code> here), and the components
+<code>U_bar</code> / <code>B</code> that feed <span class="math inline">\(T_{\text{MI}} = \bar U + (1 + 1/M)B\)</span>.
+Their derivation — Rubin pooling, the BRR–Fay sandwich, Barnard–Rubin
+df, and the design-variance coverage result — is the subject of the
+Method track, <strong>M2</strong>.</p>
+</div>
+<div id="the-draws-get_draws" class="section level3">
+<h3>6.2 The draws — <code>get_draws()</code></h3>
+<p>As noted in Section 2, this fit retained no posterior draws, so the
+draw accessor returns <code>NULL</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">get_draws</span>(fit)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
+<p>Had the fit been run with <code>return_draws = TRUE</code>, this
+would be an <span class="math inline">\(S \times \text{(FE
+terms)}\)</span> matrix of CCC-calibrated fixed-effect draws — useful
+for derived quantities or custom intervals. Its absence does not weaken
+the fixed-effect report, which is fully specified by the target.</p>
+</div>
+<div id="the-diagnostics-get_diagnostics" class="section level3">
+<h3>6.3 The diagnostics — <code>get_diagnostics()</code></h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>dg <span class="ot">&lt;-</span> <span class="fu">get_diagnostics</span>(fit)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="fu">names</span>(dg)</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot;</span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;ccc&quot;</span></span></code></pre></div>
+<p>The list holds <code>preflight</code> (the resolved formula, term
+names, and target fingerprint checked before fitting),
+<code>stack_fit</code> and <code>stack_fit_warnings</code> (the
+stacked-fit record and any messages it raised), and <code>ccc</code>,
+the calibration block for <code>stack_direct</code>. A quick peek at the
+center-separation agreement inside <code>ccc</code>:</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>dg<span class="sc">$</span>ccc[<span class="fu">c</span>(<span class="st">&quot;center_status&quot;</span>, <span class="st">&quot;delta_c_rel&quot;</span>, <span class="st">&quot;delta_c_max&quot;</span>)]</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co">#&gt; $center_status</span></span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ok&quot;</span></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a><span class="co">#&gt; $delta_c_rel</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; [1] 2.549387e-14</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt; $delta_c_max</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="co">#&gt; [1] 4.415668e-14</span></span></code></pre></div>
+<p><code>center_status == &quot;ok&quot;</code> means the calibration’s center
+matched the target’s within tolerance; <code>delta_c_rel</code> and
+<code>delta_c_max</code> are the relative center-separation summarised
+two ways — a root-mean-square diagnostic and a max-over-terms reportable
+gate — both effectively zero (~<span class="math inline">\(10^{-14}\)</span>) here.</p>
+<p>A reminder from Section 4: these tiny numbers confirm CCC <em>ran
+cleanly</em>; they do <strong>not</strong> confer coverage. The
+center-separation diagnostic, its green/yellow/red tiers, the
+conditioning diagnostic <span class="math inline">\(\kappa_A\)</span>,
+and the RMS-vs-max distinction are defined in <strong>M4</strong>.</p>
+</div>
+</div>
+<div id="a-reporting-checklist" class="section level2">
+<h2>7. A reporting checklist</h2>
+<p>A copy-paste checklist for reporting a pvstackr fixed-effect result.
+Walk it once per analysis; every field is read directly off the objects
+above, never remembered.</p>
+<ul>
+<li><strong>Method.</strong> State it (<code>stack_direct</code> for a
+reportable fit). <code>per_pv</code> and <code>stack_psis</code> are
+reference/cross-check only — see A4.</li>
+<li><strong>Centering.</strong> Confirm <code>center = &quot;target&quot;</code>
+(the reportable convention; A2 §6). A <code>&quot;posterior&quot;</code>-centered
+fit is diagnostic only and must not be reported.</li>
+<li><strong>Estimates and SEs.</strong> Take <code>estimate</code> and
+<code>se</code> from <code>get_estimates()</code>. Under
+<code>center = &quot;target&quot;</code> these are the external target’s pooled
+coefficients and <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>.</li>
+<li><strong>Intervals — with their role.</strong> Report
+<code>conf_low</code> / <code>conf_high</code> <em>together with</em>
+the <code>interval_role</code> for each row. Never strip the role off
+the number.</li>
+<li><strong>Degrees of freedom.</strong> Report <code>df</code> and
+<code>df_method</code> (and <code>df_complete</code> when the
+Barnard–Rubin path supplies it), so the small-<span class="math inline">\(M\)</span> behaviour is visible.</li>
+<li><strong>Fraction of missing information.</strong> Report
+<code>get_target(fit)$fmi</code> — high FMI explains small df and wide
+intervals.</li>
+<li><strong>The coverage flag.</strong> Report intervals as
+<strong>coverage-claimable only when
+<code>coverage_claim_allowed == TRUE</code></strong>. When it is
+<code>FALSE</code> (as for this fixture), label them
+<strong>descriptive</strong> explicitly.</li>
+<li><strong>Provenance.</strong> Record <code>target_source</code>,
+<code>target_hash</code>, and the package version so the result is
+reproducible and auditable. The full reproducibility checklist is in
+A5.</li>
+</ul>
+<p>For this synthetic fixture, that report reads: a
+<code>stack_direct</code>, <code>center = &quot;target&quot;</code> fit; estimates
+~458 / 47 / 2 with SEs from <span class="math inline">\(T_{\text{MI}}\)</span>; intervals
+<code>descriptive_classic_rubin</code> with
+<code>df_method == &quot;classic&quot;</code> and df ~1; FMI ~0.84–0.99; and —
+because <code>coverage_claim_allowed == FALSE</code> throughout — the
+intervals reported as <strong>descriptive, not
+coverage-claimable</strong>.</p>
+</div>
+<div id="where-to-next" class="section level2">
+<h2>8. Where to next</h2>
+<p>You can now read a fit and decide what is safe to report. From
+here:</p>
+<ul>
+<li><strong>A4 · Comparing methods</strong> —
+<code>pv_compare_methods()</code> across <code>stack_direct</code>,
+<code>per_pv</code>, and <code>stack_psis</code>; how to read agreement
+diagnostics; and the two cautions (design variance is not optional; a
+small Pareto-<span class="math inline">\(\hat k\)</span> does not
+guarantee correct variance).</li>
+<li><strong>A5 · Real PISA data guidance</strong> — connecting to
+genuine PISA files: licensing and non-affiliation, the design
+declaration, memory and runtime, and the full reproducibility checklist
+(where <code>target_hash</code> and friends earn their keep).</li>
+</ul>
+<p>For the mathematics behind the columns read here — the external
+target, Rubin / BRR–Fay combining, Barnard–Rubin df, and FMI in
+<strong>M2</strong>, and the precise statement of why only
+<code>stack_direct</code> is coverage-claimable in <strong>M5</strong> —
+start the Method track at <strong>M1 · Foundations and
+notation</strong>.</p>
+<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
+<div id="session-info" class="section level3">
+<h3>Session info</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
+<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt; [1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8</span></span>
+<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
+<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
+<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a><span class="co">#&gt;  [5] glue_1.8.1      cachem_1.1.0    knitr_1.51      htmltools_0.5.9</span></span>
+<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a><span class="co">#&gt;  [9] rmarkdown_2.31  lifecycle_1.0.5 cli_3.6.6       vctrs_0.7.3    </span></span>
+<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="co">#&gt; [13] sass_0.4.10     jquerylib_0.1.4 compiler_4.6.0  tools_4.6.0    </span></span>
+<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a><span class="co">#&gt; [17] pillar_1.11.1   evaluate_1.0.5  bslib_0.11.0    yaml_2.3.12    </span></span>
+<span id="cb14-28"><a href="#cb14-28" tabindex="-1"></a><span class="co">#&gt; [21] otel_0.2.0      rlang_1.2.0     jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+</div>
+<div id="references" class="section level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-barnard1999small" class="csl-entry">
+Barnard, John, and Donald B. Rubin. 1999. <span>“Small-Sample Degrees of
+Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
+948–55. <a href="https://doi.org/10.1093/biomet/86.4.948">https://doi.org/10.1093/biomet/86.4.948</a>.
+</div>
+<div id="ref-judkins1990fay" class="csl-entry">
+Judkins, David R. 1990. <span>“Fay’s Method for Variance
+Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
+223–39.
+</div>
+<div id="ref-rubin1987multiple" class="csl-entry">
+Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
+Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

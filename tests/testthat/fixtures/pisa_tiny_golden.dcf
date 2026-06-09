@@ -1,0 +1,17 @@
+Fixture-ID: pisa_tiny
+Fixture-Version: 0.1.0
+Source: package-owned synthetic tiny fixture
+Claims-Scope: API smoke tests and fixture drift detection only
+Real-PISA-Data: false
+CSV-SHA256: 7dc9e8e013fd21b5ffd284bf28713edfc092873ad7be02f73e475d0372f66777
+RDS-SHA256: 5c9bdcf63c0071bac03e127d34e37f45626ce0ab4cb811106070bce82673ba4c
+Data-Hash: d1e9941d
+Row-Support-Hash: 5af32aa2
+PV-Value-Hash: a29f24e4
+Weight-Design-Hash: 69584370
+Design-Hash: 4776c0f1
+Target-Hash: 4a4d40f8
+Long-Data-Hash: b17ea992
+Draws-Hash: aae99bde
+Estimates-Hash: 80f22617
+Canonical-Fit-Hash: 20835208
