@@ -393,10 +393,13 @@ test_that("pv_brr_target is equivariant to common plausible-value outcome shifts
     c(b_Intercept = 25, b_x = 0),
     tolerance = 1e-12
   )
-  expect_equal(shifted_target$U_bar, target$U_bar, tolerance = 1e-12)
-  expect_equal(shifted_target$B, target$B, tolerance = 1e-12)
-  expect_equal(shifted_target$T_MI, target$T_MI, tolerance = 1e-12)
-  expect_equal(shifted_target$df, target$df, tolerance = 1e-12)
+  # Equivariance is exact in theory; use a cross-platform floating-point margin
+  # (1e-12 is tighter than some platforms' BLAS/math libraries reproduce once the
+  # outcome is shifted, e.g. Windows).
+  expect_equal(shifted_target$U_bar, target$U_bar, tolerance = 1e-8)
+  expect_equal(shifted_target$B, target$B, tolerance = 1e-8)
+  expect_equal(shifted_target$T_MI, target$T_MI, tolerance = 1e-8)
+  expect_equal(shifted_target$df, target$df, tolerance = 1e-8)
   expect_identical(shifted_target$design_hash, target$design_hash)
   expect_false(identical(shifted_target$target_hash, target$target_hash))
 })

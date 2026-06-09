@@ -1,0 +1,13 @@
+# Normalize line endings: text files are stored and checked out as LF on every
+# platform. This prevents Windows autocrlf from rewriting fixture files (e.g.
+# inst/extdata/pisa_tiny.csv), which would change their bytes and break the
+# content/sha256 hashes the tests validate.
+* text=auto eol=lf
+
+# Binary assets — never line-ending convert
+*.rds   binary
+*.RData binary
+*.png   binary
+*.ico   binary
+*.gz    binary
+*.zip   binary
