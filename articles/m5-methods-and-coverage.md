@@ -1,0 +1,515 @@
+# M5: Methods, PSIS, and coverage — choosing a path and what may be claimed
+
+Abstract
+
+The capstone of the Method track, where the preceding four pages
+converge into a single contract: which of the three fitting methods may
+carry a coverage claim, and why only one of them can. It states the
+precise contrast between stack_direct, per_pv, and stack_psis, displays
+the Pareto-smoothed importance-sampling tail-shape thresholds that
+diagnose stack_psis, and argues that coverage is conferred by the
+design-based provenance of the external target alone — the M2 target
+reached through the M3 point identity and the M4 calibration — not by
+any model-based covariance and not by a clean diagnostic. It is emphatic
+that a small Pareto tail-shape is necessary but not sufficient for a
+correct stack_psis variance, that the diagnostic is
+specification-dependent, and that the one-fit topology is an
+architecture statement and never a speed claim. A base-R classifier and
+a read-only flag check verify the rules on the bundled synthetic
+fixture.
+
+``` r
+
+library(pvstackr)
+```
+
+The first four pages built the machinery one piece at a time. M2 derived
+the **external variance answer** — the design-based BRR–Fay sandwich
+pooled by the Rubin rules into \\T\_{\text{MI}}\\ (EQ-TMI, EQ-BRRFAY),
+with the small-sample Barnard–Rubin degrees of freedom (EQ-BARNARD) the
+path a coverage-claimable target takes (Judkins 1990; Rubin 1987;
+Barnard and Rubin 1999). M3 showed that one stacked, \\1/M\\-weighted
+fit recovers the Rubin **point** \\\bar\beta\\ under the regularity
+conditions of Theorem 2.2 (EQ-THM22) — a fixed-effect point identity, no
+more. M4 showed how the CCC affine map (EQ-CCC) forces that one fit’s
+draw cloud to carry the target’s **variance** too. This capstone closes
+the loop. It asks the question the whole track has been circling: given
+three ways to fit the model, *which one may carry a coverage claim, and
+why only that one?* The answer is a contract about **provenance**, and
+the discriminator is where each method gets its covariance.
+
+Two warnings up front, because they bound everything below. First,
+coverage is a property of **one path only** — `stack_direct` calibrated
+to the external, design-based target — and even that path is descriptive
+under classic degrees of freedom, exactly as the bundled fixture is.
+Second, the Pareto tail-shape diagnostic this page introduces is a check
+on the *importance-sampling step*, not a certificate that the resulting
+variance is right; reading it as the latter is the single most seductive
+error in the chapter.
+
+**Scope of this page.** M5 states the three-method contrast, derives the
+PSIS tail-shape thresholds (EQ-PSIS), and gives the coverage contract.
+It estimates nothing — there is no MCMC anywhere below, only a pure
+base-R classifier and read-only accessor calls against the bundled
+synthetic fixture. The full three-method *comparison* — building three
+fits and running
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+on injected draws — is **A4**’s job, and this page cross-references it
+rather than duplicating its construction. The target is **M2**, the
+point identity is **M3**, the calibration is **M4**; M5 is where their
+provenance is cashed out as the `coverage_claim_allowed` flag.
+
+The shared light-path load — the same one used across the Method track —
+gives us the cached fit and its external target to point at:
+
+``` r
+
+fit <- readRDS(
+  system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
+              package = "pvstackr")
+)$fit
+tg <- get_target(fit)   # external Rubin / BRR–Fay target (M2's object)
+
+c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
+#>     M     R fay_k 
+#>   2.0   4.0   0.5
+```
+
+The design is the tiny synthetic one M1 introduced: \\M = 2\\ plausible
+values, \\R = 4\\ replicate weights, Fay coefficient \\k = 0.5\\.
+
+## 1. The three methods, precisely
+
+pvstackr ships three fitting methods. They answer the *same* question —
+what is the fixed-effect block \\\beta\_{\text{FE}}\\? — but they get
+their **variance** from different places, and that difference is the
+entire story of when a row may carry a coverage claim. The locked method
+↔︎ pipeline map (facts §4) lays them side by side:
+
+| Package method | Blueprint pipeline | Covariance basis | Intervals | MCMC fits |
+|----|----|----|----|----|
+| `stack_direct` *(default)* | C-Direct | **design-based** external \\T\_{\text{MI}}\\ | **conditional** — coverage-claimable only with an external Barnard–Rubin BRR–Fay target; descriptive under classic df | 1 |
+| `per_pv` | A (orthodox) | model-based (posterior) | descriptive/reference | \\M\\ |
+| `stack_psis` | B | model-based (posterior) | descriptive/reference | 1 (+PSIS) |
+
+In one sentence each:
+
+- **`stack_direct`** fits one stacked model and calibrates it — via CCC
+  (M4, EQ-CCC) — to the **external, design-based** Rubin / BRR–Fay
+  target (M2, EQ-TMI). Its point is the Rubin mean by the stacked bridge
+  (M3, EQ-THM22) and its covariance is the design-based
+  \\T\_{\text{MI}}\\. Because that covariance is design-based,
+  `stack_direct` rows are the only ones the package ever marks
+  `coverage_claim_allowed = TRUE` (Judkins 1990; Rubin 1987).
+- **`per_pv`** is the orthodox multiple-imputation path: fit the model
+  once per plausible value and pool the \\M\\ model-based results with
+  Rubin’s rules. It is the natural **reference** against which
+  `stack_direct`’s point is sanity-checked, but its covariance is
+  *model-based* (the posterior’s own spread), so its intervals stay
+  descriptive.
+- **`stack_psis`** reweights a single stacked draw cloud with per-PV
+  Pareto-smoothed importance sampling (Vehtari et al. 2017, 2024) and
+  pools the reweighted summaries. One fit, model-based covariance — a
+  **cross-check**, never the deliverable.
+
+**The covariance basis is the discriminator.** Read the third column,
+not the first: two of the three methods carry a *model-based* covariance
+(the posterior’s nominal spread), and only `stack_direct` carries the
+*design-based* external \\T\_{\text{MI}}\\. Everything in this page
+follows from that one column — the “Intervals” column is a *consequence*
+of the “Covariance basis” column, never an independent property. The
+remaining columns are secondary: the “MCMC fits” count is a topology
+fact (Section 5), and the “Blueprint pipeline” labels (C-Direct, A, B)
+are the companion paper’s internal names, given here only so a reader of
+that work can line the two vocabularies up. A4 §1 prints the same map
+from the workflow side; this page supplies the reason the column that
+matters is the covariance basis.
+
+## 2. PSIS in `stack_psis`
+
+`stack_psis` is the one method that needs a diagnostic of its own,
+because it does something the other two do not: it makes a **single**
+stacked draw cloud stand in for all \\M\\ plausible values by
+*reweighting* it. The reweighting is Pareto-smoothed importance sampling
+(PSIS), and its health is read off a single number with published
+thresholds.
+
+The mechanism, in one line. To make one cloud represent plausible value
+\\m\\, `stack_psis` forms **per-PV importance weights** — how much each
+draw should count when standing in for PV \\m\\ — and then **smooths the
+tail** of those weights by fitting a **generalized Pareto distribution**
+to the largest of them (Vehtari et al. 2017, 2024). Raw importance
+weights have notoriously heavy, unstable tails; the generalized-Pareto
+fit replaces the extreme weights with fitted order statistics, taming
+that instability. The single diagnostic that falls out of the fit is the
+estimated **tail-shape** \\\hat k\\ — the shape parameter of the fitted
+Pareto tail — and it is read against the Vehtari et al. thresholds.
+
+**EQ-PSIS — the PSIS Pareto tail-shape thresholds.** Per-PV importance
+weights are smoothed by a generalized-Pareto fit; the tail-shape \\\hat
+k\\ is read against the Vehtari et al. thresholds:
+
+\\ \hat k \< 0.5 \\ \text{(good)};\qquad 0.5 \le \hat k \< 0.7 \\
+\text{(borderline)};\qquad \hat k \ge 0.7 \\ \text{(unreliable)}. \\
+
+Read the tiers as a statement about the **importance-sampling step**,
+and only that step:
+
+- \\\hat k \< 0.5\\ — **good.** The fitted tail is light enough that the
+  importance-sampling estimate has finite variance and converges at the
+  usual rate; the reweighting is trustworthy.
+- \\0.5 \le \hat k \< 0.7\\ — **borderline.** The tail is heavy enough
+  that convergence slows and the estimate should be treated with
+  caution.
+- \\\hat k \ge 0.7\\ — **unreliable.** The tail is so heavy that the
+  importance-sampling estimate is no longer dependable; the reweighting
+  has effectively broken down.
+
+The thresholds are *boundaries between tiers*, and they are
+**right-open**: \\\hat k = 0.5\\ is the first borderline value (not the
+last good one), and \\\hat k = 0.7\\ is the first unreliable value.
+Section 6’s classifier encodes exactly that convention. What \\\hat k\\
+tells you is whether the **weights are well-behaved** — nothing more.
+The leap from “the weights are well-behaved” to “the resulting variance
+is correct” is precisely the trap Section 4 dismantles.
+
+## 3. Why only `stack_direct` is coverage-claimable
+
+Now the contract. A coverage claim is the assertion that a method’s
+nominal-95% intervals actually capture the truth about 95% of the time.
+The package licenses that assertion on **one path only**, and the reason
+is provenance, assembled across the whole track.
+
+The chain is exactly the four pages you have read:
+
+1.  **The variance has the right provenance (M2).** The interval’s
+    covariance is \\T\_{\text{MI}}\\, built from the *design* — the
+    BRR–Fay replicate-weight sandwich (EQ-BRRFAY) pooled by the Rubin
+    rules (EQ-TMI) — not from the model’s nominal posterior. M2 §6
+    stated the empirical result qualitatively: a correct weighted point
+    paired with *model-based* standard errors can **under-cover**
+    severely, and substituting the design-based \\T\_{\text{MI}}\\
+    **restores nominal coverage**. Provenance, not arithmetic, is what
+    licenses the claim (Judkins 1990; Rubin 1987).
+2.  **The right point reaches one fit (M3).** The stacked fractional
+    bridge means that single fit reports the Rubin mean \\\bar\beta\\ as
+    its point (EQ-THM22), so the calibrated answer is centred where the
+    orthodox \\M\\-fit recipe would centre it.
+3.  **The right variance reaches that fit (M4).** CCC’s affine map
+    (EQ-CCC) forces the stacked draw cloud’s covariance to equal that
+    same external \\T\_{\text{MI}}\\, so the one fit *reports the
+    external answer in full*.
+4.  **The degrees of freedom are small-sample correct (M2).** A
+    coverage-claimable interval needs the **Barnard–Rubin** degrees of
+    freedom \\\nu\_{\text{BR}}\\ (EQ-BARNARD) (Barnard and Rubin 1999),
+    not the classic Rubin formula — the small-\\M\\ correction the tails
+    of the reference distribution require.
+
+`per_pv` and `stack_psis` fail at the very first link: their covariance
+is **model-based**, the posterior’s own spread, which never sees the
+survey’s clustering and weighting. However sensible their points, their
+intervals cannot bear a *design*-coverage claim, so the package marks
+them **descriptive always** — regardless of which degrees of freedom
+they happen to use. This is the H3 rule, and the package enforces it
+through metadata, not trust: the licensing decision lives in the
+`coverage_claim_allowed` column, which Section 6 reads off the fixture.
+
+**Coverage is `stack_direct`-only — and even `stack_direct` is
+descriptive under classic df.** A row is `coverage_claim_allowed = TRUE`
+**only** when the fit is `stack_direct` *and* it was calibrated to an
+external **Barnard–Rubin** BRR–Fay target (Barnard and Rubin 1999; Rubin
+1987; Judkins 1990). `per_pv` and `stack_psis` are **always**
+descriptive, whatever their df. And a `stack_direct` fit built on
+**classic** Rubin df — like the bundled fixture — is descriptive too,
+because classic df does not deliver the small-sample calibration the
+claim rests on. The lesson A3 §4 stated for practitioners holds here as
+a rule: **read the flag, never infer coverage from the method name.**
+This fixture *is* `stack_direct` and is still, honestly, descriptive
+(Section 6).
+
+It is worth being explicit about what does **not** confer coverage,
+because the preceding pages each carried a version of this caveat. The
+stacked point identity (M3) is a *point* statement and says nothing
+about variance. The CCC moment match (M4) is *algebraic by construction*
+— it forces the calibrated cloud’s mean and covariance to equal the
+target’s, so its near-perfect agreement (the \\\sim10^{-14}\\
+center-separation numbers of M4 §6) confirms only that the linear
+algebra ran cleanly, **not** that the intervals cover. Coverage comes
+from the *provenance* of \\T\_{\text{MI}}\\ and the companion paper’s
+simulation oracle, never from a clean diagnostic. M5 collects those
+caveats into a single contract: coverage is licensed by the whole
+design-based chain, certified by the flag.
+
+## 4. Caution — small \\\hat k\\ ≠ correct `stack_psis` variance
+
+The most dangerous misreading in this track concerns `stack_psis`, and
+it is dangerous precisely because the diagnostic that looks reassuring
+is reassuring about the *wrong thing*. This is the H4 caution, and it
+has two parts.
+
+**A small \\\hat k\\ certifies the weights, not the variance.** Section
+2 was careful: \\\hat k\\ diagnoses the **importance-sampling step** — a
+small \\\hat k\\ says the weights are well-behaved and the reweighting
+is stable. It says **nothing** about whether the resulting
+**between-imputation variance** is right. The reason is structural.
+`stack_psis` reweights **one** stacked draw cloud to stand in for all
+\\M\\ plausible values, so the per-PV “imputations” are all drawn from
+the *same* cloud and are therefore **correlated**. But Rubin’s
+between-imputation covariance \\B\\ (EQ-TMI) assumes the imputations are
+**independent**; correlated ones make \\B\\ shrink, and a shrunk \\B\\
+shrinks the pooled total \\T\_{\text{MI}} = \bar U + (1+1/M)B\\. The
+`stack_psis` interval can therefore run **narrow even when \\\hat k\\ is
+small** — the importance sampling is stable, and the variance is still
+wrong. A green \\\hat k\\ is **necessary but not sufficient** for a
+trustworthy interval.
+
+**And \\\hat k\\ is specification-dependent.** The diagnostic is not a
+fixed property of the method; it depends on the model you actually fit.
+It can sit comfortably in the *good* tier on a simplified,
+low-dimensional model and climb into the *unreliable* tier on a full
+production specification — the regime where PSIS is formally broken. A
+green \\\hat k\\ on a toy model is no guarantee of a green \\\hat k\\ on
+the model you report.
+
+**Small Pareto-\\\hat k\\ ≠ correct `stack_psis` variance; and \\\hat
+k\\ is specification-dependent.** Two distinct failures: (i) the
+correlated-imputation narrowing above means a stable importance-sampling
+step can sit on top of a *too small* between-imputation variance; and
+(ii) the tail-shape itself is **not** a stable number — it is small in
+the simplified two-covariate reading demo but climbs **above 1** in the
+full paper specification, where Pipeline B is unreliable. Both
+behaviours are described **qualitatively** in the **companion methods
+paper (in preparation)**; the package hard-codes **no** \\\hat k\\ value
+as a fact (the \\\hat k\\ values in Section 6’s classifier are an
+*illustration of the thresholds*, exactly as A4 §6 treats its injected
+`pareto_k = 0.2`). The standing instruction follows: **treat
+`stack_psis` as a cross-check, never the deliverable** (Vehtari et al.
+2017, 2024).
+
+This is why the rule of thumb is unambiguous (A4 §7): report
+`stack_direct`, keep `stack_psis` as a one-fit cross-check while
+watching \\\hat k\\ — and *not trusting a small \\\hat k\\ alone* — and
+use `per_pv` as the orthodox reference for the point.
+
+## 5. The cost/benefit — `M` fits → 1
+
+The map’s “MCMC fits” column records a genuine difference between the
+methods, and it is worth reading correctly because it is the one column
+most easily misread as a performance claim. It is **not** one.
+
+The orthodox `per_pv` path fits the model **\\M\\ separate times** —
+once per plausible value — and pools afterward. The two stacked methods
+fit the model **once**, on the \\N\cdot M\\ stacked rows with the
+\\1/M\\ row weighting M3 derived (`stack_psis` adds the PSIS reweighting
+on top of that single fit). For PISA reading, where \\M = 10\\ (OECD
+2024), that is the contrast between **ten** model fits and **one** — “10
+fits → 1”.
+
+**“\\M\\ fits → 1” is topology, not speed.** The fit count describes the
+**shape of the computation** — how many model fits a method’s
+architecture requires — not a benchmarked runtime. “One stacked fit
+instead of \\M\\” is an **architecture / topology** statement; the “10
+fits → 1” figure is the \\M = 10\\ count for PISA reading (OECD 2024),
+**not** a claim that the stacked path is faster. v0.1 reports no timings
+and makes **no** efficiency or “faster” claim (the H5 guardrail; A4 §7’s
+honesty triad). The single stacked fit can be larger and slower per fit
+than one per-PV fit — it carries \\M\\ times the rows — so the count is
+genuinely a statement about *number of fits*, not wall-clock time.
+
+The benefit, then, is *not* “it runs faster.” It is that the stacked
+architecture collapses the multiple-imputation point recovery (M3) and
+the variance calibration (M4) into a **single** object that can be
+calibrated to the external target and licensed for coverage — the
+algebraic-equivalence headline the package may honestly claim (facts
+§5), stated as an identity under stated conditions and *never* as a
+speedup.
+
+## 6. Verify in code
+
+Two read-only panels close the page: a pure base-R classifier that
+encodes the EQ-PSIS thresholds, and a flag read that confirms the
+coverage contract on the fixture. Neither estimates anything.
+
+**Panel 1 — the EQ-PSIS classifier.** This is the threshold logic of
+Section 2 in one base-R function. The `right = FALSE` argument is what
+makes the tier boundaries **right-open**, so \\\hat k = 0.5\\ lands in
+*borderline* and \\\hat k = 0.7\\ in *unreliable*, matching EQ-PSIS
+exactly:
+
+``` r
+
+## PSIS Pareto-k threshold classification (EQ-PSIS), pure base-R
+classify_k <- function(k) {
+  cut(k, breaks = c(-Inf, 0.5, 0.7, Inf),
+      labels = c("good", "borderline", "unreliable"), right = FALSE)
+}
+
+data.frame(
+  k       = c(0.04, 0.20, 0.49, 0.50, 0.69, 0.70),
+  verdict = classify_k(c(0.04, 0.20, 0.49, 0.50, 0.69, 0.70))
+)
+#>      k    verdict
+#> 1 0.04       good
+#> 2 0.20       good
+#> 3 0.49       good
+#> 4 0.50 borderline
+#> 5 0.69 borderline
+#> 6 0.70 unreliable
+```
+
+The verdicts are good / good / good / borderline / borderline /
+unreliable: the three values below \\0.5\\ are good, \\0.50\\ and
+\\0.69\\ are borderline, and \\0.70\\ is unreliable. The boundary cases
+(\\0.50\\, \\0.70\\) fall into the *higher-risk* tier, which is the
+conservative reading EQ-PSIS intends.
+
+**These \\\hat k\\ values are an illustration of the thresholds, not
+package-measured facts.** The numbers above are hand-chosen to exercise
+each tier boundary of EQ-PSIS — they are *not* read from any fit, and
+the package hard-codes no \\\hat k\\ as a result (H4; facts §7). This is
+the same posture A4 §6 takes with its injected `pareto_k = 0.2`: a value
+supplied to demonstrate the *machinery*, never asserted as a
+measurement. On a real `stack_psis` fit you would read the realized
+`pareto_k_max` off the comparison diagnostics (A4 §4) and classify
+*that* — and, per Section 4, you would still not trust a small value on
+its own.
+
+**Panel 2 — read the coverage flag, not the method name.** The fixture
+is a `stack_direct` fit, yet the licensing decision is recorded in the
+estimate table’s metadata, and it is `FALSE`. We read the flag directly
+(this is the H3 rule made concrete, mirroring A3 §4):
+
+``` r
+
+est <- get_estimates(fit)
+
+unique(est$interval_role)            # "descriptive_classic_rubin"
+#> [1] "descriptive_classic_rubin"
+unique(est$coverage_claim_allowed)   # FALSE -- even though method == "stack_direct"
+#> [1] FALSE
+est[, c("term", "interval_role", "df_method", "coverage_claim_allowed")]
+#>          term             interval_role df_method coverage_claim_allowed
+#> 1 b_Intercept descriptive_classic_rubin   classic                  FALSE
+#> 2         b_x descriptive_classic_rubin   classic                  FALSE
+#> 3    b_female descriptive_classic_rubin   classic                  FALSE
+```
+
+Every row reads `interval_role == "descriptive_classic_rubin"`,
+`df_method == "classic"`, and `coverage_claim_allowed == FALSE` — across
+all three fixed-effect terms. This is the contract of Section 3 made
+visible: the fit *is* `stack_direct` (the default, coverage-*capable*
+method), but because it carries **classic** Rubin df rather than the
+Barnard–Rubin correction, it is descriptive, and the flag says so. Read
+the column, never the method name.
+
+For the **full three-method comparison** — building a `per_pv` reference
+and a `stack_psis` cross-check from injected draws, aligning all three
+with
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md),
+and reading `interval_role` / `coverage_claim_allowed` / `pareto_k_max`
+per method — see **A4 §3–§6**, which already does exactly that on the
+light path. This page deliberately does **not** rebuild it: M5 states
+the coverage *rules*; A4 runs the worked comparison.
+
+## 7. Where to next
+
+You now hold the coverage contract in full — the three-method map whose
+discriminator is the **covariance basis** (Section 1), the PSIS
+tail-shape thresholds that diagnose `stack_psis` (EQ-PSIS), the
+provenance chain that makes **only** `stack_direct` coverage-claimable
+(Section 3), the trap that a small \\\hat k\\ is necessary but not
+sufficient and is specification-dependent (Section 4), and the topology
+— not speed — reading of “\\M\\ fits → 1” (Section 5). That contract is
+the capstone the whole Method track was built toward: M2’s target, M3’s
+point, and M4’s calibration converge here into the single flag the
+package reports.
+
+**The Method track is complete.** From here the natural move is back to
+the Applied track, where these rules are put to work:
+
+- **A4 · Comparing methods** — the worked three-method comparison this
+  page states the rules for:
+  [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+  on the light path, the agreement diagnostics, and the two cautions
+  (design variance is not optional; small Pareto-\\\hat k\\ is not
+  enough), with its proofs forwarded to this page and to M3.
+- **A5 · Real PISA data guidance** — pointing the same workflow at a
+  genuine PISA cycle: licensing and non-affiliation, the design
+  declaration, the \\M(R+1)\\ replicate-fit footprint, and the
+  reproducibility checklist — the place the \\M = 10\\ scale behind “10
+  fits → 1” becomes a real job to size.
+
+To see the licensing flag itself from the reporting side — the
+`interval_role`, `coverage_claim_allowed`, `df_method`, and
+`df_complete` columns, and the rule to read the flag rather than the
+method name — return to **A3 · Reading results** (§4).
+
+And for the provenance behind the contract: **M2 · The BRR–Fay
+fixed-effect target** (the design-based \\T\_{\text{MI}}\\ and the
+Barnard–Rubin df that license coverage), **M3 · The stacked fractional
+bridge** (the point identity), and **M4 · CCC: Cholesky Calibration
+Correction** (the variance match that is *not* the source of coverage).
+
+Bug reports and feature requests:
+<https://github.com/joonho112/pvstackr/issues>.
+
+### Session info
+
+``` r
+
+sessionInfo()
+#> R version 4.6.0 (2026-04-24)
+#> Platform: x86_64-pc-linux-gnu
+#> Running under: Ubuntu 24.04.4 LTS
+#> 
+#> Matrix products: default
+#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> 
+#> locale:
+#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+#> 
+#> time zone: UTC
+#> tzcode source: system (glibc)
+#> 
+#> attached base packages:
+#> [1] stats     graphics  grDevices utils     datasets  methods   base     
+#> 
+#> other attached packages:
+#> [1] pvstackr_0.1.0
+#> 
+#> loaded via a namespace (and not attached):
+#>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
+#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
+#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
+#> [25] rlang_1.2.0       fs_2.1.0
+```
+
+## References
+
+Barnard, John, and Donald B. Rubin. 1999. “Small-Sample Degrees of
+Freedom with Multiple Imputation.” *Biometrika* 86 (4): 948–55.
+<https://doi.org/10.1093/biomet/86.4.948>.
+
+Judkins, David R. 1990. “Fay’s Method for Variance Estimation.” *Journal
+of Official Statistics* 6 (3): 223–39.
+
+OECD. 2024. *PISA 2022 Technical Report*. OECD Publishing.
+
+Rubin, Donald B. 1987. *Multiple Imputation for Nonresponse in Surveys*.
+John Wiley & Sons. <https://doi.org/10.1002/9780470316696>.
+
+Vehtari, Aki, Andrew Gelman, and Jonah Gabry. 2017. “Practical Bayesian
+Model Evaluation Using Leave-One-Out Cross-Validation and WAIC.”
+*Statistics and Computing* 27 (5): 1413–32.
+<https://doi.org/10.1007/s11222-016-9696-4>.
+
+Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah
+Gabry. 2024. “Pareto Smoothed Importance Sampling.” *Journal of Machine
+Learning Research* 25 (72): 1–58.

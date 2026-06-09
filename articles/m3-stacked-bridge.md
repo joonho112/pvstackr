@@ -1,0 +1,418 @@
+# M3: The stacked fractional bridge — one fit, the Rubin point, and where it stops
+
+Abstract
+
+The third page of the Method track derives the bridge that lets a single
+model fit stand in for the multiple-imputation point estimate. It
+explains what “stacked fractional” means — one model fit on all M
+plausible values at once, with every row down-weighted by one over M —
+and writes the stacked objective as the average of the
+per-plausible-value likelihoods. From that objective it states the point
+identity of the companion paper’s Theorem 2.2: under a short list of
+regularity conditions the stacked fixed-effect estimate equals the Rubin
+average that M2 derived, and it sketches in prose why this holds. It is
+careful about scope: this is a fixed-effect point identity, exact only
+under those conditions and approximate in production, and it says
+nothing about variance or coverage. A read-only panel confirms the
+identity on the cached fixture under the reportable centering
+convention.
+
+``` r
+
+library(pvstackr)
+```
+
+M2 built the external variance answer — the BRR–Fay sandwich pooled by
+the Rubin rules into \\T\_{\text{MI}}\\, with the Rubin mean
+\\\bar\beta\\ falling out as the reportable *point*. It got there the
+orthodox way: fit the model once per plausible value and combine the
+\\M\\ results (Mislevy 1991). This page asks a different question. Can a
+**single** model fit — on all \\M\\ plausible values stacked together —
+recover that same point \\\bar\beta\\, without ever forming the \\M\\
+separate fits and averaging them? The answer is the **stacked fractional
+bridge**, and the identity it delivers (Theorem 2.2) is the subject of
+M3.
+
+Two warnings up front, because they bound everything below and the rest
+of the page keeps returning to them. First, what the bridge delivers is
+a **point** identity for the fixed effects, *not* a variance or coverage
+statement — the variance answer is M2’s external target, and the
+calibration that delivers it to the stacked fit is M4. Second, “one
+stacked fit instead of \\M\\” is a statement about **architecture**, the
+shape of the computation, and never a claim about speed.
+
+**Scope of this page.** M3 derives the bridge (EQ-BRIDGE) and the point
+identity (EQ-THM22), and verifies the identity on the bundled synthetic
+fixture. It estimates nothing — there is no MCMC anywhere below, only
+read-only accessor calls and a `data.frame`. The *live* stacked fit is
+produced by **brms/Stan** (Bürkner 2017); this vignette runs none of it,
+reading instead from the cached fixture. The variance side is **M2**
+(\\T\_{\text{MI}}\\) and **M4** (the CCC calibration); which fits may
+carry a coverage claim is **M5**.
+
+The shared light-path load — the same one used across the Method track —
+gives us the cached fit and its external target to point at:
+
+``` r
+
+fit <- readRDS(
+  system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
+              package = "pvstackr")
+)$fit
+tg <- get_target(fit)   # external Rubin / BRR–Fay target (M2's object)
+
+c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
+#>     M     R fay_k 
+#>   2.0   4.0   0.5
+```
+
+The design is the tiny synthetic one M1 introduced: \\M = 2\\ plausible
+values, \\R = 4\\ replicate weights, Fay coefficient \\k = 0.5\\.
+
+## 1. The stacking idea
+
+Start from the orthodox picture (M2, EQ-MODEL). You have \\M\\ plausible
+values per student, and the multiple-imputation recipe fits the model
+**\\M\\ separate times** — once to each plausible value — producing
+\\M\\ per-PV estimates \\\hat\beta_1,\dots,\hat\beta_M\\, which the
+Rubin rules then average into \\\bar\beta\\. The fit is repeated; the
+combining happens afterwards.
+
+Stacking rearranges the *topology* of that computation. Instead of \\M\\
+tables of \\N\\ students fed to \\M\\ fits, lay all \\M\\ plausible
+values **end to end into one long table** of \\N\cdot M\\ rows: student
+\\ij\\ appears \\M\\ times, once carrying \\y\_{ij}^{(1)}\\, once
+\\y\_{ij}^{(2)}\\, and so on, with the covariates (\\x\_{ij}\\, the
+cluster mean \\\bar x\_{\cdot j}\\, the cluster index \\j\\) copied
+across all \\M\\ of its rows. Then fit the model **once** to this
+stacked table.
+
+If you stacked naïvely and stopped there, each student would count \\M\\
+times and the likelihood would behave as if the sample were \\M\\ times
+larger — wrong. The fix is the **fractional** part: give every row
+weight \\1/M\\. With that weight a student contributes a total mass of
+\\M\cdot(1/M)=1\\ across its \\M\\ copies, exactly one student’s worth,
+and the stacked log-likelihood becomes the *average* of the \\M\\ per-PV
+log-likelihoods rather than their sum. That weighting is the entire
+content of “stacked fractional”: one design of \\N\cdot M\\ rows, each
+down-weighted by \\1/M\\.
+
+**“One stacked fit instead of \\M\\” is topology, not speed.** It
+describes the shape of the computation — a single fit on \\N\cdot M\\
+stacked rows in place of \\M\\ fits on \\N\\ rows each — not a
+benchmarked runtime. This vignette makes **no** “faster” claim and
+reports no timings; the comparison is architectural, exactly as A4 §7
+frames the “fit count” column. The point of the bridge is *what the
+single fit recovers*, which is the rest of this page.
+
+Two pieces of the M1 vocabulary do the work here. \\L_m^{0}(\psi)\\ is
+the **unweighted per-PV likelihood** M1 §4 named — the likelihood of the
+parameters \\\psi\\ under EQ-MODEL fit to plausible value \\m\\ alone.
+And \\N\\ is the number of students, so the stacked design has the
+\\N\cdot M\\ rows just described. The next section writes the stacked
+objective in those symbols.
+
+## 2. The stacked fractional objective
+
+Stacking the \\M\\ plausible values and weighting every row by \\1/M\\
+turns the per-PV likelihoods of Section 1 into a single objective.
+Writing \\q\_{\text{SWL}}(\psi)\\ for the **stacked weighted
+likelihood** at parameters \\\psi\\, the bridge — **tag EQ-BRIDGE** — is
+
+\\ \log q\_{\text{SWL}}(\psi)=\log p(\psi)+\tfrac1M\textstyle\sum_m \log
+L_m^{0}(\psi)+C. \\
+
+Read it left to right:
+
+- \\\log p(\psi)\\ is the **prior** — the same prior the live brms fit
+  places on the parameters (Bürkner 2017). Under the Theorem 2.2
+  conditions below it is flat on the fixed effects, so it shifts the
+  objective by a constant and does not move the fixed-effect optimum.
+- \\\tfrac1M\sum_m \log L_m^{0}(\psi)\\ is the **averaged per-PV
+  log-likelihood** — the heart of the bridge. Each \\\log
+  L_m^{0}(\psi)\\ is one plausible value’s contribution; the
+  \\\tfrac1M\\ in front is precisely the row weight from Section 1
+  carried through to the log scale. This is what makes the stacked
+  likelihood the *average* per-PV likelihood rather than their product
+  or their sum: the \\1/M\\ weight is the whole reason the \\\sum_m\\ is
+  an average.
+- \\C\\ collects terms constant in \\\psi\\ (the row-weighting and
+  stacking constants); it does not affect the location of the maximum.
+
+So \\q\_{\text{SWL}}\\ is exactly the object Section 1 described — one
+fit on the stacked rows, each weighted \\1/M\\ — written as a
+likelihood. The fixed-effect estimate it produces when maximised,
+\\\hat\beta\_{\text{FE}}^{q}\\, is the quantity the next section
+identifies with the Rubin mean. (M1 introduced both \\q\_{\text{SWL}}\\
+and \\L_m^{0}\\ in the symbol table; M3 is where they are assembled.)
+
+## 3. Theorem 2.2 — the point identity
+
+The reason to build \\q\_{\text{SWL}}\\ is that maximising it returns
+the Rubin point. Let \\\hat\beta\_{\text{FE}}^{q}\\ be the fixed-effect
+estimate that maximises the stacked objective EQ-BRIDGE. The companion
+methods paper’s **Theorem 2.2** — **tag EQ-THM22** — states that, under
+the regularity conditions listed below,
+
+\\ \hat\beta\_{\text{FE}}^{q}=\bar\beta, \\
+
+where \\\bar\beta=\tfrac1M\sum_m\hat\beta_m\\ is the Rubin mean from M2
+(EQ-TMI) (Rubin 1987). In words: **one stacked, \\1/M\\-weighted fit
+recovers the multiple-imputation point estimate** that the orthodox
+\\M\\-fits-and-pool recipe produces — the same point, reached from the
+other direction.
+
+The identity is exact only under a set of **regularity conditions,
+labelled collectively R0–R5** in the canonical facts sheet. They are:
+
+- a **flat prior** on the fixed effects (so \\\log p(\psi)\\ does not
+  move the fixed-effect optimum);
+- a **linear-Gaussian** model (EQ-MODEL with Gaussian residuals);
+- a **common design \\X\\** across plausible values (the same covariate
+  matrix in every \\L_m^{0}\\ — the plausible values differ only in the
+  outcome column);
+- **PV-invariant cluster means** \\\bar x\_{\cdot j}\\ (computed once
+  from the full sample and reused across all \\m\\, exactly as M1 §3 and
+  EQ-MODEL require);
+- a **common plug-in covariance \\V\\** (the same residual/variance
+  structure used for every plausible value, not re-estimated per PV);
+- **equal PV weight \\1/M\\** on every row (the fractional weighting of
+  Section 1); and
+- **identifiability** of the fixed-effect block.
+
+These are stated as a collective list, not a one-to-one numbered map:
+the facts sheet gives the seven assumptions under the single heading
+“R0–R5” without assigning each a distinct index, so this vignette does
+**not** invent a mapping of the form “R0 = flat prior, R1 = …”. The
+collective label is what is locked.
+
+## 4. Why it holds
+
+The full proof is the companion methods paper’s; what follows is a
+**sketch** — an honest gesture at the mechanism, not a derivation. The
+intuition rests on two of the conditions above, the **common design
+\\X\\** and the **common plug-in covariance \\V\\**.
+
+Maximising a (log-)likelihood means setting its **score** — the gradient
+in the parameters — to zero. Because EQ-BRIDGE is a \\1/M\\-weighted
+*sum* of the per-PV log-likelihoods, and differentiation is linear, the
+score of the stacked objective is the \\1/M\\-weighted **average of the
+per-PV scores**:
+
+\\ \text{(stacked score)} = \tfrac1M\textstyle\sum_m \text{(score of }
+\log L_m^{0}). \\
+
+Now use the two conditions. With a linear-Gaussian model, a common
+design \\X\\, and a common plug-in covariance \\V\\, each per-PV score
+for the fixed effects is *linear in its data* and *shares the same
+curvature* across plausible values — the per-PV estimating equations
+differ only through the outcome column \\y^{(m)}\\, not through \\X\\ or
+\\V\\. Two consequences follow. First, the root of an individual per-PV
+score is that PV’s estimate, \\\hat\beta_m\\. Second, because the
+equations are linear in the outcome and share a common left-hand side,
+the root of the **average** score is the **average** of the roots.
+Setting the stacked (averaged) score to zero therefore yields
+
+\\ \hat\beta\_{\text{FE}}^{q} = \tfrac1M\textstyle\sum_m \hat\beta_m =
+\bar\beta, \\
+
+which is EQ-THM22. The flat prior is what lets us ignore \\\log
+p(\psi)\\ in the fixed-effect optimum, and identifiability is what makes
+the root unique. Strip away the common \\X\\ or the common \\V\\ — let
+the design or the plug-in covariance vary by plausible value — and “the
+root of the average equals the average of the roots” no longer holds
+exactly, which is precisely where Section 5 picks up. Again: this is a
+sketch of the mechanism; the rigorous statement and proof live in the
+companion methods paper (in preparation).
+
+## 5. Where the identity stops
+
+Theorem 2.2 is powerful but **narrow**, and reading it past its scope is
+the error this page is most concerned to prevent. Three boundaries.
+
+**It is a point identity, not a variance or coverage statement.**
+EQ-THM22 says the stacked fit recovers the Rubin *point* \\\bar\beta\\.
+It says **nothing** about the standard error, the interval, or the
+coverage of that point. The variance answer is a different object
+entirely — M2’s external \\T\_{\text{MI}}\\ — and it reaches the stacked
+fit only through M4’s CCC calibration (EQ-CCC), not through the bridge.
+The bridge gives you *where the estimate is*; M2 and M4 give you *how
+uncertain it is*. Conflating the two is the central misreading to avoid.
+
+**It is exact only under R0–R5.** The equality in Section 3 holds *as an
+identity* only when all the listed conditions are met — in particular a
+common design and a common plug-in covariance across plausible values,
+and a flat prior on the fixed effects.
+
+**EQ-THM22 is a fixed-effect *point* identity, exact only under R0–R5,
+and approximate in production.** In a real fit the variance components
+\\(\sigma^2,\sigma^2\_{\text{sch}})\\ of EQ-MODEL are estimated **per
+plausible value** (production uses per-PV REML), so the plug-in
+covariance \\V\\ is **not** exactly common across the \\M\\ values — one
+of the R0–R5 conditions is only approximately met. The “root of the
+average equals the average of the roots” argument of Section 4 then
+holds **approximately, not exactly**: on real PISA the stacked point and
+the Rubin mean agree closely but need not be byte-identical. This is the
+**guardrail** framing of the facts sheet (§3, §7) — *empirical and
+approximate in production* — and deliberately **not** an “exact,
+verified” blueprint claim. The identity is about the **fixed-effect
+point only**; it is **never** a variance or coverage result.
+
+**It is not a “one-MCMC, same-inference” claim.** That the *point*
+coincides does **not** mean a single stacked fit reproduces the full
+\\M\\-fit *inference*. The inference — the variance, the degrees of
+freedom, the interval, the coverage flag — comes from M2’s external
+target delivered through M4’s CCC, and is governed by the provenance
+rules of M5. The bridge buys you the point; it does not buy you the
+interval.
+
+## 6. Verify the point identity on the fixture
+
+The cached `stack_direct` fixture lets us see EQ-THM22 realised. We read
+the stacked fit’s reported estimate with
+[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
+and the external target’s Rubin mean with
+[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
+and check that they coincide. This is read-only — no estimation, no MCMC
+— and is the same accessor pattern A1–A3 use.
+
+``` r
+
+est <- get_estimates(fit)
+
+all.equal(est$estimate, unname(tg$beta_bar))   # TRUE  -- EQ-THM22 realized on the fixture
+#> [1] TRUE
+data.frame(
+  term             = est$term,
+  stacked_estimate = est$estimate,
+  rubin_beta_bar   = unname(tg$beta_bar)
+)
+#>          term stacked_estimate rubin_beta_bar
+#> 1 b_Intercept       457.894088     457.894088
+#> 2         b_x        46.883361      46.883361
+#> 3    b_female         2.143702       2.143702
+```
+
+The stacked fit’s reported fixed-effect estimates are **term-by-term
+equal** to the Rubin mean \\\bar\beta\\ from M2 — EQ-THM22 realised on
+this fixture. The point identity holds.
+
+**Framing precision — what this panel does and does not prove.** This
+fixture was fit under the **reportable centering convention**
+`center = "target"` (the value recorded in `fit$control$center`). Under
+that convention the stacked fit is *centred on the external target by
+construction*, so the reported estimate **is** \\\bar\beta\\ **by
+construction** — the agreement above is therefore EQ-THM22
+**operationalised** on the fixture: the reportable-convention
+realisation of the theorem, plus the theorem itself. It is **not**, and
+must not be read as, an independent measurement of the *live-fit*
+identity — that would require maximising the stacked objective EQ-BRIDGE
+from scratch and comparing to a separately pooled \\\bar\beta\\, which
+is the companion paper’s job, not this synthetic fixture’s. A4 §3
+forwards exactly this point and is careful to say the live-fit identity
+holds **“approximately, not exactly”** in production (Section 5); M3
+says the same.
+
+It is worth making explicit *which* quantity the bridge supplies and
+which it does not. The reported **point** is the bridge’s contribution
+(EQ-THM22). The reported **standard error**, by contrast, is read
+straight off the *external* target — it is
+\\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\ from M2, not anything the
+bridge produces:
+
+``` r
+
+all.equal(est$se, unname(sqrt(diag(tg$T_MI))))   # TRUE  -- the SE is M2's target, not the bridge's
+#> [1] TRUE
+```
+
+The standard errors match the external target exactly because that is
+where they come from. This is the division of labour Section 5 insisted
+on, made concrete: **the bridge gives the point; M2 (the target) and M4
+(the calibration) give the variance.** The bridge contributes nothing to
+the SE column, and nothing in this panel licenses a coverage claim —
+indeed this fixture carries `coverage_claim_allowed == FALSE` under
+classic df (A3 §4, M5), so its agreement is descriptive and algebraic,
+never coverage evidence.
+
+## 7. Where to next
+
+You now have the bridge in full — the stacked fractional objective
+(EQ-BRIDGE) that averages the per-PV likelihoods, and the point identity
+(EQ-THM22) that recovers the Rubin mean \\\bar\beta\\ from one stacked
+fit under R0–R5 — together with its hard boundary: a fixed-effect
+*point* identity, exact only under those conditions, approximate in
+production, and silent on variance and coverage.
+
+- **M4 · CCC: Cholesky Calibration Correction** — the natural next step,
+  and the *variance* counterpart to this page. Where Theorem 2.2 matched
+  the **point**, the CCC affine map (EQ-CCC) matches the stacked draw
+  cloud’s first two **moments** to M2’s external \\T\_{\text{MI}}\\ — so
+  the variance is delivered by *calibration*, not by the bridge.
+- **M2 · The BRR–Fay fixed-effect target** — the other half of the
+  answer: the \\\bar\beta\\ this identity recovers, and the
+  \\T\_{\text{MI}}\\ this identity does **not** give (EQ-TMI, EQ-FMI).
+- **M5 · Methods, PSIS, and coverage** — the precise contrast of the
+  three methods and why only `stack_direct` is coverage-claimable, the
+  provenance that turns this point identity plus M4’s calibration into a
+  reportable interval.
+
+To see how the point identity reads from the workflow side — the “agree
+on the point, differ on the variance” pattern across methods, and the
+`approximately, not exactly` caveat stated for a practitioner — return
+to **A4 · Comparing methods** (§3), which forwards its proof to this
+page.
+
+Bug reports and feature requests:
+<https://github.com/joonho112/pvstackr/issues>.
+
+### Session info
+
+``` r
+
+sessionInfo()
+#> R version 4.6.0 (2026-04-24)
+#> Platform: x86_64-pc-linux-gnu
+#> Running under: Ubuntu 24.04.4 LTS
+#> 
+#> Matrix products: default
+#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
+#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
+#> 
+#> locale:
+#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
+#> 
+#> time zone: UTC
+#> tzcode source: system (glibc)
+#> 
+#> attached base packages:
+#> [1] stats     graphics  grDevices utils     datasets  methods   base     
+#> 
+#> other attached packages:
+#> [1] pvstackr_0.1.0
+#> 
+#> loaded via a namespace (and not attached):
+#>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
+#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
+#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
+#> [25] rlang_1.2.0       fs_2.1.0
+```
+
+## References
+
+Bürkner, Paul-Christian. 2017. “brms: An R Package for Bayesian
+Multilevel Models Using Stan.” *Journal of Statistical Software* 80 (1):
+1–28. <https://doi.org/10.18637/jss.v080.i01>.
+
+Mislevy, Robert J. 1991. “Randomization-Based Inference about Latent
+Variables from Complex Samples.” *Psychometrika* 56 (2): 177–96.
+<https://doi.org/10.1007/BF02294457>.
+
+Rubin, Donald B. 1987. *Multiple Imputation for Nonresponse in Surveys*.
+John Wiley & Sons. <https://doi.org/10.1002/9780470316696>.
