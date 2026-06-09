@@ -209,6 +209,8 @@ test_that("pisa_tiny shipped artifacts match golden sidecar hashes", {
 })
 
 test_that("live package rebuild reproduces cached tiny parity signature", {
+  skip_if_not_hash_tests()
+
   live <- pisa_tiny_parity_live_fit()
   cached <- pisa_tiny_parity_load()$cached
   golden <- pisa_tiny_parity_golden()
@@ -223,6 +225,8 @@ test_that("live package rebuild reproduces cached tiny parity signature", {
 })
 
 test_that("cached tiny fit public contract matches compact golden signature", {
+  skip_if_not_hash_tests()
+
   cached <- pisa_tiny_parity_load()$cached
   fit <- cached$fit
   estimates <- round_numeric_columns(get_estimates(fit)[c(

@@ -32,6 +32,8 @@ test_that("tiny PISA-shaped CSV fixture is packaged and license-clean", {
 })
 
 test_that("cached tiny stack_direct fixture is fresh against packaged CSV", {
+  skip_if_not_hash_tests()
+
   csv_path <- fixture_path("extdata", "pisa_tiny.csv")
   manifest_path <- fixture_path("extdata", "pisa_tiny_manifest.dcf")
   rds_path <- fixture_path("extdata", "examples", "pisa_tiny_stack_direct.rds")

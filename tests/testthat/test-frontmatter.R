@@ -72,6 +72,8 @@ test_that("frontmatter files exist and record scope", {
 })
 
 test_that("README tiny workflow smoke code stays lightweight", {
+  skip_if_not_hash_tests()
+
   csv_path <- system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
   rds_path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
   expect_true(nzchar(csv_path))

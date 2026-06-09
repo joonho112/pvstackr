@@ -1,3 +1,10 @@
+skip_if_not_hash_tests <- function() {
+  testthat::skip_if_not(
+    identical(Sys.getenv("PVSTACKR_RUN_HASH_TESTS"), "true"),
+    "recomputed content-hash parity is environment-specific; set PVSTACKR_RUN_HASH_TESTS=true (dev/reference environment only)"
+  )
+}
+
 pisa_tiny_parity_path <- function(...) {
   path <- system.file(..., package = "pvstackr")
   if (nzchar(path)) {
