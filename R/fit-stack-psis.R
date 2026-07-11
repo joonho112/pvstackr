@@ -95,7 +95,7 @@ pv_weighted_mean_cov <- function(draws, weights) {
   if (!is.finite(denom) || denom <= .Machine$double.eps) {
     pv_abort("PSIS weights are degenerate; weighted covariance cannot be computed.")
   }
-  cov <- crossprod(centered * sqrt(weights), centered) / denom
+  cov <- crossprod(centered * sqrt(weights)) / denom
   dimnames(cov) <- list(colnames(draws), colnames(draws))
   list(mean = center, cov = pv_symmetrize(cov))
 }

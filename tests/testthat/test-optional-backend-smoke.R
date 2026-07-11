@@ -151,3 +151,43 @@ test_that("posterior draws_matrix output is accepted by the injected draw extrac
   expect_equal(colnames(fit$stacked_draws), c(bundle$cached$target$fe_names, "sigma"))
   expect_equal(fit$meta$fit_engine, "injected_fit_function")
 })
+
+test_that("posterior draws_matrix output survives the full stack_direct CCC path", {
+  skip_if_backend_smoke_disabled()
+  skip_if_not_installed("posterior")
+
+  bundle <- pisa_tiny_parity_load()
+  raw_draws <- pisa_tiny_parity_fit_function(bundle$cached$target)(
+    formula = OUTCOME ~ x + female,
+    data = bundle$data,
+    family = NULL,
+    prior = NULL,
+    chains = 2L,
+    iter = 20L,
+    warmup = 10L,
+    cores = 1L,
+    seed = 20260607L,
+    backend = "injected",
+    file = tempfile("posterior-ccc-"),
+    file_refit = "never"
+  )$draws
+
+  # Baseline plain-matrix run and the posterior::draws_matrix run must agree.
+  # The draws_matrix source used to fail CCC validation: draws_calibrated stayed
+  # a draws_matrix while draws_fe_cal became a plain matrix built by matrix
+  # algebra, so the strict identical() block check compared class, not values.
+  plain <- backend_smoke_direct_fit(backend = "injected", draws = raw_draws)
+  posterior_run <- backend_smoke_direct_fit(
+    backend = "injected",
+    draws = posterior::as_draws_matrix(raw_draws)
+  )
+
+  expect_true("draws_matrix" %in% posterior_run$record$draws_class)
+  expect_s3_class(posterior_run$fit, "pvstackr_fit")
+  expect_equal(posterior_run$fit$status, "ok")
+  expect_invisible(pvstackr:::validate_pvstackr_fit(posterior_run$fit))
+  expect_identical(class(posterior_run$fit$ccc$draws_calibrated), c("matrix", "array"))
+  expect_identical(class(posterior_run$fit$ccc$draws_fe_cal), c("matrix", "array"))
+  expect_equal(posterior_run$fit$ccc$draws_calibrated, plain$fit$ccc$draws_calibrated, tolerance = 0)
+  expect_equal(posterior_run$fit$estimates, plain$fit$estimates, tolerance = 0)
+})

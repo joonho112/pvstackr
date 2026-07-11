@@ -412,3 +412,44 @@ test_that("CCC supports a one-dimensional fixed-effect block", {
   expect_equal(unname(colMeans(out$draws_fe_cal)), 10, tolerance = 1e-14)
   expect_equal(as.numeric(stats::cov(out$draws_fe_cal)), 9, tolerance = 1e-14)
 })
+
+test_that("ccc_as_draw_matrix strips class/attributes and row names to a plain matrix", {
+  base <- ccc_draw_fixture(include_vc = TRUE)
+  # Mimic an as_draws_matrix() result: a matrix carrying an extra S3 subclass,
+  # draw-id row names, and an incidental attribute.
+  classed <- structure(
+    base,
+    dimnames = list(as.character(seq_len(nrow(base))), colnames(base)),
+    class = c("draws_matrix", "draws", "matrix", "array"),
+    extra_attr = "provenance"
+  )
+  expect_true(is.matrix(classed))
+
+  out <- pvstackr:::ccc_as_draw_matrix(classed)
+  expect_identical(class(out), c("matrix", "array"))
+  expect_null(rownames(out))
+  expect_identical(colnames(out), colnames(base))
+  expect_null(attr(out, "extra_attr"))
+  expect_identical(out, `dimnames<-`(base, list(NULL, colnames(base))))
+})
+
+test_that("CCC calibrates and validates a draws_matrix-classed input identically to a plain matrix", {
+  base <- ccc_draw_fixture(include_vc = TRUE)
+  target <- ccc_target_fixture()
+  classed <- structure(
+    base,
+    dimnames = list(as.character(seq_len(nrow(base))), colnames(base)),
+    class = c("draws_matrix", "draws", "matrix", "array")
+  )
+
+  plain_out <- pvstackr:::ccc_calibrate(base, target)
+  classed_out <- pvstackr:::ccc_calibrate(classed, target)
+
+  # The classed source used to fail validation because draws_calibrated stayed a
+  # draws_matrix while draws_fe_cal was a plain matrix built by matrix algebra,
+  # so the strict identical() block check compared class, not values.
+  expect_invisible(pvstackr:::validate_pvstackr_ccc(classed_out))
+  expect_identical(class(classed_out$draws_calibrated), c("matrix", "array"))
+  expect_identical(classed_out$draws_calibrated, plain_out$draws_calibrated)
+  expect_identical(classed_out$draws_fe_cal, plain_out$draws_fe_cal)
+})

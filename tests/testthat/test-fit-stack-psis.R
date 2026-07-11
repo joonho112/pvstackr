@@ -419,3 +419,28 @@ test_that("pv_fit_stack_psis rejects malformed PSIS inputs and hollow objects", 
     "PSIS"
   )
 })
+
+test_that("pv_weighted_mean_cov matches the direct weighted-covariance formula", {
+  set.seed(42)
+  draws <- matrix(rnorm(400), nrow = 100, ncol = 4,
+                  dimnames = list(NULL, paste0("b_", letters[1:4])))
+  w <- rexp(100)
+  w <- w / sum(w)
+  out <- pv_weighted_mean_cov(draws, w)
+  mu <- colSums(draws * w)
+  cen <- sweep(draws, 2L, mu, FUN = "-")
+  denom <- 1 - sum(w^2)
+  ref <- matrix(0, 4, 4, dimnames = list(colnames(draws), colnames(draws)))
+  for (s in seq_len(nrow(draws))) {
+    ref <- ref + w[s] * tcrossprod(cen[s, ])
+  }
+  ref <- ref / denom
+  expect_equal(out$mean, mu)
+  expect_equal(out$cov, ref, tolerance = 1e-12)
+  # uniform weights must reproduce the ordinary covariance up to the
+  # reliability-weights denominator, not an S-dependent inflation
+  wu <- rep(1 / 100, 100)
+  outu <- pv_weighted_mean_cov(draws, wu)
+  expect_equal(outu$cov, stats::cov(draws) * (99 / 100) / (1 - sum(wu^2)),
+               tolerance = 1e-12)
+})

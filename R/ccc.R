@@ -18,7 +18,22 @@ ccc_as_draw_matrix <- function(draws) {
   if (nrow(out) < 2L) {
     pv_abort("`draws` must contain at least two posterior draws.")
   }
-  out
+  # Return a canonical plain base matrix. An input can satisfy is.matrix() yet
+  # carry an S3 subclass with extra attributes and draw-id row names -- notably
+  # the draws_matrix class produced by the posterior package's as_draws_matrix().
+  # Downstream identity checks (e.g. draws_fe_cal vs the fixed-effect block of
+  # draws_calibrated) use identical(), so any class/attribute difference between
+  # a calibrated block built by matrix algebra and the still-classed source
+  # would fail on provenance rather than values. Strip to a bare double matrix,
+  # keeping column names and dropping row names, so those checks compare values.
+  col_names <- colnames(out)
+  out <- unclass(out)
+  matrix(
+    as.double(out),
+    nrow = nrow(out),
+    ncol = ncol(out),
+    dimnames = list(NULL, col_names)
+  )
 }
 
 ccc_forbidden_target_text <- function(target) {

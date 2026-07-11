@@ -1,3 +1,34 @@
+# pvstackr 0.1.1
+
+Patch release fixing two bugs found while preparing the LSAE software article.
+Point estimates are unchanged for every method; the fixes affect `stack_psis`
+interval width and the acceptance of `posterior::draws_matrix` inputs.
+
+## Bug fixes
+
+- **`stack_psis` PSIS-weighted covariance.** `pv_weighted_mean_cov()` applied
+  `sqrt(weights)` to only one factor of the cross-product
+  (`crossprod(centered * sqrt(weights), centered)`), weighting each draw by
+  `sqrt(w)` instead of `w`. This inflated `stack_psis` within-imputation
+  covariances by roughly the square root of the draw count. Weighted-mean point
+  estimates were unaffected, but `stack_psis` standard errors and intervals
+  reported by 0.1.0 are inflated and should be recomputed. Added a direct
+  regression test for the weighted-covariance formula.
+
+- **CCC validation of `posterior::draws_matrix` inputs.** When a
+  `draws_function` returned a `posterior::draws_matrix` (the natural output of
+  `posterior::as_draws_matrix()` on a `brmsfit`), `validate_pvstackr_ccc()`
+  compared `draws_fe_cal` against the fixed-effect block of `draws_calibrated`
+  with a strict `identical()`. The `draws_matrix` S3 class and draw-id row
+  names made that check fail even when the values matched, aborting with
+  "CCC `draws_fe_cal` must equal the fixed-effect block of `draws_calibrated`".
+  Draw matrices are now normalized to plain base matrices at the ingestion
+  boundary (`ccc_as_draw_matrix()`), so the identity check compares values and
+  column names rather than S3 provenance. Added regression tests for a
+  `draws_matrix`-classed input through calibration and validation, plus (under
+  the optional backend-smoke suite) a genuine `posterior::as_draws_matrix()`
+  through the full `stack_direct` CCC path.
+
 # pvstackr 0.1.0
 
 First public release. `pvstackr` calibrates a stacked Bayesian-backend fit of
