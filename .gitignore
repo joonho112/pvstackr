@@ -42,3 +42,4 @@ renv.lock
 # Maintainer-only trees (excluded from the public repository and the tarball)
 /dev/
 /log/
+Rplots.pdf
