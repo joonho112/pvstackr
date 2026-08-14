@@ -75,7 +75,10 @@ pv_warn_if_bare_pv_with_subject_families <- function(data, prefix, suffix) {
 }
 
 pv_hash_payload <- function(payload) {
-  bytes <- as.integer(serialize(payload, NULL, ascii = FALSE, xdr = TRUE, version = 2))
+  # The serialization header records the writing R version, and these hashes are
+  # stored on objects and re-derived later -- the legacy target revalidation
+  # compares them fail-closed -- so the header has to stay out of the digest.
+  bytes <- as.integer(pv_validation_payload_bytes(payload, "Content hash payload"))
   if (length(bytes) == 0L) {
     return("00000000")
   }

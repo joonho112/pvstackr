@@ -90,7 +90,7 @@ test_that("README tiny workflow smoke code stays lightweight", {
     id_cols = "CNTSTUID"
   )
   expect_s3_class(design, "pvstackr_design")
-  expect_equal(design$design_hash, "4776c0f1")
+  expect_equal(design$design_hash, "fa78c04b")
 
   cached <- readRDS(rds_path)
   fit <- cached$fit

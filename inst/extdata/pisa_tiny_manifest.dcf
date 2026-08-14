@@ -38,15 +38,15 @@ Generated-At: omitted_for_deterministic_fixture
 CSV-SHA256:
         7dc9e8e013fd21b5ffd284bf28713edfc092873ad7be02f73e475d0372f66777
 RDS-SHA256:
-        d28b8f87e0970069266a16a21a7a756c39bffdb8e9670212b577f9df5adeecbc
-Data-Hash: d1e9941d
-Row-Support-Hash: 5af32aa2
-PV-Value-Hash: a29f24e4
-Weight-Design-Hash: 69584370
-Design-Hash: 4776c0f1
+        a82ead4ec7441f0c8f9c8e5e510ba03a24356ffffc489e45dc1dc60e998d89cf
+Data-Hash: 096e93aa
+Row-Support-Hash: ca572a2f
+PV-Value-Hash: 23242471
+Weight-Design-Hash: 883642fd
+Design-Hash: fa78c04b
 Target-Hash:
         sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
 Long-Data-Hash: 11549a18
-Draws-Hash: 088c0172
-Estimates-Hash: 80515a37
-Canonical-Fit-Hash: acf49722
+Draws-Hash: 010200ff
+Estimates-Hash: 08b259c4
+Canonical-Fit-Hash: 9d7096af
