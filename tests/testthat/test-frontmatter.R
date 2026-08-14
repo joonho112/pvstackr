@@ -36,7 +36,8 @@ test_that("frontmatter files exist and record scope", {
   expect_match(readme, "design-based external Rubin/BRR-Fay fixed-effect target for reported estimates and SEs", fixed = TRUE)
   expect_match(readme, "Per-PV Bayesian/backend reference", fixed = TRUE)
   expect_match(readme, "model-based within-PV covariance", fixed = TRUE)
-  expect_match(readme, "supplied/precomputed or injected PSIS", fixed = TRUE)
+  expect_match(readme, "explicit PSIS producer/version provenance", fixed = TRUE)
+  expect_match(readme_flat, "Kish-style iid weight ESS", fixed = TRUE)
   expect_match(readme_flat, "do not construct or calibrate to the external BRR-Fay target", fixed = TRUE)
   expect_match(readme, "Rubin/BRR-Fay fixed-effect target", fixed = TRUE)
   expect_match(readme, "calibrated reporting is scoped to fixed", fixed = TRUE)
@@ -96,7 +97,11 @@ test_that("README tiny workflow smoke code stays lightweight", {
   expect_s3_class(fit, "pvstackr_fit")
   expect_equal(fit$method, "stack_direct")
   expect_equal(fit$status, "ok")
-  expect_equal(fit$design$design_hash, design$design_hash)
+  expect_null(fit$design$data)
+  expect_identical(
+    fit$design$design_hash,
+    fit$target$binding_manifest$manifest_hash
+  )
   expect_equal(fit$target$target_hash, cached$target_hash)
 
   estimates <- get_estimates(fit)
@@ -123,6 +128,12 @@ test_that("README.Rmd renders to github markdown when rmarkdown is available", {
   out_dir <- tempfile("pvstackr-readme-")
   dir.create(out_dir)
   on.exit(unlink(out_dir, recursive = TRUE), add = TRUE)
+  logo_dir <- file.path(out_dir, "man", "figures")
+  dir.create(logo_dir, recursive = TRUE)
+  expect_true(file.copy(
+    file.path(pkg_root(), "man", "figures", "logo.png"),
+    file.path(logo_dir, "logo.png")
+  ))
 
   rendered <- rmarkdown::render(
     input = file.path(pkg_root(), "README.Rmd"),

@@ -66,12 +66,10 @@ test_that("real PISA guidance does not equate package per_pv SEs with stack_dire
   skip_if_no_guidance_source()
 
   guidance <- paste(readLines(guidance_path(), warn = FALSE), collapse = "\n")
-  facts_path <- file.path(guidance_pkg_root(), "dev", "facts-and-notation.md")
-  facts <- if (file.exists(facts_path)) {
-    paste(readLines(facts_path, warn = FALSE), collapse = "\n")
-  } else {
-    ""
-  }
+  facts <- paste(
+    readLines(file.path(guidance_pkg_root(), "dev", "facts-and-notation.md"), warn = FALSE),
+    collapse = "\n"
+  )
   text <- gsub("[[:space:]]+", " ", paste(guidance, facts, sep = "\n"))
 
   bad_patterns <- c(
@@ -158,10 +156,6 @@ test_that("real PISA guidance vignette renders without real PISA data", {
 
 test_that("build hygiene blocks common real-data formats and PISA folders", {
   skip_if_no_guidance_source()
-  skip_if_not(
-    file.exists(file.path(guidance_pkg_root(), "dev", "check-build-hygiene.R")),
-    "dev/ tooling is not present in this tree (installed or public checkout)"
-  )
   script <- paste(readLines(file.path(guidance_pkg_root(), "dev", "check-build-hygiene.R"), warn = FALSE), collapse = "\n")
   expect_match(script, "[Pp][Ii][Ss][Aa]", fixed = TRUE)
   for (extension in c("sav", "por", "sas7bdat", "sas7bcat", "xpt", "dta", "duckdb", "db")) {

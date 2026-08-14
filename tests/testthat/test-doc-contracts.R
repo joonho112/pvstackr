@@ -34,7 +34,8 @@ test_that("interval and source vocabulary are documented in source contracts", {
   expect_match(object_contracts, "coverage_claim_allowed = FALSE", fixed = TRUE)
   expect_match(object_contracts, "coverage_claim_allowed = TRUE", fixed = TRUE)
   expect_match(object_contracts, "formal external", fixed = TRUE)
-  expect_match(object_contracts, "log_ratios_self_normalized", fixed = TRUE)
+  expect_match(object_contracts, "self_normalized_log_ratios", fixed = TRUE)
+  expect_match(object_contracts, "weight_ess_iid", fixed = TRUE)
 
   expect_match(fit_direct, "describe the external target policy", fixed = TRUE)
   expect_match(fit_direct, "not a residual", fixed = TRUE)
@@ -56,7 +57,9 @@ test_that("interval and source vocabulary are documented in source contracts", {
   expect_match(object_contracts, "additional_args", fixed = TRUE)
   expect_match(fit_reference, "external design replicate", fixed = TRUE)
   expect_match(fit_reference, "coverage_claim_allowed = FALSE", fixed = TRUE)
-  expect_match(fit_psis, "does not by itself run Pareto smoothing", fixed = TRUE)
+  expect_match(fit_psis, "does not run Pareto smoothing", fixed = TRUE)
+  expect_match(fit_psis, "caller declaration", fixed = TRUE)
+  expect_match(fit_psis, "owned_stamp_bounded_projection", fixed = TRUE)
   expect_match(accessors, "Estimate-row `target_source` labels are provenance", fixed = TRUE)
   expect_match(compare, "only when all available", fixed = TRUE)
   expect_match(compare, "formal target object", fixed = TRUE)
@@ -238,6 +241,17 @@ test_that("method-comparison interval cell is conditional, not a bare coverage c
   for (txt in list(a4, m5, facts)) {
     expect_match(txt, "coverage-claimable only with an external Barnard", fixed = TRUE)
   }
+})
+
+test_that("public PSIS comparison vignette keeps placeholder weights blocked", {
+  a4 <- doc_contract_read(file.path("vignettes", "a4-comparing-methods.Rmd"))
+
+  expect_match(a4, "fails closed", fixed = TRUE)
+  expect_match(a4, "provenance_incomplete", fixed = TRUE)
+  expect_match(a4, "a string label is not evidence", fixed = TRUE)
+  expect_false(grepl("synthetic_vignette_fixture", a4, fixed = TRUE))
+  expect_false(grepl("psis_producer =", a4, fixed = TRUE))
+  expect_false(grepl("status == \"ok\"", a4, fixed = TRUE))
 })
 
 test_that("M2 prints the Barnard-Rubin (EQ-BARNARD) formula, keeping the classic-df honesty (ER071-F4)", {
