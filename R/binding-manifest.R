@@ -3602,6 +3602,27 @@ pv_binding_target_manifest_validate <- function(target_content, manifest) {
   invisible(target_content)
 }
 
+# `per_pv` is a list of per-plausible-value estimates. Its shape is checked
+# exactly; its numbers go through the same tolerance as the pooled estimates.
+pv_binding_legacy_per_pv_numeric_equal <- function(expected, observed) {
+  if (!is.list(expected) || !is.list(observed) ||
+      !identical(names(expected), names(observed)) ||
+      length(expected) != length(observed)) {
+    return(FALSE)
+  }
+  all(vapply(seq_along(expected), function(index) {
+    left <- expected[[index]]
+    right <- observed[[index]]
+    if (is.numeric(left) || is.numeric(right)) {
+      return(pv_binding_target_numeric_equal(left, right))
+    }
+    if (is.list(left) || is.list(right)) {
+      return(pv_binding_legacy_per_pv_numeric_equal(left, right))
+    }
+    identical(left, right)
+  }, logical(1)))
+}
+
 pv_binding_legacy_revalidation_abort <- function(detail) {
   pv_binding_abort("PV_BIND_E080", detail, "target_content")
 }
@@ -3774,23 +3795,50 @@ pv_binding_target_content_from_brr_target <- function(
         engine = "lm",
         verbose = FALSE
       )
+      # Structure and declared inputs must match exactly. The estimates must not:
+      # they are weighted least-squares output, and the last bits of a BLAS
+      # result differ between platforms, so a legacy target built on one machine
+      # could never be revalidated on another under bit-exact equality. Compare
+      # them under the package's numeric policy instead, and compare the
+      # input-derived design hash exactly. `target_hash` is deliberately not
+      # compared: it digests those same estimates, so it carries the same
+      # platform dependence and the numeric check above already covers them.
       exact_fields <- c(
-        "per_pv", pv_binding_target_derived_fields(), "M", "R", "fay_k",
-        "df_method", "interval_role", "coverage_claim_allowed",
-        "fe_names", "target_source", "engine", "policy"
+        "M", "R", "fay_k", "df_method", "interval_role",
+        "coverage_claim_allowed", "fe_names", "target_source", "engine", "policy"
       )
+      numeric_fields <- pv_binding_target_derived_fields()
       rebuilt_legacy_hashes <- rebuilt_target$binding_manifest$legacy_hashes
       rebuilt_legacy_df_complete <- if (identical(rebuilt_target$df_method, "classic")) {
         stats::setNames(rep(NA_real_, length(rebuilt_target$fe_names)), rebuilt_target$fe_names)
       } else {
         rebuilt_target$df_complete
       }
+      numeric_matches <- all(vapply(
+        numeric_fields,
+        function(field) {
+          pv_binding_target_numeric_equal(
+            target[[field]],
+            rebuilt_target[[field]],
+            allow_positive_infinity = field %in% c("df", "df_classic")
+          )
+        },
+        logical(1)
+      ))
+      per_pv_matches <- pv_binding_legacy_per_pv_numeric_equal(
+        target$per_pv,
+        rebuilt_target$per_pv
+      )
+      df_complete_matches <- if (identical(target$df_method, "classic")) {
+        identical(target$df_complete, rebuilt_legacy_df_complete)
+      } else {
+        pv_binding_target_numeric_equal(target$df_complete, rebuilt_legacy_df_complete)
+      }
       if (!identical(target[exact_fields], rebuilt_target[exact_fields]) ||
-          !identical(target$df_complete, rebuilt_legacy_df_complete) ||
-          !identical(target$design_hash, rebuilt_legacy_hashes$design_hash) ||
-          !identical(target$target_hash, rebuilt_legacy_hashes$target_hash)) {
+          !numeric_matches || !per_pv_matches || !df_complete_matches ||
+          !identical(target$design_hash, rebuilt_legacy_hashes$design_hash)) {
         pv_binding_legacy_revalidation_abort(
-          "Legacy target primitives do not exactly match independent raw-input reconstruction."
+          "Legacy target primitives do not match independent raw-input reconstruction."
         )
       }
       list(target = rebuilt_target, manifest = fresh_manifest)

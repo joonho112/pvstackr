@@ -442,3 +442,42 @@ test_that("legacy algorithm identifier matches the frozen contract", {
     "adler32_r_serialize_v2"
   )
 })
+
+test_that("legacy revalidation tolerates BLAS noise but not a real change", {
+  path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
+                      package = "pvstackr")
+  fixture <- readRDS(path)
+  legacy_target <- if (identical(fixture$target$schema_version, "0.1.0")) {
+    fixture$target
+  } else {
+    binding_legacy_from_current(fixture$target)
+  }
+  revalidate <- function(target) {
+    pv_revalidate_brr_target(
+      target = target,
+      data = fixture$design$data,
+      formula = fixture$design$formula,
+      conf_level = fixture$fit$control$conf_level
+    )
+  }
+
+  # A difference at the scale two BLAS implementations disagree on must not
+  # block: otherwise a target built on one machine is unusable on another.
+  drifted <- legacy_target
+  drifted$beta <- drifted$beta * (1 + 1e-14)
+  expect_s3_class(revalidate(drifted), "pvstackr_brr_target")
+
+  # Anything larger is a real disagreement and still fails closed.
+  altered <- legacy_target
+  altered$beta <- altered$beta * (1 + 1e-6)
+  expect_error(revalidate(altered), "do not match independent raw-input reconstruction")
+
+  # Structure and declared inputs keep exact equality.
+  renamed <- legacy_target
+  names(renamed$beta)[1] <- "b_TAMPERED"
+  expect_error(revalidate(renamed))
+
+  rehashed <- legacy_target
+  rehashed$design_hash <- "deadbeef"
+  expect_error(revalidate(rehashed), "do not match independent raw-input reconstruction")
+})
