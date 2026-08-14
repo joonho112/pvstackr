@@ -40,6 +40,10 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+          # cmdstanr is a Suggests dependency and lives outside CRAN; the
+          # DESCRIPTION Additional_repositories field is not consulted by the
+          # dependency solver, so the repository is declared here as well.
+          extra-repositories: https://stan-dev.r-universe.dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
