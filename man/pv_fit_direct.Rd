@@ -31,12 +31,18 @@ pv_fit_direct(
 
 \item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "stack_direct"}.}
 
-\item{family}{Optional backend family object passed to the injected fit
-function.}
+\item{family}{Optional family representation. Reportable \code{stack_direct}
+accepts only Gaussian/identity semantics and passes a package-owned
+canonical \code{stats::gaussian("identity")} object to the backend; executable
+closures supplied by the caller are never forwarded.}
 
-\item{prior}{Optional backend prior object. Explicit priors are allowed but
-reported as warning-level diagnostics because the current identity result
-is scoped to MLE/flat-prior fixed-effect regimes.}
+\item{prior}{Optional backend prior object. Under the materialized
+\code{stack_direct} design, only recognized invariant prior tables are passed
+through; coefficient-, intercept-, scoped-, and opaque priors fail before
+backend execution because their identities cannot be preserved exactly.
+Accepted explicit priors are still reported as warning-level diagnostics
+because the current identity result is scoped to MLE/flat-prior
+fixed-effect regimes.}
 
 \item{fit_function}{Injected backend fitting function for this package stage.}
 
@@ -51,14 +57,25 @@ are recommended when backend draw names do not follow the automatic \verb{b_*}
 fixed-effect convention, including distributional names such as
 \verb{b_sigma_*}.}
 
-\item{diagnose_function}{Optional backend diagnostic extractor.}
+\item{diagnose_function}{Optional injected backend diagnostic extractor.
+Its existing named-list fields are preserved, while sampler fields are
+normalized under \code{stack_fit$diagnostics$sampler}. A missing, malformed, or
+failed extractor produces explicit incomplete diagnostics and reason codes.
+When the bundled brms adapter is used, pvstackr automatically obtains
+R-hat and bulk/tail ESS from posterior summaries and divergences from brms
+NUTS parameters. The normalized record includes total and per-chain ESS
+minima, chain count, post-warmup draws per chain, source, and completeness.
+Extraction records diagnostics but does not itself change fit status.}
 
 \item{log_lik_function}{Optional log-likelihood extractor.}
 
 \item{extract_log_lik}{Whether to extract log-likelihood draws.}
 
-\item{cache_dir, cache_stem}{Cache location metadata passed to the injected
-fit function.}
+\item{cache_dir, cache_stem}{Cache directory and safe file stem. For the
+bundled brms backend, pvstackr creates the directory, verifies that it is
+writable, and uses brms \code{file_refit = "on_change"}. Set \code{cache_dir = NULL}
+to disable file caching. Injected adapters continue to own their cache
+implementation and receive these values only as fit arguments.}
 
 \item{additional_args}{Additional named arguments passed to the injected fit
 function.}
@@ -67,13 +84,13 @@ function.}
 A \code{pvstackr_fit} object.
 }
 \description{
-\code{pv_fit_direct()} runs the v0.1 \code{stack_direct} path: fixed-effect-only
+\code{pv_fit_direct()} runs the current \code{stack_direct} path: fixed-effect-only
 compatibility preflight, one stacked plausible-value fit, CCC calibration to
 an external BRR-Fay/Rubin target, and assembly of a reportable
 \code{pvstackr_fit} object.
 }
 \details{
-In v0.1, \code{stack_direct} is fixed-effect-only and requires an external
+The current \code{stack_direct} contract is fixed-effect-only and requires an external
 \code{pvstackr_brr_target} from \code{\link[=pv_brr_target]{pv_brr_target()}}. The formula RHS and derived
 fixed-effect names must match the target exactly. Group terms such as
 \code{(1 | school)} are rejected until a two-level target engine is implemented.
@@ -81,6 +98,15 @@ fixed-effect names must match the target exactly. Group terms such as
 The returned \code{pvstackr_fit} has \code{status = "ok"}, \code{"warning"}, or
 \code{"blocked"}. Yellow CCC center separation and explicit priors produce
 warning-status fits; red CCC center separation blocks reportable estimates.
+Frozen sampler gates also promote R-hat or ESS findings to warning status and
+block incomplete diagnostics, hard R-hat/ESS failures, configuration
+mismatches, or any divergence before CCC calibration. A sampler-blocked fit
+retains the independently valid external target but removes design data,
+stack/backend fit, CCC payload, estimates, and draws. Its retained target is
+an exact canonical allowlisted snapshot whose formula uses the safe base
+environment and whose warnings are empty. Its preflight record is a
+formula-free snapshot, so extensions and caller/private environments are not
+retained.
 CCC calibration-matrix conditioning is also gated by \code{kappa_A}: values at or
 above \code{1e6} produce warning-status fits, and values at or above \code{1e8} block
 reportable estimates. Reportable estimates and retained draws are

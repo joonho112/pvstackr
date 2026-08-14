@@ -40,8 +40,8 @@ errors that carry the design-based combining variance, together with
 diagnostics that say plainly when an interval may be read as a coverage
 statement and when it may not.
 
-`pvstackr` is a focused, self-contained method package — not a paper-replication
-repository. A companion methods paper is in preparation.
+`pvstackr` is a focused, self-contained method package — not a
+paper-replication repository. A companion methods paper is in preparation.
 
 ## Installation
 
@@ -88,13 +88,17 @@ The public method IDs are:
 | Method | Role |
 |----|----|
 | `stack_direct` | Default calibrated-reporting path: a design-based external Rubin/BRR-Fay fixed-effect target for reported estimates and SEs, plus one stacked backend fit used to calibrate draws and diagnose agreement. |
-| `stack_psis` | Diagnostic/reference method: one stacked draw source plus supplied/precomputed or injected PSIS weights, Pareto-k diagnostics, and model-based Rubin pooling of PSIS-weighted fixed-effect summaries. |
+| `stack_psis` | Diagnostic/reference method: one stacked draw source plus externally produced weights, Pareto-k diagnostics, explicit PSIS producer/version provenance, and model-based Rubin pooling of weighted fixed-effect summaries. |
 | `per_pv` | Per-PV Bayesian/backend reference: one fit or posterior-draw source per plausible value, with fixed-effect centers and model-based within-PV covariance combined by Rubin pooling. |
 
 In the current package stage, all three method IDs are implemented
 through injected or precomputed light paths. `stack_psis` currently
-expects supplied or injected PSIS weights and Pareto-k diagnostics
-rather than depending on a live PSIS backend.
+expects supplied or injected weights, Pareto-k diagnostics, and a
+caller-declared external PSIS producer/version rather than depending on
+a live PSIS backend. Raw self-normalized log ratios and external weights
+without that provenance are diagnostic-only and fail closed. Diagnostics
+include per-PV Kish-style iid weight ESS and maximum normalized weight;
+these are not MCMC ESS or autocorrelation-adjusted `loo` diagnostics.
 
 ## Scope
 
@@ -247,7 +251,7 @@ fit
 #>   fixed effects: 3
 #>   target: external_brr_fay_rubin
 #>   draws: not retained
-#>   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc
+#>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 
 get_estimates(fit)[
@@ -260,10 +264,10 @@ get_estimates(fit)[
 #> 3    b_female   2.143702 3.5550309 1.013730 -41.60687  45.89428
 
 get_target(fit)$target_hash
-#> [1] "4a4d40f8"
+#> [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"
 names(get_diagnostics(fit))
-#> [1] "preflight"          "stack_fit"          "stack_fit_warnings"
-#> [4] "ccc"
+#> [1] "preflight"          "sampler"            "sampler_gate"      
+#> [4] "stack_fit"          "stack_fit_warnings" "ccc"
 get_draws(fit)
 #> NULL
 ```

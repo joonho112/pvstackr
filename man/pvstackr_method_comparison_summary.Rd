@@ -38,6 +38,10 @@ pooling source, or estimand construction); \code{NA} otherwise.}
 estimate table and the per-method diagnostic table.}
 \item{\code{agreement}}{The descriptive cross-method agreement table.}
 \item{\code{timing}}{Per-method timing metadata.}
+\item{\code{summary_schema_version}, \code{source_validation},
+\code{source_reportability_comparison}, \code{validation}}{The current summary
+schema, deep-valid compact source comparison and its stamp, and the
+owned-summary SHA-256 record used before printing.}
 }
 }
 \description{

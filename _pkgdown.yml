@@ -64,6 +64,7 @@ reference:
       Build the external Rubin / BRR-Fay fixed-effect target.
     contents:
       - pv_brr_target
+      - pv_revalidate_brr_target
 
   - title: Fit a method
     desc: >

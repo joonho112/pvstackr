@@ -30,9 +30,10 @@ comparison object.}
 \value{
 A \code{pvstackr_method_comparison} object with top-level
 \code{estimate_table}, \code{diagnostic_table}, \code{agreement}, and \code{timing} fields.
-\code{estimate_table} includes method-level interval metadata alongside the
-aligned fixed-effect estimates. \code{diagnostic_table} includes method-level
-target/pooling provenance and shared-provenance flags.
+\code{estimate_table} includes method-level interval and PSIS provenance
+metadata alongside the aligned fixed-effect estimates. \code{diagnostic_table}
+includes method-level target/pooling provenance, PSIS source and bounded
+weight-concentration summaries, and shared-provenance flags.
 }
 \description{
 \code{pv_compare_methods()} compares already-created \code{pvstackr_fit} objects by
@@ -63,6 +64,23 @@ compared methods share a target hash, pooling hash, target source, or estimand
 construction. \code{target_source} is provenance vocabulary, not necessarily a
 formal target object: \code{stack_psis} rows use \code{stack_psis_rubin_pooling} even
 though \code{\link[=get_target]{get_target()}} returns \code{NULL} for \code{stack_psis} fits.
+For \code{stack_psis}, the aligned estimate rows additionally retain
+\code{psis_source}, \code{pareto_k_source}, \code{weight_method}, \code{psis_producer}, and
+\code{psis_producer_version}. The method diagnostic table adds the minimum
+per-PV Kish-style iid weight ESS and ESS fraction, plus the maximum
+normalized weight. These fields preserve the source fit's bounded
+provenance and concentration diagnostics; they are not MCMC ESS or a
+substitute for Pareto-k gating.
+
+Current comparison objects record deep-valid compact PSIS source fits,
+canonical per-source reportability projections, each source authority's
+validation stamp, and an owned-payload SHA-256 stamp. Derived tables and
+diagnostics are recomputed from those projections during validation. A
+pre-marker serialized comparison containing
+\code{stack_psis} is inspection-only and must be rebuilt from current validated
+fits; its saved numeric table is not grandfathered. Independently of the
+stamp, warning-status PSIS rows are forbidden and blocked PSIS rows must
+carry no reportable numeric or pooling metadata.
 }
 \section{Interpreting agreement}{
 

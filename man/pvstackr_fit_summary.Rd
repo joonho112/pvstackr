@@ -37,6 +37,10 @@ rather than coverage-claimable; \code{NA} otherwise.}
 fit warnings.}
 \item{\code{estimates}, \code{diagnostics}}{The reportable fixed-effect estimate
 table and the structured diagnostics list.}
+\item{\code{summary_schema_version}, \code{source_validation},
+\code{source_reportability_fit}, \code{validation}}{The current summary schema,
+deep-valid compact source fit and its stamp, and the owned-summary
+SHA-256 record used before printing.}
 }
 }
 \description{

@@ -39,13 +39,14 @@ and the **interval semantics** that separate the methods, and to state the two
 cautions that govern when agreement means something.
 
 ::: {.alert .alert-warning}
-A note on the worked example below. To compare three methods offline we feed
-`per_pv` and `stack_psis` **synthetic, injected** posterior draws (random noise
-centred near the fixture's coefficients), because the package ships only one
-cached fit and runs no live MCMC. Their point estimates are therefore *manufactured
-for illustration* and will not coincide with `stack_direct` the way a real
-comparison would. Read this article for the **structure** of a comparison and the
-**interval semantics**, not as a substantive agreement result.
+A note on the worked example below. We feed `per_pv` **synthetic, injected**
+posterior draws (random noise centred near the fixture's coefficients), because
+the package ships only one cached fit and runs no live MCMC. For `stack_psis`,
+the example deliberately supplies equal placeholder weights and arbitrary
+Pareto-$\hat k$ values **without** claiming that PSIS ran. The fit therefore
+fails closed and remains visible as a blocked comparison row. Read this article
+for the **structure** of a comparison and the **interval semantics**, not as a
+substantive agreement result.
 :::
 
 ## 1. The three methods in one table
@@ -78,7 +79,7 @@ In one sentence each:
 ::: {.alert .alert-warning}
 The **"fit count" column is topology, not speed.** It records how many model fits
 a method's architecture requires — one stacked fit versus $M$ separate ones — not
-a benchmarked runtime. v0.1 makes no "faster" claim; see the honesty triad in
+a benchmarked runtime. The current package makes no "faster" claim; see the honesty triad in
 Section 7.
 :::
 
@@ -95,10 +96,11 @@ it finished fits — so the only setup is building three fits that share the sam
 fixed-effect names (`b_Intercept`, `b_x`, `b_female`).
 
 The first fit is the cached `stack_direct` fixture you already met in A1. The
-other two are built from **injected synthetic draws**: `pv_fit_reference()` accepts
-a list of per-PV posterior draw matrices, and `pv_fit_stack_psis()` accepts a
-stacked draw matrix with supplied PSIS weights and Pareto-$\hat k$ values. No live
-MCMC runs anywhere below.
+other two use injected synthetic inputs: `pv_fit_reference()` accepts a list of
+per-PV posterior draw matrices, and `pv_fit_stack_psis()` accepts a stacked draw
+matrix plus weight diagnostics. No live MCMC or PSIS routine runs below.
+Consequently, the PSIS example intentionally omits producer/version and must
+remain blocked; a string label is not evidence that smoothing occurred.
 
 ```{r build-fits}
 fe <- c("b_Intercept", "b_x", "b_female")
@@ -122,8 +124,9 @@ fit_per_pv <- pv_fit_reference(
   control      = pv_control(method = "per_pv")
 )
 
-# Synthetic stacked draw cloud + equal (placeholder) PSIS weights and small
-# Pareto-k. Again injected for illustration; nothing is importance-sampled live.
+# Synthetic stacked draw cloud + equal placeholder weights and arbitrary
+# Pareto-k. Nothing is importance-sampled live, so producer/version are omitted
+# and the fit must fail closed as provenance_incomplete.
 sd_mat <- mk(c(458, 47, 2))
 fit_psis <- pv_fit_stack_psis(
   stacked_draws = sd_mat,
@@ -134,7 +137,8 @@ fit_psis <- pv_fit_stack_psis(
 )
 ```
 
-With three fits in hand, the comparison is one call:
+With two reportable fits and one intentionally blocked fit in hand, the
+comparison is one call:
 
 ```{r compare}
 cmp <- pv_compare_methods(
@@ -156,10 +160,10 @@ two honest one-liners that recur throughout this article:
 - an **interval note** — at least one compared interval is *descriptive rather
   than coverage-claimable* (Sections 3, 5–7).
 
-Comparison aligns methods on their **shared** fixed-effect terms: every method
-here reports `b_Intercept`, `b_x`, and `b_female`, so all three line up cleanly. A
-method missing a term would still get a row, with its numeric fields left `NA`
-rather than silently dropped.
+Comparison aligns methods on their **shared** fixed-effect terms. The two
+reportable methods supply `b_Intercept`, `b_x`, and `b_female`; the blocked
+`stack_psis` fit still gets one row for each term, with numeric fields left `NA`
+rather than silently disappearing.
 
 ## 3. The three methods side by side
 
@@ -178,10 +182,10 @@ est[, c("method_label", "term", "estimate", "se",
 
 Read this table on two axes.
 
-**The points do not match here — and that is the synthetic setup, not a finding.**
-The three methods' estimates differ by more than they should because the `per_pv`
-and `stack_psis` rows were built from *independent random noise*, not from the
-same data as `stack_direct`. In a **real** comparison, `stack_direct` and `per_pv`
+**The available points do not match here — and that is the synthetic setup, not
+a finding.** The `per_pv` rows were built from independent random noise, not
+from the same data as `stack_direct`; the blocked `stack_psis` rows correctly
+contain no estimates. In a **real** comparison, `stack_direct` and `per_pv`
 points agree closely: this is the **stacked-MLE point identity** — one stacked,
 $1/M$-weighted fit recovers the Rubin-pooled per-PV point estimate. That identity
 is *exact* only under its regularity conditions (flat prior, linear-Gaussian,
@@ -192,13 +196,14 @@ precise statement and its caveat are Theorem 2.2 in the **Method track, M3**.
 **The interval semantics are the real teaching point.** Even where points agree,
 two columns separate the methods and never collapse:
 
-- **`interval_role`** records the *kind* of interval — `descriptive_classic_rubin`
-  for `stack_direct` (this classic-df fixture), `reference_classic_rubin` for
-  `per_pv`, and `psis_classic_rubin` for `stack_psis`.
-- **`coverage_claim_allowed`** is `FALSE` for **every** row here: the fixture's
-  `stack_direct` target uses *classic* Rubin df (so it is descriptive by design,
-  as in A2/A3), and `per_pv` / `stack_psis` are *always* descriptive regardless of
-  their df.
+- **`interval_role`** records the *kind* of available interval —
+  `descriptive_classic_rubin` for `stack_direct` (this classic-df fixture) and
+  `reference_classic_rubin` for `per_pv`. It is `NA` for the blocked PSIS rows;
+  a valid reportable PSIS path would use `psis_classic_rubin` here.
+- **`coverage_claim_allowed`** is `FALSE` for the two available methods and
+  `NA` for the blocked one. The fixture's `stack_direct` target uses *classic*
+  Rubin df (so it is descriptive by design, as in A2/A3), and `per_pv` /
+  `stack_psis` intervals are always descriptive regardless of their df.
 
 Interval **width** also differs sharply, and width is where the methods genuinely
 diverge. Look at the slope on `x`:
@@ -210,21 +215,21 @@ bx$width <- bx$conf_high - bx$conf_low
 bx
 ```
 
-The three widths are not interchangeable — and in this synthetic run the
-model-based methods happen to produce *wider* intervals than the calibrated
-`stack_direct` fit. Do not read that ordering as a general result: it is an
-artifact of the injected draw clouds (the `per_pv` and `stack_psis` clouds carry
-their own noisy spread). The durable lesson is that **width and the coverage flag
-are method-specific** — comparing intervals across methods means comparing
-*different kinds of object*, which is exactly what `interval_role` is there to flag.
+The two available widths are not interchangeable; the blocked PSIS row has no
+width at all. Do not read the available ordering as a general result: it is an
+artifact of the injected `per_pv` draw clouds. The durable lesson is that
+**width, availability, and the coverage flag are method-specific** — exactly
+what `interval_role`, `status`, and `coverage_claim_allowed` are there to flag.
 
 A figure makes the per-term overlay easy to read. We plot the two slope
 coefficients (dropping the intercept, whose ~458 scale would flatten the axis) and
-overlay all three methods, each offset slightly so the intervals do not collide:
+overlay the two available methods. The blocked PSIS method remains in the table
+but is correctly absent from the interval geometry:
 
-```{r overlay-figure, fig.width = 7, fig.height = 3.4, fig.cap = "The two slope coefficients (b_x, b_female) under all three methods, with their 95% intervals overlaid. The dashed line marks zero. Because the per_pv and stack_psis rows are built from synthetic injected draws, their points and widths are illustrative only — the figure shows the comparison structure and the per-method interval semantics, not a substantive agreement result.", fig.alt = "A horizontal dot-and-interval plot with two rows, one for the coefficient on x near 47 and one for the coefficient on female near 2. Within each row the three methods stack_direct, per_pv, and stack_psis are drawn at slightly offset heights in different colours, each with its own 95 percent interval. A dashed vertical reference line is drawn at zero."}
+```{r overlay-figure, fig.width = 7, fig.height = 3.4, fig.cap = "The two slope coefficients (b_x, b_female) under the two reportable methods, with their 95% intervals overlaid. The blocked stack_psis rows remain in the comparison table but have no interval to draw. The dashed line marks zero; the synthetic per_pv points and widths are illustrative only.", fig.alt = "A horizontal dot-and-interval plot with two rows, one for the coefficient on x and one for the coefficient on female. Within each row the reportable stack_direct and per_pv methods are drawn at slightly offset heights with 95 percent intervals. The blocked stack_psis method has no plotted point or interval. A dashed vertical reference line is drawn at zero."}
 slopes  <- est[est$term != "b_Intercept",
                c("method_label", "term", "estimate", "conf_low", "conf_high")]
+slopes  <- slopes[is.finite(slopes$estimate), , drop = FALSE]
 methods <- unique(slopes$method_label)
 terms   <- sort(unique(slopes$term))
 
@@ -252,10 +257,11 @@ legend("topright", legend = methods, col = cols, pch = 19, lwd = 2,
 par(op)
 ```
 
-The intervals all comfortably span zero for `b_female` and all sit clear of zero
-for `b_x` — but their *widths* differ by method, and only the `stack_direct` row
-could ever (with a Barnard–Rubin target) carry a coverage claim. That last point
-is the bridge to the cautions.
+The available intervals comfortably span zero for `b_female` and sit clear of
+zero for `b_x` — but their *widths* differ by method, and only the `stack_direct`
+row could ever (with a Barnard–Rubin target) carry a coverage claim. The absent
+PSIS interval is itself part of the honesty contract. That is the bridge to the
+cautions.
 
 ## 4. Agreement diagnostics
 
@@ -279,13 +285,11 @@ dg$agreement
 ```
 
 The reference compares to itself, so its `max_abs_z_diff` and
-`max_abs_log_se_ratio` are exactly zero. For `stack_direct` and `stack_psis` the
-*point* gaps are large here only because the injected draws are synthetic; in a
-real comparison the informative pattern is **agree on points, disagree on
-variance** — methods that share a target tend to match on the point (nearly an
-algebraic identity) while differing on the variance, which comes from genuinely
-different machinery. The SE-ratio column is the one that correctly reflects three
-different covariance bases.
+`max_abs_log_se_ratio` are exactly zero. The `stack_direct` point gap is large
+here only because the injected `per_pv` draws are synthetic. The blocked
+`stack_psis` row has no available comparison statistics. In a real comparison
+the informative pattern is **agree on points, disagree on variance** — methods
+that share a target tend to match on the point while differing on variance.
 
 **`target_overlap`** is the honesty gate on reading agreement as corroboration. It
 flags whether the compared methods share provenance — an external target, a target
@@ -295,8 +299,8 @@ hash, a pooling hash, or a target-source family:
 str(dg$target_overlap)
 ```
 
-In this synthetic run `independence_caveat_required` is `FALSE`, because the three
-injected fits happen to carry **distinct** hashes and only `stack_direct` holds the
+In this synthetic run `independence_caveat_required` is `FALSE`, because the
+available fits carry distinct hashes and only `stack_direct` holds the
 `external_brr_fay_rubin` source. But the field exists precisely for the common case
 where it flips to `TRUE`: when two methods are calibrated to the *same* external
 target (or pool the same draws), close agreement is **mechanically guaranteed** and
@@ -313,13 +317,14 @@ dg$method_diagnostics[, c("method_label", "interval_role",
 ```
 
 A few reads from this table. `target_source` is **provenance vocabulary, not a
-formal target object**: the `stack_psis` row reads `stack_psis_rubin_pooling`, but
-`get_target()` returns `NULL` for a `stack_psis` fit — the label records how the
-covariance was built, not that a target object exists. The `n_fits` column is the
+formal target object**. It is withheld for the blocked PSIS row; a reportable
+PSIS fit would use `stack_psis_rubin_pooling`, while `get_target()` would still
+return `NULL`. The `n_fits` column is the
 topology count from Section 1 (`stack_direct` = 1, `per_pv` = $M$ = 2,
-`stack_psis` = 1). And for `stack_psis`, `psis_status` and `pareto_k_max` carry the
-PSIS diagnostics: here `status == "ok"` with `pareto_k_max = 0.2`, comfortably
-inside the **Vehtari et al. thresholds** [@vehtari2024pareto] —
+`stack_psis` = 1). For `stack_psis`, `psis_status =
+"provenance_incomplete"`: the arbitrary `pareto_k_max = 0.2` is retained as a
+bounded diagnostic, but it cannot establish that smoothing ran. For a genuine
+PSIS run, the **Vehtari et al. thresholds** [@vehtari2024pareto] are —
 
 - $\hat k < 0.5$: **good**;
 - $0.5 \le \hat k < 0.7$: **borderline**;
@@ -389,7 +394,7 @@ Pareto-$\hat k$ is necessary but **not sufficient** for a trustworthy interval;
 the correlated-imputation narrowing and the specification dependence of $\hat k$
 are described qualitatively in the **companion methods paper (in preparation)**.
 The package hard-codes **no** $\hat k$ values as facts — the `pareto_k = 0.2` used
-above is an injected illustration, nothing more
+above is an arbitrary injected diagnostic and remains blocked, nothing more
 [@vehtari2017practical; @vehtari2024pareto].
 :::
 
@@ -409,13 +414,13 @@ The choice collapses to one sentence per method:
 
 And the **honesty triad** that governs every claim in this article:
 
-1. **Fixed effects only.** v0.1 calibrates and reports $\beta_{\text{FE}}$;
+1. **Fixed effects only.** The current package calibrates and reports $\beta_{\text{FE}}$;
    variance components are out of scope.
 2. **Coverage on one path only.** `coverage_claim_allowed = TRUE` requires
    `stack_direct` **and** an external Barnard–Rubin BRR–Fay target; `per_pv` and
    `stack_psis` are always descriptive.
 3. **No speed claims.** "One fit" is *topology* — an architecture statement, not a
-   benchmarked runtime. v0.1 makes no efficiency claim.
+   benchmarked runtime. The current package makes no efficiency claim.
 
 ## 8. Where to next
 

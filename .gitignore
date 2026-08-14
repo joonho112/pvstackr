@@ -12,11 +12,29 @@ desktop.ini
 *.tar.gz
 *.tgz
 *.zip
-
 README.html
 README_files/
 
 docs/
 
+.quarto/
+_freeze/
+.cache/
+cache/
+results/
+data-cache/
+pisa/
+renv/
+renv.lock
+
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
 /doc/
 /Meta/

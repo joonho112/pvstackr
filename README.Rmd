@@ -90,13 +90,17 @@ The public method IDs are:
 | Method | Role |
 |---|---|
 | `stack_direct` | Default calibrated-reporting path: a design-based external Rubin/BRR-Fay fixed-effect target for reported estimates and SEs, plus one stacked backend fit used to calibrate draws and diagnose agreement. |
-| `stack_psis` | Diagnostic/reference method: one stacked draw source plus supplied/precomputed or injected PSIS weights, Pareto-k diagnostics, and model-based Rubin pooling of PSIS-weighted fixed-effect summaries. |
+| `stack_psis` | Diagnostic/reference method: one stacked draw source plus externally produced weights, Pareto-k diagnostics, explicit PSIS producer/version provenance, and model-based Rubin pooling of weighted fixed-effect summaries. |
 | `per_pv` | Per-PV Bayesian/backend reference: one fit or posterior-draw source per plausible value, with fixed-effect centers and model-based within-PV covariance combined by Rubin pooling. |
 
 In the current package stage, all three method IDs are implemented through
 injected or precomputed light paths. `stack_psis` currently expects supplied or
-injected PSIS weights and Pareto-k diagnostics rather than depending on a live
-PSIS backend.
+injected weights, Pareto-k diagnostics, and a caller-declared external PSIS
+producer/version rather than depending on a live PSIS backend. Raw self-normalized
+log ratios and external weights without that provenance are diagnostic-only and
+fail closed. Diagnostics include per-PV Kish-style iid weight ESS and maximum
+normalized weight; these are not MCMC ESS or autocorrelation-adjusted `loo`
+diagnostics.
 
 ## Scope
 

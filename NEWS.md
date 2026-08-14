@@ -1,3 +1,62 @@
+# pvstackr 0.2.0
+
+* `stack_psis` now separates the weight input route, Pareto-k source, and
+  smoothing provenance. Supplied or injected weights can enter the reportable
+  caller-declared external-PSIS route only when the caller records both an
+  external producer and version; this records a declaration, not package
+  verification;
+  otherwise they fail closed, as do raw self-normalized log ratios. Every path
+  records per-PV Kish-style iid weight ESS, its draw-count fraction, and the
+  maximum normalized weight. These are weight-concentration diagnostics, not
+  MCMC ESS, `loo::relative_eff()`, or a replacement for the immutable Pareto-k
+  gate. Mixed weight routes are rejected rather than silently prioritized.
+  The legacy `fallback = "warn"` request now emits its scheduled deprecation
+  warning and still behaves as immutable fail-closed `"block"`.
+
+* New bundled brms backend for the stacked fit: `pv_fit(method =
+  "stack_direct")` with `pv_control(backend = "brms")` now runs without an
+  injected `fit_function`/`draws_function` pair. The bundled adapter fits the
+  prepared stacked formula with `brms::brm()` (through cmdstanr when
+  available, rstan otherwise) and returns fixed-effect and residual-scale
+  draws as a plain base matrix. brms is in Suggests; injected adapters remain
+  the mechanism for other engines, and `per_pv`/`stack_psis` inputs are
+  unchanged.
+
+* Final `pvstackr_fit` objects now carry an exact validation record. A deep
+  tier preserves the full semantic checks, while a cheap tier re-hashes the
+  current package-owned payload with domain-separated SHA-256 and rejects
+  stale stamps. This catches same-moment draw replacements, coordinated
+  proposal/weight row changes, hidden leaf attributes, and self-rehashed
+  data-free design snapshots that summary-only validation cannot distinguish.
+  Opaque retained backend objects are explicit fast-tier exceptions and force
+  deep validation. Public fit accessors and fit print/summary methods use the
+  rehash tier, avoiding repeated method-specific recomputation while still
+  reading every mutable retained payload byte.
+
+* Blocked fits now use a generic fail-closed retention firewall. Effective
+  `return_draws`, `keep_data`, `keep_backend_fit`, and `keep_log_lik` are always
+  `FALSE`; reportable estimates and heavy design, stack-fit, CCC, draw, weight,
+  pooling, backend, and log-likelihood payloads are absent. Blocked
+  `stack_direct` fits may retain only a canonical independently valid external
+  target plus exact slim sampler or scalar CCC gate evidence, while blocked
+  `stack_psis` fits retain only the canonical Pareto-k/provenance decision
+  record and bounded weight-concentration diagnostics. The
+  recursive validator also rejects hidden payloads in nested fields or leaf
+  attributes. Because `per_pv` has no typed blocked schema, relabeling a
+  reportable reference fit as blocked is rejected.
+
+* Historical PSIS results now have an explicit inspection-only migration path.
+  `pv_migrate_legacy_psis_fit()` returns current validated fits unchanged but
+  projects any non-current `stack_psis` fit to bounded Pareto-k evidence and a
+  redaction record; saved estimates, draws, pooling, weights, backend objects,
+  and data are not migrated, and estimate/draw accessors refuse the inspection
+  object. New method comparisons and fit/comparison summaries carry deep-valid
+  compact source reportability objects, canonical source projections, and
+  owned-payload SHA-256 records. Pre-marker serialized comparisons or summaries
+  containing PSIS are refused and must be rebuilt, while an independent semantic
+  gate also rejects warning PSIS rows and any blocked row retaining numeric or
+  pooling metadata.
+
 # pvstackr 0.1.1
 
 Patch release fixing two bugs found while preparing the LSAE software article.

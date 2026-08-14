@@ -63,10 +63,26 @@ A reportable \code{stack_direct} \code{pvstackr_fit} with status \code{"ok"} or
 fixed-effect draws when \code{control$return_draws = TRUE}. Reportable
 \code{stack_direct} fits must use \code{control$center = "target"} so fixed-effect
 estimates are the external Rubin/BRR-Fay target centers. Top-level
+calibrated fixed-effect draws are the only retained individual-draw matrix:
+nested raw stacked draws, nuisance draws, full calibrated draws, and duplicate
+calibrated fixed-effect matrices are removed for either retention setting.
+Blocked fits retain no individual draws and record effective
+\code{return_draws = FALSE}. Top-level
 \code{warnings} are reserved for interpretation-level diagnostics such as
 explicit priors or yellow center separation. Routine backend draw-column
 drops, such as sampler columns named \code{lp__}, are retained in nested
 stack-fit diagnostics instead of becoming top-level fit warnings.
+
+Every current \code{pvstackr_fit} also carries an exact \code{validation} record with
+a validation-schema ID, semantic-policy ID, canonicalizer ID, fast-path
+eligibility flag, and a domain-separated SHA-256 stamp. Deep validation
+evaluates the full method contract and then verifies this stamp. Cheap
+validation still re-hashes the current package-owned payload; it never
+trusts the stored stamp alone. Fits that retain opaque backend objects are
+not fast-path eligible and fall back to deep validation because backend
+implementation state is outside the portable stamp boundary. The stamp is
+tamper-evident for stale or uncoordinated mutations, not an external digital
+signature or proof of authorship.
 
 A reportable \code{per_pv} \code{pvstackr_fit} with status \code{"ok"} or \code{"warning"} must
 contain a non-null \code{pvstackr_reference_pool} target and a non-empty
@@ -78,7 +94,8 @@ provenance/design metadata for this path; they are not automatically
 supplied to \code{fit_function} and do not affect Rubin pooling. Weighted backend
 fits must be handled by the backend adapter, data supplied to the backend, or
 backend-specific \code{additional_args}. Per-PV draws, when retained, remain
-nested in diagnostics rather than top-level reportable draws because Rubin
+fixed-effect-only matrices nested in diagnostics rather than top-level
+reportable draws because Rubin
 pooling does not synthesize a single calibrated top-level draw matrix.
 
 A reportable \code{stack_psis} \code{pvstackr_fit} with status \code{"ok"} or \code{"warning"}
@@ -89,8 +106,17 @@ using model-based weighted covariance; this path does not construct an
 external BRR-Fay target. Group terms such as \code{(1 | school)} and
 \code{(1 || school)} are rejected for this v0.1 fixed-effect-only path. Failed
 Pareto-k diagnostics cannot be reported as \code{status = "ok"}. With the default
-block fallback, failed PSIS diagnostics produce a blocked fit with diagnostics
-but no reportable estimates.
+block fallback, failed PSIS diagnostics produce a blocked fit containing only
+the canonical scalar/vector Pareto-k decision record and its redaction
+manifest, with no reportable estimates, target, design, stack fit, CCC, or
+draws. All heavy-retention controls are recorded as effective \code{FALSE} for a
+blocked fit, irrespective of the original request. When \code{return_draws = TRUE}
+on a reportable fit, diagnostics retain
+the fixed-effect-only proposal matrix together with its normalized PV weight
+matrix; these two payloads are retained or removed as a pair. Package-owned
+nuisance draws and nested full stack draws are never retained in a final PSIS
+fit. Explicitly authorized opaque backend objects and log-likelihood matrices
+remain governed separately by \code{keep_backend_fit} and \code{keep_log_lik}.
 }
 
 \section{\code{pvstackr_method_comparison} Contract}{
@@ -132,8 +158,40 @@ has one, and \code{NULL} for methods such as \code{stack_psis} that do not carry
 formal target. Estimate-row \code{target_source} labels are provenance metadata;
 they are not a guarantee that \code{\link[=get_target]{get_target()}} returns a non-null object.
 \code{\link[=get_draws]{get_draws()}} returns retained top-level reportable draws only; per-PV
-reference draws and PSIS weights remain diagnostic artifacts accessible
-through \code{\link[=get_diagnostics]{get_diagnostics()}}.
+reference draws and the PSIS fixed-effect proposal/weight pair remain
+diagnostic artifacts accessible through \code{\link[=get_diagnostics]{get_diagnostics()}}. Current fit
+accessors and fit print/summary methods use the rehash validation tier: they
+rescan the current package-owned payload and compare its SHA-256 stamp without
+repeating method-specific semantic recomputation. This is linear in retained
+payload bytes rather than an O(1) cache lookup. Opaque-backend fits remain
+ineligible and fall back to deep validation.
+
+Historical \code{stack_psis} fits that do not satisfy the current fit envelope
+must be passed to \code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}}. The migrator never promotes
+saved estimates, pooling summaries, weights, or draws. It returns an explicit
+inspection-only object containing bounded Pareto-k decision evidence and a
+redaction manifest; \code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_draws]{get_draws()}} refuse that object,
+while \code{\link[=get_diagnostics]{get_diagnostics()}} remains available. Current comparisons and fit or
+comparison summaries carry source and owned-payload validation stamps.
+Pre-marker serialized comparisons/summaries containing \code{stack_psis} are
+refused and must be rebuilt, closing derived-table paths that no longer carry
+their source fit.
+
+Current live \code{stack_direct} fits expose normalized sampler diagnostics and a
+frozen reportability gate through \code{\link[=get_diagnostics]{get_diagnostics()}}. A sampler- or
+CCC-blocked fit retains only its independently valid external BRR-Fay target
+plus the exact slim gate evidence required to reproduce the blocked status;
+CCC evidence is scalar-only. Design data, stack/backend fit, full CCC
+matrices, estimates, and draws are absent, and every heavy-retention control
+is recorded as effective \code{FALSE}. The target is rebuilt from an exact
+recursive allowlist with empty warnings and a safe formula environment; the
+slim preflight snapshot does not retain a formula object. A recursive
+fail-closed validator rejects result-like fields, matrices/arrays/data
+frames, raw or complex payloads, executable/external objects, hidden leaf
+attributes, and noncanonical diagnostic variants anywhere outside that
+independent target. Current \code{per_pv} fits have no typed blocked-object path,
+so a reportable reference fit cannot be relabeled as blocked. Legacy cached
+schema-0.1 stack fits remain readable without the newer sampler gate.
 }
 
 \section{Reporting Scope}{
@@ -181,9 +239,22 @@ design-based target object. \code{target_source = "per_pv_rubin_draws"} denotes 
 use \code{target_source = "stack_psis_rubin_pooling"} and
 \code{pooling_source = "stack_psis_rubin_pooling"} to record diagnostic pooling
 provenance. PSIS input-source diagnostics use a separate vocabulary:
-\code{supplied_weights}, \code{psis_function}, and \code{log_ratios_self_normalized}. The
-\code{log_ratios_self_normalized} path self-normalizes the supplied log ratios and
-does not by itself run Pareto smoothing.
+\code{supplied_psis_weights}, \code{injected_psis_function}, and
+\code{self_normalized_log_ratios}. \code{pareto_k_source} distinguishes supplied
+diagnostics from injected-function output, while \code{weight_method}
+distinguishes caller-declared external PSIS from unspecified external weights
+and self-normalized raw importance weights. Only the caller-declared
+path can expose estimates; the declaration records producer/version but is
+not package verification. Each path records bounded per-PV Kish-style iid
+weight ESS (\code{weight_ess_iid}), its draw-count fraction
+(\code{weight_ess_fraction}), and \code{max_normalized_weight}. These
+concentration diagnostics are not MCMC ESS and never replace the immutable
+Pareto-k gate.
+If normalized weights are retained, deep validation recomputes these
+diagnostics. A compact or blocked object instead records
+\code{weight_diagnostic_authority = "owned_stamp_bounded_projection"}: feasibility
+and the owned payload stamp remain checkable, but the redacted original
+weights cannot be independently reconstructed.
 }
 
 \keyword{internal}

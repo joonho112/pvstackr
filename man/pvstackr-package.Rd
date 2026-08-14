@@ -11,7 +11,7 @@ plausible-value fit plus fixed-effect CCC calibration to a design-based
 external Rubin/BRR-Fay target. It also implements the \code{per_pv} reference
 path: one backend fit or posterior-draw source per plausible value plus
 model-based Rubin pooling, and the \code{stack_psis} diagnostic/reference path:
-one stacked draw source plus supplied or injected PSIS weights, model-based
+one stacked draw source plus caller-declared external PSIS weights, model-based
 Rubin pooling, and Pareto-k gating.
 }
 \details{

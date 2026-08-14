@@ -20,6 +20,8 @@ pv_fit_stack_psis(
   pareto_k = NULL,
   log_ratios = NULL,
   psis_function = NULL,
+  psis_producer = NULL,
+  psis_producer_version = NULL,
   fallback = c("block", "warn"),
   weight_col = NULL,
   rep_weight_cols = NULL,
@@ -61,8 +63,9 @@ recommended when backend draw names do not follow the automatic \verb{b_*}
 fixed-effect convention, including distributional names such as
 \verb{b_sigma_*}.}
 
-\item{psis_weights}{Optional normalized or unnormalized PSIS weight matrix,
-one column per plausible value.}
+\item{psis_weights}{Optional normalized or unnormalized external weight
+matrix, one column per plausible value. The numeric matrix alone does not
+establish that PSIS smoothing occurred.}
 
 \item{pareto_k}{Pareto-k diagnostics aligned to plausible values.}
 
@@ -71,8 +74,14 @@ self-normalized when \code{pareto_k} is supplied.}
 
 \item{psis_function}{Optional function returning \code{weights} and \code{pareto_k}.}
 
-\item{fallback}{Behavior when Pareto-k exceeds the threshold: \code{"block"} or
-\code{"warn"}.}
+\item{psis_producer, psis_producer_version}{Optional bounded scalar strings
+identifying the external PSIS producer and its version. Both are required
+together for supplied or injected weights to be reportable. They record a
+caller declaration; package-verified \code{loo} execution is deferred.}
+
+\item{fallback}{Requested behavior when Pareto-k fails: \code{"block"} or the
+legacy \code{"warn"}. Both choices now fail closed; \code{"warn"} cannot make failed
+PSIS output reportable.}
 
 \item{weight_col, rep_weight_cols, fay_k, id_cols}{Optional design metadata.}
 
@@ -87,17 +96,19 @@ A \code{pvstackr_fit} object with \code{method = "stack_psis"}.
 }
 \description{
 \code{pv_fit_stack_psis()} implements the \code{stack_psis} API for this package stage:
-one stacked draw source, supplied/precomputed or injected per-plausible-value
-PSIS weights, Pareto-k diagnostics, model-based Rubin pooling of
-PSIS-weighted fixed-effect summaries, and explicit gating when Pareto-k
-diagnostics fail.
+one stacked draw source, externally produced per-plausible-value weights and
+Pareto-k diagnostics, model-based Rubin pooling of weighted fixed-effect
+summaries, and explicit provenance and diagnostic gates.
 }
 \details{
 This function does not depend on \code{loo}, \code{brms}, or \code{cmdstanr} directly and
 does not run a live PSIS routine from the \code{loo} package by default. Users may
-supply PSIS weights plus Pareto-k values, or inject a
-\code{psis_function(log_ratios)} that returns \code{weights} and \code{pareto_k}.
-In v0.1, reportable output is fixed-effect-only; group terms such as
+supply weights plus Pareto-k values, or inject a
+\code{psis_function(log_ratios)} that returns \code{weights} and \code{pareto_k}. Numeric
+weights or a function name cannot prove that Pareto smoothing occurred.
+Reportable output therefore also requires both \code{psis_producer} and
+\code{psis_producer_version}; these fields are caller-declared provenance, not
+package verification. In v0.2, reportable output is fixed-effect-only; group terms such as
 \code{(1 | school)} and \code{(1 || school)} are rejected.
 
 \code{stack_psis} interval metadata is diagnostic/reference vocabulary, not a
@@ -106,15 +117,38 @@ design-coverage claim. Classic Rubin pooling is labeled
 \code{interval_role = "psis_barnard_rubin"} and uses the supplied \code{df_complete}.
 Both roles set \code{coverage_claim_allowed = FALSE} because the pooled covariance
 is model-based weighted covariance of the stacked draws. The pooling
-provenance is labeled \code{stack_psis_rubin_pooling}. PSIS diagnostics record
-their weight source as \code{supplied_weights}, \code{psis_function}, or
-\code{log_ratios_self_normalized}; the last path self-normalizes the log ratios
-and does not by itself run Pareto smoothing.
+provenance is labeled \code{stack_psis_rubin_pooling}. Diagnostics separate the
+input route (\code{supplied_psis_weights}, \code{injected_psis_function}, or
+\code{self_normalized_log_ratios}), the Pareto-k source, and the weight method.
+The self-normalized path does not run Pareto smoothing and is always blocked
+from estimates. Supplied or injected weights without producer/version
+provenance are likewise diagnostic-only.
 
-If any Pareto-k exceeds \code{control$psis_k_threshold}, the default
-\code{fallback = "block"} returns a blocked \code{pvstackr_fit} with diagnostics but no
-reportable estimates. \code{fallback = "warn"} retains estimates with warning
-status for diagnostic comparison workflows.
+Every path records per-PV weight-concentration diagnostics after column
+normalization: \code{weight_ess_iid = 1 / sum(w^2)}, its draw-count fraction, and
+the largest normalized weight. This is a Kish-style iid weight diagnostic,
+not MCMC ESS, the \code{loo} relative-efficiency diagnostic, or an autocorrelation-adjusted PSIS
+effective sample size. These quantities explain weight concentration but do
+not relax or replace the Pareto-k gate.
+
+Reportability uses an immutable fail-closed gate: every plausible value must
+have a finite Pareto-k strictly below \code{control$psis_k_threshold}, and that
+threshold cannot exceed \code{0.7}. Failed, unevaluated, unsmoothed, or
+provenance-incomplete input always returns a blocked \code{pvstackr_fit} with no
+reportable estimates, raw weights, or draws; bounded ESS and maximum-weight
+diagnostics remain available. The legacy
+\code{fallback = "warn"} argument remains accepted for call compatibility and
+emits a deprecation warning, but it cannot relax the gate and is recorded
+only as the requested policy.
+
+When \code{control$return_draws = TRUE}, retained normalized weights are used to
+recompute the ESS, maximum-weight, and weighted-summary diagnostics during
+deep validation (\code{weight_diagnostic_authority = "retained_weights_recomputed"}). When weights are intentionally redacted,
+these bounded diagnostics are protected by the package-owned validation
+stamp and cross-field feasibility checks
+(\code{"owned_stamp_bounded_projection"}), but the original weight vector cannot
+be independently reconstructed from the compact object. This is an explicit
+portability and threat-model boundary, not a stronger statistical claim.
 }
 \section{Reportable scope and coverage}{
 
@@ -133,8 +167,10 @@ cross-check, never the deliverable.
 
 \examples{
 set.seed(1)
-# Injected stack_psis demo: a stacked draw matrix plus supplied PSIS weights
-# and Pareto-k (the function does not run `loo` by default). Fixed-effect
+# Fail-closed stack_psis demo: equal placeholder weights and arbitrary
+# Pareto-k values do not establish that PSIS ran. This example deliberately
+# omits producer/version, so it remains diagnostic-only.
+# Fixed-effect
 # columns are named like `b_*`; weights have one column per plausible value.
 M <- 2L
 stacked_draws <- matrix(
@@ -150,8 +186,8 @@ fit_psis <- pv_fit_stack_psis(
   pareto_k      = pareto_k,
   control       = pv_control(method = "stack_psis")
 )
-fit_psis                    # a stack_psis pvstackr_fit
-get_estimates(fit_psis)     # interval_role = "psis_*"; coverage_claim_allowed = FALSE
+fit_psis                    # blocked: provenance_incomplete
+get_diagnostics(fit_psis)$psis[c("status", "weight_method")]
 }
 \references{
 Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model

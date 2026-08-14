@@ -48,14 +48,17 @@ no fixed seed.}
 
 \item{backend}{Backend policy. Character scalar; one of \code{"none"},
 \code{"injected"}, \code{"brms"}, or \code{"cmdstanr"}. Default \code{"none"}. In this package
-stage the backend fit is injected or precomputed.}
+stage \code{"brms"} selects the bundled brms adapter (with deterministic
+cmdstanr/rstan resolution), while other live engines use an injected
+\code{fit_function} adapter or precomputed draws.}
 
 \item{conf_level}{Confidence or credible-interval level for report tables.
 Numeric scalar in \verb{(0, 1)}. Default \code{0.95}.}
 
-\item{psis_k_threshold}{Pareto-k warning threshold for \code{stack_psis}. Numeric
-scalar in \verb{(0, 1]}. Default \code{0.7}, matching the Vehtari et al. unreliable-k
-cutoff.}
+\item{psis_k_threshold}{Pareto-k reportability threshold for \code{stack_psis}.
+Numeric scalar in \verb{(0, 0.7]}. Default \code{0.7}; values below \code{0.7} may impose
+a stricter gate, but the package-level ceiling cannot be relaxed. Every
+plausible value must have a finite Pareto-k strictly below this threshold.}
 
 \item{center}{Calibration centering convention, \code{"target"} or \code{"posterior"}.
 Reportable \code{stack_direct} output requires \code{"target"}. \code{"posterior"} is
@@ -67,14 +70,18 @@ diagnostics against the external target. Default \code{"target"}.}
 Logical scalar; must be \code{FALSE}. Automatic target repair is not currently
 supported. Default \code{FALSE}.}
 
-\item{return_draws}{Logical scalar. Whether fitted objects retain reportable
-fixed-effect draws (read via \code{\link[=get_draws]{get_draws()}}). Default \code{TRUE}.}
+\item{return_draws}{Logical scalar. Whether fitted objects retain their
+method-specific fixed-effect draw representation. For \code{stack_direct}, read
+the calibrated matrix via \code{\link[=get_draws]{get_draws()}}. Per-PV matrices and the PSIS
+proposal/weight pair remain in \code{\link[=get_diagnostics]{get_diagnostics()}}. Default \code{TRUE}.}
 
 \item{keep_data}{Logical scalar. Whether fitted objects may retain the user
 data frame. Default \code{FALSE} (fits stay light).}
 
 \item{keep_backend_fit}{Logical scalar. Whether fitted objects may retain the
-heavy backend fit object. Default \code{FALSE} (fits stay light).}
+heavy, opaque backend fit object. This requires \code{keep_data = TRUE} on
+public composite fits because a backend object may contain analysis data.
+Default \code{FALSE} (fits stay light).}
 
 \item{keep_log_lik}{Logical scalar. Whether fitted objects may retain
 log-likelihood draws. Default \code{FALSE} (fits stay light).}
@@ -116,10 +123,25 @@ estimate table; treat \code{"posterior"} as a CCC check, never a deliverable.
 \subsection{Object retention}{
 
 The retention flags govern how much a fitted \code{pvstackr_fit} carries, and the
-defaults keep fits light. \code{return_draws} (default \code{TRUE}) retains the
-reportable fixed-effect draws used downstream by \code{\link[=get_draws]{get_draws()}}; the remaining
-flags default to \code{FALSE}. \code{keep_data} retains the user data frame,
-\code{keep_backend_fit} retains the heavy backend fit object, and \code{keep_log_lik}
+defaults keep fits light. \code{return_draws} (default \code{TRUE}) retains only the
+method-specific fixed-effect draw representation: calibrated top-level draws
+for \code{stack_direct}, fixed-effect-only per-PV matrices in diagnostics for
+\code{per_pv}, and a fixed-effect proposal matrix paired with normalized PV
+weights in diagnostics for \code{stack_psis}. \code{\link[=get_draws]{get_draws()}} exposes only the
+synthesized top-level \code{stack_direct} matrix; use \code{\link[=get_diagnostics]{get_diagnostics()}} for the
+other two representations. Package-owned raw full stacked draws, nuisance
+draws, and duplicate calibrated matrices are never retained in a final
+composite fit. This does not inspect or override explicitly authorized
+opaque backend objects (\code{keep_backend_fit}) or log-likelihood matrices
+(\code{keep_log_lik}), which have separate retention authorities.
+Blocked fits fail closed and record effective \code{return_draws}, \code{keep_data},
+\code{keep_backend_fit}, and \code{keep_log_lik} values of \code{FALSE}, irrespective of
+the original retention request. \code{keep_data} retains the user data frame in the
+top-level design; otherwise the fit stores a metadata/hash-only design
+snapshot with a base-environment formula. Package-owned stacked-data copies
+are not retained inside composite fits. \code{keep_backend_fit} retains an opaque
+backend object and therefore requires \code{keep_data = TRUE}, because the package
+cannot prove that an arbitrary backend object is data-free. \code{keep_log_lik}
 retains log-likelihood draws. Enable the \code{FALSE}-by-default flags only when
 you need the extra payload (for example, re-extraction or model checking), as
 each materially increases the size of the saved object.

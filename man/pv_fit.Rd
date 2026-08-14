@@ -64,7 +64,7 @@ If \code{control} is \code{NULL} it is constructed with \code{pv_control(method 
 otherwise \code{control$method} \strong{must} equal \code{method} or the call errors. Any
 arguments in \code{...} are forwarded verbatim to the dispatched fitter, so consult
 that fitter's signature for the available extras (for example, the injected
-backend adapters of \code{\link[=pv_fit_direct]{pv_fit_direct()}}, or the injected PSIS weights of
+backend adapters of \code{\link[=pv_fit_direct]{pv_fit_direct()}}, or caller-declared external PSIS weights of
 \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}).
 
 In this package stage, only \code{stack_direct} output is coverage-claimable: its
