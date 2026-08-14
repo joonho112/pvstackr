@@ -242,8 +242,10 @@ fit <- pv_fit(
 ```
 
 `brms` is in Suggests, so it is needed only when you actually ask for this
-backend. It samples through `cmdstanr` when a configured CmdStan is available
-and through `rstan` otherwise.
+backend. It samples through `cmdstanr` when that package is installed and
+CmdStan is configured, and through `rstan` when `cmdstanr` is not installed. An
+installed `cmdstanr` without a working CmdStan raises an error rather than
+falling back silently.
 
 To drive a different engine, inject three functions instead. The chunk below
 shows that **shape**; it is **not run** here, because no live backend is
@@ -410,14 +412,22 @@ my_draws_function <- function(backend_fit, ...) {
   # ... extract a draws matrix from backend_fit ...
 }
 
+# diagnose_function: report the sampler diagnostics. Without it the sampler
+# evidence is incomplete and the fit is blocked rather than reported.
+my_diagnose_function <- function(backend_fit, ...) {
+  # ... return R-hat, ESS, and divergences from backend_fit ...
+}
+
 fit <- pv_fit(
-  data           = your_real_pisa_data,
-  formula        = OUTCOME ~ x + female,
-  target         = your_target,
-  method         = "stack_direct",
-  control        = pv_control(method = "stack_direct", backend = "injected"),
-  fit_function   = my_fit_function,
-  draws_function = my_draws_function
+  data              = your_real_pisa_data,
+  formula           = OUTCOME ~ x + female,
+  target            = your_target,
+  method            = "stack_direct",
+  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = my_fit_function,
+  draws_function    = my_draws_function,
+  diagnose_function = my_diagnose_function,
+  cache_dir         = NULL
 )
 ```
 

@@ -240,8 +240,10 @@ fit <- pv_fit(
                      keep_backend_fit = FALSE,
                      keep_log_lik     = FALSE
                    ),
-  fit_function   = your_fit_function,    # your modelling backend (see A2 §7)
-  draws_function = your_draws_function   # extract posterior draws for CCC
+  fit_function      = your_fit_function,      # your modelling backend (see A2 §7)
+  draws_function    = your_draws_function,    # extract posterior draws for CCC
+  diagnose_function = your_diagnose_function, # sampler diagnostics; required
+  cache_dir         = NULL                    # an injected adapter owns its cache
 )
 
 summary(fit)

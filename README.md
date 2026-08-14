@@ -90,9 +90,11 @@ The public method IDs are:
 | `per_pv` | Per-PV Bayesian/backend reference: one fit or posterior-draw source per plausible value, with fixed-effect centers and model-based within-PV covariance combined by Rubin pooling. |
 
 `stack_direct` can run without any adapter of your own:
-`pv_control(backend = "brms")` fits the stacked model with `brms`
-through `cmdstanr` when a configured CmdStan is available and `rstan`
-otherwise. `brms` stays in Suggests, so nothing heavy is needed to
+`pv_control(backend = "brms")` fits the stacked model with `brms`. It
+uses `cmdstanr` when that package is installed and CmdStan is
+configured, and `rstan` when `cmdstanr` is not installed at all; an
+installed `cmdstanr` without a working CmdStan is an error rather than a
+silent fallback. `brms` stays in Suggests, so nothing heavy is needed to
 install, load, or test the package. To attach a different engine, inject
 a fit function, a draws function, and a diagnose function; the bundled
 adapter is exported (`pv_backend_brms_fit_function()` and its two
@@ -332,14 +334,26 @@ fit <- pv_fit(
   method = "stack_direct",
   control = pv_control(
     method = "stack_direct",
-    backend = "injected",
+    backend = "brms",
     iter = 2000L,
     warmup = 1000L,
     chains = 4L,
     seed = 20260607
-  ),
-  fit_function = fit_stacked_model,
-  draws_function = extract_fixed_effect_draws
+  )
+)
+
+# To drive a different engine, inject all three adapter functions instead.
+# The bundled ones are exported, so you can reuse the parts you do not replace.
+fit <- pv_fit(
+  data = design$data,
+  formula = design$formula,
+  target = target,
+  method = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = pv_backend_brms_fit_function,
+  draws_function    = pv_backend_brms_draws_function,
+  diagnose_function = pv_backend_brms_sampler_diagnostics,
+  cache_dir         = NULL
 )
 
 summary(fit)
@@ -421,4 +435,4 @@ by the OECD or the PISA programme.
 
 ## License
 
-MIT © JoonHo Lee. See [LICENSE.md](LICENSE.md) for details.
+MIT © JoonHo Lee. See [LICENSE.md](LICENSE) for details.

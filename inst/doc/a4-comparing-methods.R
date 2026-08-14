@@ -26,8 +26,9 @@ fit_per_pv <- pv_fit_reference(
   control      = pv_control(method = "per_pv")
 )
 
-# Synthetic stacked draw cloud + equal (placeholder) PSIS weights and small
-# Pareto-k. Again injected for illustration; nothing is importance-sampled live.
+# Synthetic stacked draw cloud + equal placeholder weights and arbitrary
+# Pareto-k. Nothing is importance-sampled live, so producer/version are omitted
+# and the fit must fail closed as provenance_incomplete.
 sd_mat <- mk(c(458, 47, 2))
 fit_psis <- pv_fit_stack_psis(
   stacked_draws = sd_mat,
@@ -59,9 +60,10 @@ bx <- est[est$term == "b_x",
 bx$width <- bx$conf_high - bx$conf_low
 bx
 
-## ----overlay-figure, fig.width = 7, fig.height = 3.4, fig.cap = "The two slope coefficients (b_x, b_female) under all three methods, with their 95% intervals overlaid. The dashed line marks zero. Because the per_pv and stack_psis rows are built from synthetic injected draws, their points and widths are illustrative only — the figure shows the comparison structure and the per-method interval semantics, not a substantive agreement result.", fig.alt = "A horizontal dot-and-interval plot with two rows, one for the coefficient on x near 47 and one for the coefficient on female near 2. Within each row the three methods stack_direct, per_pv, and stack_psis are drawn at slightly offset heights in different colours, each with its own 95 percent interval. A dashed vertical reference line is drawn at zero."----
+## ----overlay-figure, fig.width = 7, fig.height = 3.4, fig.cap = "The two slope coefficients (b_x, b_female) under the two reportable methods, with their 95% intervals overlaid. The blocked stack_psis rows remain in the comparison table but have no interval to draw. The dashed line marks zero; the synthetic per_pv points and widths are illustrative only.", fig.alt = "A horizontal dot-and-interval plot with two rows, one for the coefficient on x and one for the coefficient on female. Within each row the reportable stack_direct and per_pv methods are drawn at slightly offset heights with 95 percent intervals. The blocked stack_psis method has no plotted point or interval. A dashed vertical reference line is drawn at zero."----
 slopes  <- est[est$term != "b_Intercept",
                c("method_label", "term", "estimate", "conf_low", "conf_high")]
+slopes  <- slopes[is.finite(slopes$estimate), , drop = FALSE]
 methods <- unique(slopes$method_label)
 terms   <- sort(unique(slopes$term))
 

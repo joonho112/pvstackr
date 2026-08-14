@@ -12,7 +12,7 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-06-08" />
+<meta name="date" content="2026-08-14" />
 
 <title>A3: Reading results — estimates, intervals, and what to report</title>
 
@@ -374,7 +374,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">A3: Reading results — estimates, intervals,
 and what to report</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-06-08</h4>
+<h4 class="date">2026-08-14</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
 <p>How to read a fitted object and decide what is safe to report. This
@@ -500,9 +500,9 @@ value.</p>
 <p><strong>The three terms.</strong> Rows are <code>b_Intercept</code>,
 <code>b_x</code>, and <code>b_female</code> — the fixed-effect block,
 with the <code>b_</code> prefix marking each as a fixed-effect
-coefficient. There are no variance-component rows: v0.1 calibrates and
-reports <span class="math inline">\(\beta_{\text{FE}}\)</span> only, a
-scope reminder carried over from A1/A2 and confirmed by the
+coefficient. There are no variance-component rows: the package
+calibrates and reports <span class="math inline">\(\beta_{\text{FE}}\)</span> only, a scope reminder
+carried over from A1/A2 and confirmed by the
 <code>parameter_scope</code> column below.</p>
 <p><strong>Dual snake_case / broom naming.</strong> Several columns
 appear twice under two spellings: the package-native snake_case
@@ -563,6 +563,12 @@ Three columns record where each row came from:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;parameter_scope&quot;</span>, <span class="st">&quot;target_source&quot;</span>, <span class="st">&quot;target_hash&quot;</span>)]</span></code></pre></div>
 <div class="kable-table">
 <table>
+<colgroup>
+<col width="9%" />
+<col width="13%" />
+<col width="18%" />
+<col width="58%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th align="left">term</th>
@@ -576,19 +582,19 @@ Three columns record where each row came from:</p>
 <td align="left">b_Intercept</td>
 <td align="left">fixed_effect</td>
 <td align="left">external_brr_fay_rubin</td>
-<td align="left">4a4d40f8</td>
+<td align="left">sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</td>
 </tr>
 <tr class="even">
 <td align="left">b_x</td>
 <td align="left">fixed_effect</td>
 <td align="left">external_brr_fay_rubin</td>
-<td align="left">4a4d40f8</td>
+<td align="left">sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</td>
 </tr>
 <tr class="odd">
 <td align="left">b_female</td>
 <td align="left">fixed_effect</td>
 <td align="left">external_brr_fay_rubin</td>
-<td align="left">4a4d40f8</td>
+<td align="left">sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</td>
 </tr>
 </tbody>
 </table>
@@ -813,7 +819,7 @@ three fields you reach for most:</p>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
 <span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a><span class="co">#&gt;       1.021       1.402       1.014</span></span>
 <span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>tg<span class="sc">$</span>target_hash       <span class="co"># content fingerprint (matches the estimate table)</span></span>
-<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;4a4d40f8&quot;</span></span></code></pre></div>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa&quot;</span></span></code></pre></div>
 <p>This is the <em>source</em> of the reportable SE: the standard errors
 in <code>get_estimates()</code> are <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>,
 and the point estimates are the pooled <code>beta_bar</code>. We can
@@ -848,8 +854,8 @@ the fixed-effect report, which is fully specified by the target.</p>
 <div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>dg <span class="ot">&lt;-</span> <span class="fu">get_diagnostics</span>(fit)</span>
 <span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a></span>
 <span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="fu">names</span>(dg)</span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot;</span></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;ccc&quot;</span></span></code></pre></div>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;sampler&quot;            &quot;sampler_gate&quot;      </span></span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot; &quot;ccc&quot;</span></span></code></pre></div>
 <p>The list holds <code>preflight</code> (the resolved formula, term
 names, and target fingerprint checked before fitting),
 <code>stack_fit</code> and <code>stack_fit_warnings</code> (the
@@ -950,14 +956,14 @@ notation</strong>.</p>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
 <span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
 <span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
 <span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
 <span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
 <span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt; [1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8</span></span>
+<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
 <span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
 <span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
@@ -966,7 +972,7 @@ notation</strong>.</p>
 <span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>

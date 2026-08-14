@@ -12,7 +12,7 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-06-08" />
+<meta name="date" content="2026-08-14" />
 
 <title>M2: The BRR–Fay fixed-effect target — Rubin combining, design variance, and degrees of freedom</title>
 
@@ -374,7 +374,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">M2: The BRR–Fay fixed-effect target — Rubin
 combining, design variance, and degrees of freedom</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-06-08</h4>
+<h4 class="date">2026-08-14</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
 <p>The second page of the Method track derives the external variance
@@ -790,8 +790,7 @@ floor. Second — and this is the point of D-1 above —
 <strong>not</strong> what appears here, and the complete-data df it
 would need is absent:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>tg<span class="sc">$</span>df_complete   <span class="co"># NA for every term -&gt; the classic path, not Barnard–Rubin</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;          NA          NA          NA</span></span></code></pre></div>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
 <div class="alert alert-warning">
 <p><strong>This target is descriptive, not coverage-claimable.</strong>
 The agreements above are <em>algebraic</em> — the Rubin rules reproduced
@@ -835,7 +834,7 @@ FMI and the classic-vs-Barnard–Rubin df read in practice — return to
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
 <span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
@@ -851,7 +850,7 @@ FMI and the classic-vs-Barnard–Rubin df read in practice — return to
 <span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>

@@ -12,7 +12,7 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-06-08" />
+<meta name="date" content="2026-08-14" />
 
 <title>M5: Methods, PSIS, and coverage — choosing a path and what may be claimed</title>
 
@@ -374,7 +374,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">M5: Methods, PSIS, and coverage — choosing
 a path and what may be claimed</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-06-08</h4>
+<h4 class="date">2026-08-14</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
 <p>The capstone of the Method track, where the preceding four pages
@@ -762,8 +762,8 @@ instead of <span class="math inline">\(M\)</span>” is an
 <strong>architecture / topology</strong> statement; the “10 fits → 1”
 figure is the <span class="math inline">\(M = 10\)</span> count for PISA
 reading <span class="citation">(OECD 2024)</span>, <strong>not</strong>
-a claim that the stacked path is faster. v0.1 reports no timings and
-makes <strong>no</strong> efficiency or “faster” claim (the H5
+a claim that the stacked path is faster. The package reports no timings
+and makes <strong>no</strong> efficiency or “faster” claim (the H5
 guardrail; A4 §7’s honesty triad). The single stacked fit can be larger
 and slower per fit than one per-PV fit — it carries <span class="math inline">\(M\)</span> times the rows — so the count is
 genuinely a statement about <em>number of fits</em>, not wall-clock
@@ -970,7 +970,7 @@ the source of coverage).</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
 <span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
@@ -986,7 +986,7 @@ the source of coverage).</p>
 <span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>

@@ -52,7 +52,7 @@ metadata marks them descriptive.
 
 Two scope notes, stated up front so nothing later surprises you:
 
-- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect block
+- **Fixed effects only.** The package calibrates and reports the fixed-effect block
   $\beta_{\text{FE}}$ (intercept and slopes). Variance components are estimated
   but **not** calibrated, and are not part of the reportable output.
 - **"One fit" is an architecture statement, not a speed claim.** It describes the
@@ -116,9 +116,20 @@ fit <- pv_fit(
   formula       = OUTCOME ~ x + female,           # OUTCOME is a placeholder
   target        = your_target,                    # from pv_brr_target()
   method        = "stack_direct",
-  control       = pv_control(method = "stack_direct"),
-  fit_function  = your_fit_function,              # the modelling backend
-  draws_function = your_draws_function            # optional posterior draws
+  control       = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# Or drive your own engine, which takes all three adapter functions:
+fit <- pv_fit(
+  data              = your_data,
+  formula           = OUTCOME ~ x + female,
+  target            = your_target,
+  method            = "stack_direct",
+  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = your_fit_function,          # estimates the stacked model
+  draws_function    = your_draws_function,        # extracts posterior draws
+  diagnose_function = your_diagnose_function,     # reports sampler diagnostics
+  cache_dir         = NULL
 )
 ```
 

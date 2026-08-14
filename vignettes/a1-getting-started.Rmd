@@ -116,9 +116,20 @@ fit <- pv_fit(
   formula       = OUTCOME ~ x + female,           # OUTCOME is a placeholder
   target        = your_target,                    # from pv_brr_target()
   method        = "stack_direct",
-  control       = pv_control(method = "stack_direct"),
-  fit_function  = your_fit_function,              # the modelling backend
-  draws_function = your_draws_function            # optional posterior draws
+  control       = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# Or drive your own engine, which takes all three adapter functions:
+fit <- pv_fit(
+  data              = your_data,
+  formula           = OUTCOME ~ x + female,
+  target            = your_target,
+  method            = "stack_direct",
+  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = your_fit_function,          # estimates the stacked model
+  draws_function    = your_draws_function,        # extracts posterior draws
+  diagnose_function = your_diagnose_function,     # reports sampler diagnostics
+  cache_dir         = NULL
 )
 ```
 

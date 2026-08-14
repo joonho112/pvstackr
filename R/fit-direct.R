@@ -682,12 +682,22 @@ pv_fit_not_implemented <- function(method) {
 #'   id_cols = design$id_cols
 #' )
 #'
-#' # A live stack_direct fit needs an injected/precomputed backend:
+#' # A live stack_direct fit needs a backend. The bundled one needs no adapter:
 #' \dontrun{
 #' fit <- pv_fit(
 #'   data = pisa_tiny, formula = OUTCOME ~ x + female,
 #'   target = target, method = "stack_direct",
-#'   fit_function = my_backend_adapter, draws_function = my_draws_adapter
+#'   control = pv_control(method = "stack_direct", backend = "brms")
+#' )
+#'
+#' # Injecting an adapter takes all three functions; a fit that arrives without
+#' # sampler diagnostics is blocked rather than reported.
+#' fit <- pv_fit(
+#'   data = pisa_tiny, formula = OUTCOME ~ x + female,
+#'   target = target, method = "stack_direct",
+#'   control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+#'   fit_function = my_backend_adapter, draws_function = my_draws_adapter,
+#'   diagnose_function = my_diagnose_adapter, cache_dir = NULL
 #' )
 #' }
 #'
@@ -826,7 +836,9 @@ pv_fit <- function(
 #'   are recommended when backend draw names do not follow the automatic `b_*`
 #'   fixed-effect convention, including distributional names such as
 #'   `b_sigma_*`.
-#' @param diagnose_function Optional injected backend diagnostic extractor.
+#' @param diagnose_function Injected backend diagnostic extractor. Required for
+#'   a reportable injected fit: without it the sampler evidence is incomplete and
+#'   the fit is blocked.
 #'   Its existing named-list fields are preserved, while sampler fields are
 #'   normalized under `stack_fit$diagnostics$sampler`. A missing, malformed, or
 #'   failed extractor produces explicit incomplete diagnostics and reason codes.
@@ -842,6 +854,14 @@ pv_fit <- function(
 #'   writable, and uses brms `file_refit = "on_change"`. Set `cache_dir = NULL`
 #'   to disable file caching. Injected adapters continue to own their cache
 #'   implementation and receive these values only as fit arguments.
+#'
+#'   `"on_change"` tracks the data and the formula, **not** the sampler
+#'   settings. Re-running with a different `seed`, or with different `chains`,
+#'   `iter`, or `warmup`, reloads the cached fit: a changed chain or draw count
+#'   is caught by the sampler gate and blocks the fit, but a changed seed
+#'   returns the identical draws with no warning. Pass `cache_dir = NULL`, or a
+#'   distinct `cache_stem`, when the sampler settings are what you are
+#'   varying -- a seed-stability check in particular.
 #' @param additional_args Additional named arguments passed to the injected fit
 #'   function.
 #'
@@ -882,7 +902,9 @@ pv_fit <- function(
 #' fit <- pv_fit_direct(
 #'   data = pisa_tiny, formula = OUTCOME ~ x + female,
 #'   target = target,
-#'   fit_function = my_backend_adapter, draws_function = my_draws_adapter
+#'   control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+#'   fit_function = my_backend_adapter, draws_function = my_draws_adapter,
+#'   diagnose_function = my_diagnose_adapter, cache_dir = NULL
 #' )
 #' }
 #'

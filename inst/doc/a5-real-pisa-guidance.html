@@ -12,7 +12,7 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-06-08" />
+<meta name="date" content="2026-08-14" />
 
 <title>A5: Real PISA data — licensing, memory, and reproducibility</title>
 
@@ -374,7 +374,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">A5: Real PISA data — licensing, memory, and
 reproducibility</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-06-08</h4>
+<h4 class="date">2026-08-14</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
 <p>How to connect pvstackr to real PISA data without bundling licensed
@@ -586,17 +586,17 @@ weight and the replicate weights through the design and target arguments
 consult those vignettes for the line-by-line reading of the objects.</p>
 <div id="stack_direct-requires-an-external-brrfay-target" class="section level3">
 <h3>4.1 stack_direct requires an external BRR–Fay target</h3>
-<p>In the v0.1 method stage, a reportable <code>stack_direct</code> fit
-requires an <strong>external</strong> Rubin / BRR–Fay fixed-effect
-target built by <code>pv_brr_target()</code>. The target is
+<p>A reportable <code>stack_direct</code> fit requires an
+<strong>external</strong> Rubin / BRR–Fay fixed-effect target built by
+<code>pv_brr_target()</code>. The target is
 <strong>fixed-effect-only</strong>: it forms a BRR–Fay sandwich
 covariance per plausible value and pools the <span class="math inline">\(M\)</span> results with Rubin’s rules into the
 total <span class="math inline">\(T_{\text{MI}} = \bar U + (1 +
 1/M)\,B\)</span> <span class="citation">(Rubin 1987; Barnard and Rubin
 1999)</span>. Random-effect (group) terms such as
 <code>(1 | CNTSCHID)</code> or <code>(1 || CNTSCHID)</code> are
-<strong>not accepted by the v0.1 BRR-Fay target engine</strong>, by
-design — see A2 §3 for the error this raises.</p>
+<strong>not accepted by the BRR-Fay target engine</strong>, by design —
+see A2 §3 for the error this raises.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>target <span class="ot">&lt;-</span> <span class="fu">pv_brr_target</span>(</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">data            =</span> design<span class="sc">$</span>data,</span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">formula         =</span> design<span class="sc">$</span>formula,</span>
@@ -615,11 +615,13 @@ adapter</h3>
 <p>With a design and a target in hand,
 <code>pv_fit(method = &quot;stack_direct&quot;)</code> fits <strong>one</strong>
 stacked model on the N * M rows and calibrates it (via CCC) to the
-external target. On real data you supply a live Bayesian backend through
-the two adapter slots (<code>fit_function</code>,
-<code>draws_function</code>); this vignette runs <strong>no</strong>
-live backend, so the chunk shows only the shape — the adapter contracts
-are sketched in A2 §7.</p>
+external target. On real data you either ask for the bundled backend
+with <code>pv_control(backend = &quot;brms&quot;)</code>, or supply your own
+engine through the three adapter slots (<code>fit_function</code>,
+<code>draws_function</code>, <code>diagnose_function</code> — all three
+are required for a reportable fit). This vignette runs
+<strong>no</strong> live backend, so the chunk shows only the shape; the
+adapter contracts are sketched in A2 §7.</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">pv_fit</span>(</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="at">data           =</span> design<span class="sc">$</span>data,</span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>  <span class="at">formula        =</span> design<span class="sc">$</span>formula,</span>
@@ -639,12 +641,14 @@ are sketched in A2 §7.</p>
 <span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>                     <span class="at">keep_backend_fit =</span> <span class="cn">FALSE</span>,</span>
 <span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>                     <span class="at">keep_log_lik     =</span> <span class="cn">FALSE</span></span>
 <span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>                   ),</span>
-<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">fit_function   =</span> your_fit_function,    <span class="co"># your modelling backend (see A2 §7)</span></span>
-<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">draws_function =</span> your_draws_function   <span class="co"># extract posterior draws for CCC</span></span>
-<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>)</span>
-<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a></span>
-<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
-<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a><span class="fu">get_estimates</span>(fit)</span></code></pre></div>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>  <span class="at">fit_function      =</span> your_fit_function,      <span class="co"># your modelling backend (see A2 §7)</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="at">draws_function    =</span> your_draws_function,    <span class="co"># extract posterior draws for CCC</span></span>
+<span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a>  <span class="at">diagnose_function =</span> your_diagnose_function, <span class="co"># sampler diagnostics; required</span></span>
+<span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a>  <span class="at">cache_dir         =</span> <span class="cn">NULL</span>                    <span class="co"># an injected adapter owns its cache</span></span>
+<span id="cb6-24"><a href="#cb6-24" tabindex="-1"></a>)</span>
+<span id="cb6-25"><a href="#cb6-25" tabindex="-1"></a></span>
+<span id="cb6-26"><a href="#cb6-26" tabindex="-1"></a><span class="fu">summary</span>(fit)</span>
+<span id="cb6-27"><a href="#cb6-27" tabindex="-1"></a><span class="fu">get_estimates</span>(fit)</span></code></pre></div>
 </div>
 <div id="how-to-read-the-result" class="section level3">
 <h3>4.3 How to read the result</h3>
@@ -877,14 +881,14 @@ coverage-claimable (<strong>M5</strong>) — start the Method track at
 <div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
 <span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
 <span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
 <span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
 <span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
 <span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; [1] C.UTF-8/C.UTF-8/C.UTF-8/C/C.UTF-8/C.UTF-8</span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
 <span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
 <span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
@@ -893,7 +897,7 @@ coverage-claimable (<strong>M5</strong>) — start the Method track at
 <span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>

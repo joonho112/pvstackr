@@ -48,8 +48,9 @@
 * New bundled brms backend for the stacked fit: `pv_fit(method =
   "stack_direct")` with `pv_control(backend = "brms")` now runs without an
   injected `fit_function`/`draws_function` pair. The bundled adapter fits the
-  prepared stacked formula with `brms::brm()` (through cmdstanr when
-  available, rstan otherwise) and returns fixed-effect and residual-scale
+  prepared stacked formula with `brms::brm()` (through cmdstanr when it is
+  installed and CmdStan is configured, rstan when cmdstanr is absent; an
+  installed cmdstanr without a working CmdStan is an error, not a fallback) and returns fixed-effect and residual-scale
   draws as a plain base matrix. brms is in Suggests; injected adapters remain
   the mechanism for other engines, and `per_pv`/`stack_psis` inputs are
   unchanged.

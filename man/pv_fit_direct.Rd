@@ -57,7 +57,9 @@ are recommended when backend draw names do not follow the automatic \verb{b_*}
 fixed-effect convention, including distributional names such as
 \verb{b_sigma_*}.}
 
-\item{diagnose_function}{Optional injected backend diagnostic extractor.
+\item{diagnose_function}{Injected backend diagnostic extractor. Required for
+a reportable injected fit: without it the sampler evidence is incomplete and
+the fit is blocked.
 Its existing named-list fields are preserved, while sampler fields are
 normalized under \code{stack_fit$diagnostics$sampler}. A missing, malformed, or
 failed extractor produces explicit incomplete diagnostics and reason codes.
@@ -75,7 +77,15 @@ Extraction records diagnostics but does not itself change fit status.}
 bundled brms backend, pvstackr creates the directory, verifies that it is
 writable, and uses brms \code{file_refit = "on_change"}. Set \code{cache_dir = NULL}
 to disable file caching. Injected adapters continue to own their cache
-implementation and receive these values only as fit arguments.}
+implementation and receive these values only as fit arguments.
+
+\code{"on_change"} tracks the data and the formula, \strong{not} the sampler
+settings. Re-running with a different \code{seed}, or with different \code{chains},
+\code{iter}, or \code{warmup}, reloads the cached fit: a changed chain or draw count
+is caught by the sampler gate and blocks the fit, but a changed seed
+returns the identical draws with no warning. Pass \code{cache_dir = NULL}, or a
+distinct \code{cache_stem}, when the sampler settings are what you are
+varying -- a seed-stability check in particular.}
 
 \item{additional_args}{Additional named arguments passed to the injected fit
 function.}
@@ -173,7 +183,9 @@ target <- pv_brr_target(
 fit <- pv_fit_direct(
   data = pisa_tiny, formula = OUTCOME ~ x + female,
   target = target,
-  fit_function = my_backend_adapter, draws_function = my_draws_adapter
+  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function = my_backend_adapter, draws_function = my_draws_adapter,
+  diagnose_function = my_diagnose_adapter, cache_dir = NULL
 )
 }
 

@@ -3,11 +3,11 @@
 # pv_fit(method = "stack_direct") accepts injected `fit_function` /
 # `draws_function` pairs so that any Bayesian engine can drive the stacked fit.
 # For the common case the package bundles a brms adapter, selected with
-# `pv_control(backend = "brms")` and no `fit_function`. The bundled adapter is
-# equivalent to the two-function adapter documented in the vignettes: it fits
-# the prepared stacked formula with `brms::brm()` (Gaussian family unless one
-# is supplied) and returns the fixed-effect and residual-scale draws as a plain
-# base matrix.
+# `pv_control(backend = "brms")` and no `fit_function`. Its three functions are
+# exported, so an injected adapter can reuse them: it fits the prepared stacked
+# formula with `brms::brm()` (Gaussian family unless one is supplied), returns
+# the fixed-effect and residual-scale draws as a plain base matrix, and reports
+# the sampler diagnostics.
 #
 # brms remains in Suggests: the adapter checks availability at call time and
 # the package installs and runs without it.

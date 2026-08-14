@@ -67,18 +67,29 @@ fit <- readRDS(
 
 fit
 
+## ----fit-live-bundled, eval = FALSE-------------------------------------------
+# fit <- pv_fit(
+#   data    = pisa_tiny,
+#   formula = OUTCOME ~ x + female,
+#   target  = target,                                         # from Section 3
+#   method  = "stack_direct",
+#   control = pv_control(method = "stack_direct", backend = "brms")
+# )
+
 ## ----fit-live-shape, eval = FALSE---------------------------------------------
 # fit <- pv_fit(
-#   data           = pisa_tiny,
-#   formula        = OUTCOME ~ x + female,
-#   target         = target,                                  # from Section 3
-#   method         = "stack_direct",
-#   control        = pv_control(
-#                      method  = "stack_direct",
-#                      backend = "injected"                   # backend policy
-#                    ),
-#   fit_function   = your_fit_function,                       # the modelling backend
-#   draws_function = your_draws_function                      # extract posterior draws
+#   data              = pisa_tiny,
+#   formula           = OUTCOME ~ x + female,
+#   target            = target,
+#   method            = "stack_direct",
+#   control           = pv_control(
+#                         method  = "stack_direct",
+#                         backend = "cmdstanr"                # passed to your engine
+#                       ),
+#   fit_function      = your_fit_function,      # estimates the stacked model
+#   draws_function    = your_draws_function,    # extracts posterior draws
+#   diagnose_function = your_diagnose_function, # reports sampler diagnostics
+#   cache_dir         = NULL                    # an injected adapter owns its cache
 # )
 
 ## ----summary------------------------------------------------------------------
@@ -128,14 +139,22 @@ est[, c("term", "interval_role", "coverage_claim_allowed")]
 #   # ... extract a draws matrix from backend_fit ...
 # }
 # 
+# # diagnose_function: report the sampler diagnostics. Without it the sampler
+# # evidence is incomplete and the fit is blocked rather than reported.
+# my_diagnose_function <- function(backend_fit, ...) {
+#   # ... return R-hat, ESS, and divergences from backend_fit ...
+# }
+# 
 # fit <- pv_fit(
-#   data           = your_real_pisa_data,
-#   formula        = OUTCOME ~ x + female,
-#   target         = your_target,
-#   method         = "stack_direct",
-#   control        = pv_control(method = "stack_direct", backend = "injected"),
-#   fit_function   = my_fit_function,
-#   draws_function = my_draws_function
+#   data              = your_real_pisa_data,
+#   formula           = OUTCOME ~ x + female,
+#   target            = your_target,
+#   method            = "stack_direct",
+#   control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+#   fit_function      = my_fit_function,
+#   draws_function    = my_draws_function,
+#   diagnose_function = my_diagnose_function,
+#   cache_dir         = NULL
 # )
 
 ## ----session-info-------------------------------------------------------------

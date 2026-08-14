@@ -90,12 +90,22 @@ target <- pv_brr_target(
   id_cols = design$id_cols
 )
 
-# A live stack_direct fit needs an injected/precomputed backend:
+# A live stack_direct fit needs a backend. The bundled one needs no adapter:
 \dontrun{
 fit <- pv_fit(
   data = pisa_tiny, formula = OUTCOME ~ x + female,
   target = target, method = "stack_direct",
-  fit_function = my_backend_adapter, draws_function = my_draws_adapter
+  control = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# Injecting an adapter takes all three functions; a fit that arrives without
+# sampler diagnostics is blocked rather than reported.
+fit <- pv_fit(
+  data = pisa_tiny, formula = OUTCOME ~ x + female,
+  target = target, method = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function = my_backend_adapter, draws_function = my_draws_adapter,
+  diagnose_function = my_diagnose_adapter, cache_dir = NULL
 )
 }
 

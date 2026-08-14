@@ -12,7 +12,7 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-06-08" />
+<meta name="date" content="2026-08-14" />
 
 <title>M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics</title>
 
@@ -374,7 +374,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">M4: CCC — Cholesky Calibration Correction
 and the center-separation diagnostics</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-06-08</h4>
+<h4 class="date">2026-08-14</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
 <p>The fourth page of the Method track derives the calibration map that
@@ -609,17 +609,17 @@ cites it.</p>
 repair.</strong> The map needs <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>, which exists only if
 <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is positive
 definite, and <span class="math inline">\(L_{\text{tgt}}\)</span>
-likewise requires a positive-definite <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. In
-v0.1.0, CCC factors both covariances <strong>as given</strong> and
-applies <strong>no</strong> automatic Tikhonov or near-PD repair to
-either. When the raw draw cloud is <strong>ill-conditioned</strong> —
-near-collinear fixed effects, or too few effective draws relative to the
-dimension — that condition surfaces in one of two ways rather than being
-silently patched: a matrix that is <em>not</em> positive definite is
-rejected outright on the Cholesky path (the factorization aborts with a
-“must be positive definite for CCC calibration” error), while a matrix
-that is positive definite but poorly conditioned clears the Cholesky and
-is instead flagged by the <span class="math inline">\(\kappa_A\)</span>
+likewise requires a positive-definite <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. CCC
+factors both covariances <strong>as given</strong> and applies
+<strong>no</strong> automatic Tikhonov or near-PD repair to either. When
+the raw draw cloud is <strong>ill-conditioned</strong> — near-collinear
+fixed effects, or too few effective draws relative to the dimension —
+that condition surfaces in one of two ways rather than being silently
+patched: a matrix that is <em>not</em> positive definite is rejected
+outright on the Cholesky path (the factorization aborts with a “must be
+positive definite for CCC calibration” error), while a matrix that is
+positive definite but poorly conditioned clears the Cholesky and is
+instead flagged by the <span class="math inline">\(\kappa_A\)</span>
 conditioning diagnostic below. The remedy is upstream — increase
 effective draws, reduce collinearity, or simplify the fixed-effect block
 before reporting — never an internal ridge.</p>
@@ -753,8 +753,8 @@ block when the fixture was calibrated. This is read-only:</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>dg <span class="ot">&lt;-</span> <span class="fu">get_diagnostics</span>(fit)</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">names</span>(dg)                                                    <span class="co"># preflight, stack_fit, stack_fit_warnings, ccc</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot;</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;ccc&quot;</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;preflight&quot;          &quot;sampler&quot;            &quot;sampler_gate&quot;      </span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co">#&gt; [4] &quot;stack_fit&quot;          &quot;stack_fit_warnings&quot; &quot;ccc&quot;</span></span>
 <span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>dg<span class="sc">$</span>ccc[<span class="fu">c</span>(<span class="st">&quot;center_status&quot;</span>, <span class="st">&quot;delta_c_rel&quot;</span>, <span class="st">&quot;delta_c_max&quot;</span>)]</span>
 <span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="co">#&gt; $center_status</span></span>
 <span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;ok&quot;</span></span>
@@ -840,7 +840,7 @@ do not confer coverage — return to <strong>A3 · Reading results</strong>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
 <span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
 <span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.2</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
 <span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
 <span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
@@ -856,7 +856,7 @@ do not confer coverage — return to <strong>A3 · Reading results</strong>
 <span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
 <span id="cb6-22"><a href="#cb6-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span id="cb6-23"><a href="#cb6-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
