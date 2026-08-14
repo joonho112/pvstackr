@@ -429,9 +429,17 @@ test_that("bundled golden target supports a serialized schema-0.1 migration proj
   )
   expect_identical(migrated$schema_version, "0.2.0")
   expect_invisible(pvstackr:::validate_pvstackr_brr_target(migrated))
+  # The legacy target hash digests the weighted least-squares estimates, so it
+  # is reproduced only on the machine that produced them. What must hold on any
+  # machine is that the recomputed hash is well formed and that the estimates
+  # themselves agree under the package's numeric policy.
+  expect_match(migrated$binding_manifest$legacy_hashes$target_hash, "^[0-9a-f]{8}$")
+  expect_true(pvstackr:::pv_binding_target_numeric_equal(
+    migrated$beta, legacy_target$beta
+  ))
   expect_identical(
-    migrated$binding_manifest$legacy_hashes$target_hash,
-    legacy_target$target_hash
+    migrated$binding_manifest$legacy_hashes$design_hash,
+    legacy_target$design_hash
   )
   expect_identical(serialize(legacy_target, NULL, version = 3L), source_before)
 })

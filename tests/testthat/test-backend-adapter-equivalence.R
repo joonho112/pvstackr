@@ -134,16 +134,25 @@ test_that("the exported fit function resolves the backend it is handed", {
 
   for (requested in c("none", "injected", "brms", "cmdstanr")) {
     seen$backend <- NULL
+    # Resolution is stubbed so the test states what the fit function does with
+    # the backend it is handed, not whether this machine has a working CmdStan.
     out <- with_mocked_bindings(
-      pv_backend_brms_fit_function(
-        formula = y ~ x, data = data.frame(y = 1, x = 1), family = NULL,
-        prior = NULL, chains = 1L, iter = 2L, warmup = 1L, cores = 1L,
-        seed = 1L, backend = requested, file = NULL, file_refit = "never"
+      with_mocked_bindings(
+        pv_backend_brms_fit_function(
+          formula = y ~ x, data = data.frame(y = 1, x = 1), family = NULL,
+          prior = NULL, chains = 1L, iter = 2L, warmup = 1L, cores = 1L,
+          seed = 1L, backend = requested, file = NULL, file_refit = "never"
+        ),
+        .package = "brms",
+        brm = function(..., backend) {
+          seen$backend <- backend
+          "fake-brmsfit"
+        }
       ),
-      .package = "brms",
-      brm = function(..., backend) {
-        seen$backend <- backend
-        "fake-brmsfit"
+      pv_backend_cmdstan_state = function() list(),
+      pv_backend_resolve_brms_engine = function(...) {
+        list(resolved_backend = "cmdstanr",
+             selection_policy = "stub", selection_reason = "stub")
       }
     )
     expect_identical(out, "fake-brmsfit", info = requested)
