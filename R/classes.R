@@ -3776,15 +3776,10 @@ pv_fit_validation_projection <- function(fit) {
 
 pv_fit_validation_digest <- function(fit) {
   projected <- pv_fit_validation_projection(fit)
-  payload <- tryCatch(
-    # Serialization v2 is used deliberately: unlike v3, it does not encode
-    # ALTREP implementation state, so value-identical fits hash identically
-    # before and after a save/read round trip.
-    serialize(projected, NULL, ascii = FALSE, xdr = TRUE, version = 2L),
-    error = function(error) {
-      pv_abort(sprintf("Fit validation payload could not be serialized: %s", conditionMessage(error)))
-    }
-  )
+  # Serialization v2 is used deliberately: unlike v3, it does not encode
+  # ALTREP implementation state, so value-identical fits hash identically
+  # before and after a save/read round trip.
+  payload <- pv_validation_payload_bytes(projected, "Fit validation payload")
   bytes <- c(
     charToRaw("pvstackr-fit-validation-v1"),
     as.raw(0L),

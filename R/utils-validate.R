@@ -444,3 +444,22 @@ pv_validate_control <- function(control) {
   }
   canonical
 }
+
+# R writes a fourteen-byte header at the front of a serialization stream, and
+# that header records the R version doing the writing. Validation stamps are
+# stored inside the object and re-checked in whatever session later reads it,
+# so hashing the header would make a saved fit fail its own stamp after an R
+# upgrade or on a different machine. Hash the payload without it.
+pv_validation_payload_bytes <- function(x, what = "Validation payload") {
+  stream <- tryCatch(
+    serialize(x, NULL, ascii = FALSE, xdr = TRUE, version = 2L),
+    error = function(error) {
+      pv_abort(sprintf("%s could not be serialized: %s", what, conditionMessage(error)))
+    }
+  )
+  header_bytes <- 14L
+  if (length(stream) <= header_bytes) {
+    pv_abort(sprintf("%s produced an unexpectedly short serialization stream.", what))
+  }
+  stream[-seq_len(header_bytes)]
+}

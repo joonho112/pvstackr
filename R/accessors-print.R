@@ -382,13 +382,7 @@ pv_summary_validation_digest <- function(x, kind = c("fit", "comparison")) {
       names = names(backend_fits)
     )
   }
-  payload <- serialize(
-    projected,
-    NULL,
-    ascii = FALSE,
-    xdr = TRUE,
-    version = 2L
-  )
+  payload <- pv_validation_payload_bytes(projected, "Summary validation payload")
   bytes <- c(
     charToRaw(paste0("pvstackr-", kind, "-summary-validation-v1")),
     as.raw(0L),

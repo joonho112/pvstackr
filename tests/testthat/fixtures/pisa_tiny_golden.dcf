@@ -4,7 +4,7 @@ Source: package-owned synthetic tiny fixture
 Claims-Scope: API smoke tests and fixture drift detection only
 Real-PISA-Data: false
 CSV-SHA256: 7dc9e8e013fd21b5ffd284bf28713edfc092873ad7be02f73e475d0372f66777
-RDS-SHA256: 70d982ee6c3903c6b7dd0d0b0baa3a61213852d3c0db95ab9b7b020875ab59b6
+RDS-SHA256: d28b8f87e0970069266a16a21a7a756c39bffdb8e9670212b577f9df5adeecbc
 Data-Hash: d1e9941d
 Row-Support-Hash: 5af32aa2
 PV-Value-Hash: a29f24e4

@@ -742,12 +742,9 @@ pv_comparison_validation_projection <- function(comparison) {
 }
 
 pv_comparison_validation_digest <- function(comparison) {
-  payload <- serialize(
+  payload <- pv_validation_payload_bytes(
     pv_comparison_validation_projection(comparison),
-    NULL,
-    ascii = FALSE,
-    xdr = TRUE,
-    version = 2L
+    "Method-comparison validation payload"
   )
   bytes <- c(
     charToRaw("pvstackr-method-comparison-validation-v1"),
@@ -945,12 +942,9 @@ pv_comparison_source_projection_validation_record <- function(
 pv_comparison_source_projection_digest <- function(projection) {
   projected <- projection
   projected$validation$stamp <- pv_comparison_validation_sentinel()
-  payload <- serialize(
+  payload <- pv_validation_payload_bytes(
     projected,
-    NULL,
-    ascii = FALSE,
-    xdr = TRUE,
-    version = 2L
+    "Comparison source projection payload"
   )
   bytes <- c(
     charToRaw("pvstackr-comparison-source-projection-v1"),

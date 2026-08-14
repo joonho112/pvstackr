@@ -1,5 +1,14 @@
 # pvstackr 0.2.0
 
+* Validation stamps no longer depend on the R version that wrote them. The
+  stamp hashed the whole serialization stream, whose fourteen-byte header
+  records the writing R version, so a saved fit failed its own stamp when it
+  was read back under a different R version and its accessors refused to
+  return anything. The header is now excluded, and the four stamps -- fit,
+  summary, method comparison, and comparison source projection -- are portable
+  across R versions and machines. The bundled example fit was regenerated
+  under the corrected scheme.
+
 * The bundled brms adapter is now public: `pv_backend_brms_fit_function()`,
   `pv_backend_brms_draws_function()`, and
   `pv_backend_brms_sampler_diagnostics()`. Injecting all three into `pv_fit()`
