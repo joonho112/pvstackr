@@ -46,13 +46,16 @@ accessor_weights <- function() {
 }
 
 accessor_fit_psis <- function(pareto_k = c(PV1 = 0.2, PV2 = 0.3, PV3 = 0.4), fallback = "block") {
-  pv_fit_stack_psis(
+  call_fit <- function() pv_fit_stack_psis(
     stacked_draws = accessor_stacked_draws(),
     psis_weights = accessor_weights(),
     pareto_k = pareto_k,
+    psis_producer = "testthat_psis_fixture",
+    psis_producer_version = "1.0.0",
     fallback = fallback,
     control = accessor_control("stack_psis")
   )
+  if (identical(fallback, "warn")) suppressWarnings(call_fit()) else call_fit()
 }
 
 accessor_direct_data <- function() {
@@ -101,7 +104,11 @@ accessor_fit_direct <- function(return_draws = TRUE) {
       return_draws = return_draws
     ),
     fit_function = fit_function,
-    draws_function = function(fit) fit$draws
+    draws_function = function(fit) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(
+      chains = 4L,
+      post_warmup = 5L
+    )
   )
 }
 
@@ -117,6 +124,11 @@ test_that("pvstackr fit accessors return validated components", {
   direct <- accessor_fit_direct()
   expect_equal(get_draws(direct), direct$draws)
   expect_s3_class(get_target(direct), "pvstackr_brr_target")
+  expect_identical(
+    get_diagnostics(direct)$sampler,
+    direct$stack_fit$diagnostics$sampler
+  )
+  expect_identical(get_diagnostics(direct)$sampler_gate$status, "ok")
 
   no_draws <- accessor_fit_direct(return_draws = FALSE)
   expect_null(get_draws(no_draws))
@@ -128,6 +140,70 @@ test_that("pvstackr fit accessors return validated components", {
   expect_equal(get_diagnostics(blocked_psis)$psis$status, "failed")
 })
 
+test_that("fit accessors fail closed on stale or nonportable payload mutations", {
+  fit <- accessor_fit_reference()
+  original_stamp <- fit$validation$stamp
+  leaf_attribute <- fit
+  attr(leaf_attribute$estimates$estimate, "private_payload") <- "TAMPER"
+
+  frontends <- list(
+    get_estimates = function(x) get_estimates(x),
+    get_target = function(x) get_target(x),
+    get_draws = function(x) get_draws(x),
+    get_diagnostics = function(x) get_diagnostics(x),
+    print = function(x) capture.output(print(x)),
+    summary = function(x) summary(x)
+  )
+  for (name in names(frontends)) {
+    expect_error(
+      frontends[[name]](leaf_attribute),
+      "validation stamp",
+      info = name
+    )
+  }
+  expect_identical(leaf_attribute$validation$stamp, original_stamp)
+
+  same_moments <- fit
+  same_moments$diagnostics$reference$per_pv_draws <- lapply(
+    same_moments$diagnostics$reference$per_pv_draws,
+    function(x) {
+      out <- x[nrow(x):1L, , drop = FALSE]
+      rownames(out) <- NULL
+      out
+    }
+  )
+  expect_error(get_estimates(same_moments), "validation stamp")
+
+  root_attribute <- fit
+  attr(root_attribute, "private_payload") <- "TAMPER"
+  expect_error(get_target(root_attribute), "root attributes")
+
+  forged_stamp <- fit
+  forged_stamp$validation$stamp <- paste0("sha256:", strrep("f", 64L))
+  expect_error(get_draws(forged_stamp), "validation stamp")
+
+  psis <- accessor_fit_psis()
+  reverse_rows <- nrow(psis$diagnostics$weighted$proposal_draws):1L
+  psis$diagnostics$weighted$proposal_draws <-
+    psis$diagnostics$weighted$proposal_draws[reverse_rows, , drop = FALSE]
+  psis$diagnostics$weighted$weights <-
+    psis$diagnostics$weighted$weights[reverse_rows, , drop = FALSE]
+  rownames(psis$diagnostics$weighted$proposal_draws) <- NULL
+  rownames(psis$diagnostics$weighted$weights) <- NULL
+  expect_error(get_diagnostics(psis), "validation stamp")
+
+  direct <- accessor_fit_direct()
+  direct$draws <- direct$draws[nrow(direct$draws):1L, , drop = FALSE]
+  rownames(direct$draws) <- NULL
+  expect_error(get_draws(direct), "validation stamp")
+
+  direct <- accessor_fit_direct()
+  private_environment <- new.env(parent = baseenv())
+  private_environment$private_payload <- "PRIVATE_FORMULA_ENVIRONMENT_PAYLOAD"
+  environment(direct$design$formula) <- private_environment
+  expect_error(get_estimates(direct), "formula environment")
+})
+
 test_that("pvstackr method comparison accessors return comparison components", {
   reference <- accessor_fit_reference()
   psis <- accessor_fit_psis()
@@ -137,6 +213,41 @@ test_that("pvstackr method comparison accessors return comparison components", {
   expect_equal(get_diagnostics(comparison), comparison$diagnostics)
   expect_error(get_target(comparison), "No `get_target\\(\\)` method")
   expect_error(get_draws(comparison), "No `get_draws\\(\\)` method")
+})
+
+test_that("comparison derivation and retained-fit accessors reject stale fits", {
+  reference <- accessor_fit_reference()
+  psis <- accessor_fit_psis()
+
+  stale_input <- reference
+  attr(stale_input$estimates$estimate, "private_payload") <- "TAMPER"
+  expect_error(
+    pv_compare_methods(reference = stale_input, psis = psis),
+    "validation stamp"
+  )
+
+  comparison <- pv_compare_methods(
+    reference = reference,
+    psis = psis,
+    include_fits = TRUE
+  )
+  attr(
+    comparison$fits$reference$estimates$estimate,
+    "private_payload"
+  ) <- "TAMPER"
+  comparison_frontends <- list(
+    get_estimates = function(x) get_estimates(x),
+    get_diagnostics = function(x) get_diagnostics(x),
+    print = function(x) capture.output(print(x)),
+    summary = function(x) summary(x)
+  )
+  for (name in names(comparison_frontends)) {
+    expect_error(
+      comparison_frontends[[name]](comparison),
+      "validation stamp",
+      info = name
+    )
+  }
 })
 
 test_that("accessor defaults reject unsupported objects", {
@@ -188,16 +299,16 @@ test_that("pvstackr fit print and summary output are stable", {
 
 test_that("pvstackr method comparison print and summary output are stable", {
   reference <- accessor_fit_reference()
-  warning <- accessor_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4), fallback = "warn")
-  comparison <- pv_compare_methods(reference = reference, warning = warning)
+  blocked <- accessor_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4), fallback = "warn")
+  comparison <- pv_compare_methods(reference = reference, blocked = blocked)
 
   printed <- paste(capture.output(returned <- print(comparison)), collapse = "\n")
   expect_identical(returned, comparison)
   expect_match(printed, "pvstackr method comparison", fixed = TRUE)
   expect_match(printed, "reference: reference", fixed = TRUE)
   expect_match(printed, "reference=per_pv", fixed = TRUE)
-  expect_match(printed, "warning=stack_psis", fixed = TRUE)
-  expect_match(printed, "warnings: warning", fixed = TRUE)
+  expect_match(printed, "blocked=stack_psis", fixed = TRUE)
+  expect_match(printed, "blocked: blocked", fixed = TRUE)
   expect_match(printed, "provenance note:", fixed = TRUE)
   expect_match(
     printed,
@@ -210,7 +321,8 @@ test_that("pvstackr method comparison print and summary output are stable", {
   expect_equal(summarized$reference_method, "reference")
   expect_equal(summarized$n_methods, 2L)
   expect_equal(summarized$n_terms, 2L)
-  expect_equal(summarized$warning_methods, "warning")
+  expect_equal(summarized$warning_methods, character())
+  expect_equal(summarized$blocked_methods, "blocked")
   expect_equal(
     summarized$interval_note,
     "intervals are descriptive rather than coverage-claimable."
@@ -221,7 +333,7 @@ test_that("pvstackr method comparison print and summary output are stable", {
   summary_printed <- paste(capture.output(print(summarized)), collapse = "\n")
   expect_match(summary_printed, "pvstackr method comparison summary", fixed = TRUE)
   expect_match(summary_printed, "reference: reference", fixed = TRUE)
-  expect_match(summary_printed, "warnings: warning", fixed = TRUE)
+  expect_match(summary_printed, "blocked: blocked", fixed = TRUE)
   expect_match(summary_printed, "provenance note:", fixed = TRUE)
   expect_match(summary_printed, "interval note:", fixed = TRUE)
   expect_match(summary_printed, "max_abs_z_diff", fixed = TRUE)

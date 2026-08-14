@@ -46,14 +46,17 @@ compare_fit_reference <- function() {
 }
 
 compare_fit_psis <- function(pareto_k = c(PV1 = 0.2, PV2 = 0.3, PV3 = 0.4), fallback = "block", ...) {
-  pv_fit_stack_psis(
+  call_fit <- function() pv_fit_stack_psis(
     stacked_draws = compare_stacked_draws(),
     psis_weights = compare_weights(),
     pareto_k = pareto_k,
+    psis_producer = "testthat_psis_fixture",
+    psis_producer_version = "1.0.0",
     fallback = fallback,
     control = compare_control("stack_psis"),
     ...
   )
+  if (identical(fallback, "warn")) suppressWarnings(call_fit()) else call_fit()
 }
 
 compare_fit_psis_one_term <- function() {
@@ -61,6 +64,8 @@ compare_fit_psis_one_term <- function() {
     stacked_draws = compare_stacked_draws()[, c("b_Intercept", "sigma"), drop = FALSE],
     psis_weights = compare_weights(),
     pareto_k = c(PV1 = 0.2, PV2 = 0.3, PV3 = 0.4),
+    psis_producer = "testthat_psis_fixture",
+    psis_producer_version = "1.0.0",
     control = compare_control("stack_psis")
   )
 }
@@ -114,7 +119,11 @@ compare_fit_direct <- function(...) {
       return_draws = FALSE
     ),
     fit_function = fit_function,
-    draws_function = function(fit) fit$draws
+    draws_function = function(fit) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(
+      chains = 4L,
+      post_warmup = 5L
+    )
   )
 }
 
@@ -162,7 +171,9 @@ test_that("pv_compare_methods builds a comparison table and diagnostics", {
     "n_descriptive_intervals", "target_source", "target_hash",
     "pooling_source", "pooling_hash", "center", "shared_target_hash",
     "shared_pooling_hash", "shared_external_target",
-    "shares_reference_target", "shares_reference_pooling"
+    "shares_reference_target", "shares_reference_pooling", "weight_method",
+    "weight_ess_iid_min", "weight_ess_fraction_min",
+    "max_normalized_weight_max"
   ) %in% names(comparison$diagnostic_table)))
   expect_equal(comparison$diagnostic_table$df_method, c("classic", "classic"))
   expect_equal(
@@ -185,6 +196,54 @@ test_that("pv_compare_methods builds a comparison table and diagnostics", {
   expect_false(any(comparison$diagnostic_table$shares_reference_target))
   expect_false(any(comparison$diagnostic_table$shares_reference_pooling))
   expect_true(all(is.na(comparison$diagnostic_table$center)))
+  expect_identical(
+    comparison$diagnostic_table$weight_method,
+    c(NA_character_, "caller_declared_external_psis")
+  )
+  expect_identical(
+    comparison$diagnostic_table$psis_source,
+    c(NA_character_, "supplied_psis_weights")
+  )
+  expect_identical(
+    comparison$diagnostic_table$pareto_k_source,
+    c(NA_character_, "supplied")
+  )
+  expect_identical(
+    comparison$diagnostic_table$psis_producer,
+    c(NA_character_, "testthat_psis_fixture")
+  )
+  expect_identical(
+    comparison$diagnostic_table$psis_producer_version,
+    c(NA_character_, "1.0.0")
+  )
+  psis_rows <- comparison$table$method == "stack_psis"
+  expect_identical(
+    comparison$table$weight_method[psis_rows],
+    rep("caller_declared_external_psis", sum(psis_rows))
+  )
+  expect_identical(
+    comparison$table$psis_source[psis_rows],
+    rep("supplied_psis_weights", sum(psis_rows))
+  )
+  expect_identical(
+    comparison$table$psis_producer[psis_rows],
+    rep("testthat_psis_fixture", sum(psis_rows))
+  )
+  expect_equal(
+    comparison$diagnostic_table$weight_ess_iid_min,
+    c(NA_real_, 5.4),
+    tolerance = 1e-14
+  )
+  expect_equal(
+    comparison$diagnostic_table$weight_ess_fraction_min,
+    c(NA_real_, 0.9),
+    tolerance = 1e-14
+  )
+  expect_equal(
+    comparison$diagnostic_table$max_normalized_weight_max,
+    c(NA_real_, 2 / 9),
+    tolerance = 1e-14
+  )
   expect_false(comparison$diagnostics$target_overlap$shared_target_hash)
   expect_false(comparison$diagnostics$target_overlap$shared_pooling_hash)
   expect_false(comparison$diagnostics$target_overlap$shared_external_target)
@@ -193,6 +252,15 @@ test_that("pv_compare_methods builds a comparison table and diagnostics", {
   expect_equal(comparison$diagnostics$timing$elapsed_seconds, c(3.2, 1.1))
   expect_equal(comparison$diagnostics$timing$n_fits, c(3L, 1L))
   expect_s3_class(comparison$fits$reference, "pvstackr_fit")
+  expect_identical(
+    comparison$source_fit_projection$psis$psis_source,
+    "supplied_psis_weights"
+  )
+  expect_equal(
+    comparison$source_fit_projection$psis$weight_ess_iid_min,
+    5.4,
+    tolerance = 1e-14
+  )
   expect_invisible(pvstackr:::validate_pvstackr_method_comparison(comparison))
 })
 
@@ -316,8 +384,8 @@ test_that("pv_compare_methods records blocked methods without dropping terms", {
   expect_equal(psis_diagnostics$n_descriptive_intervals, 0L)
   expect_true(is.na(psis_diagnostics$target_source))
   expect_true(is.na(psis_diagnostics$target_hash))
-  expect_equal(psis_diagnostics$pooling_source, "stack_psis_rubin_pooling")
-  expect_false(is.na(psis_diagnostics$pooling_hash))
+  expect_true(is.na(psis_diagnostics$pooling_source))
+  expect_true(is.na(psis_diagnostics$pooling_hash))
   expect_false(psis_diagnostics$shared_target_hash)
   expect_false(psis_diagnostics$shared_pooling_hash)
   expect_false(psis_diagnostics$shared_external_target)
@@ -327,13 +395,253 @@ test_that("pv_compare_methods records blocked methods without dropping terms", {
   expect_invisible(pvstackr:::validate_pvstackr_method_comparison(comparison))
 })
 
+test_that("legacy PSIS comparisons and summaries cannot expose derived numerics", {
+  reference <- compare_fit_reference()
+  psis <- compare_fit_psis()
+  current <- pv_compare_methods(
+    reference = reference,
+    psis = psis,
+    include_fits = TRUE
+  )
+
+  expect_identical(current$schema_version, "0.2.0")
+  expect_identical(
+    current$validation$schema_version,
+    "pvstackr_method_comparison_validation_v1"
+  )
+  expect_identical(
+    names(current$source_fit_validation),
+    current$method_labels
+  )
+  expect_identical(
+    names(current$source_fit_projection),
+    current$method_labels
+  )
+  expect_invisible(pvstackr:::validate_pvstackr_method_comparison(current))
+  expect_invisible(pvstackr:::validate_pvstackr_method_comparison(
+    unserialize(serialize(current, NULL, version = 2L))
+  ))
+
+  without_fits <- pv_compare_methods(reference = reference, psis = psis)
+  expect_invisible(pvstackr:::validate_pvstackr_method_comparison(
+    unserialize(serialize(without_fits, NULL, version = 2L))
+  ))
+
+  legacy <- current
+  legacy$source_fit_validation <- NULL
+  legacy$validation <- NULL
+  legacy$schema_version <- "0.1.0"
+  psis_diag <- legacy$diagnostic_table$method_label == "psis"
+  psis_rows <- legacy$estimate_table$method_label == "psis"
+  legacy$diagnostic_table$status[psis_diag] <- "warning"
+  legacy$diagnostic_table$reason_codes[psis_diag] <- "psis_k_too_high"
+  legacy$diagnostic_table$psis_status[psis_diag] <- "warning"
+  legacy$diagnostic_table$pareto_k_max[psis_diag] <- 0.91
+  legacy$diagnostics$method_diagnostics <- legacy$diagnostic_table
+  legacy$diagnostics$statuses[["psis"]] <- "warning"
+  legacy$diagnostics$warning_methods <- "psis"
+  legacy$table$status[psis_rows] <- "warning"
+  legacy$table$reason_codes[psis_rows] <- "psis_k_too_high"
+  legacy$estimate_table <- legacy$table
+
+  expect_error(
+    pvstackr:::validate_pvstackr_method_comparison(legacy),
+    "inspection-only"
+  )
+  expect_error(get_estimates(legacy), "inspection-only")
+  expect_error(get_diagnostics(legacy), "inspection-only")
+  expect_error(print(legacy), "inspection-only")
+  expect_error(summary(legacy), "inspection-only")
+
+  fit_summary <- summary(psis)
+  expect_identical(fit_summary$summary_schema_version, "0.2.0")
+  expect_false(fit_summary$source_reportability_fit$control$return_draws)
+  expect_null(
+    fit_summary$source_reportability_fit$diagnostics$weighted$proposal_draws
+  )
+  expect_null(fit_summary$source_reportability_fit$diagnostics$weighted$weights)
+  expect_output(print(fit_summary), "pvstackr fit summary")
+  expect_output(
+    print(unserialize(serialize(fit_summary, NULL, version = 2L))),
+    "pvstackr fit summary"
+  )
+  legacy_fit_summary <- fit_summary
+  legacy_fit_summary$summary_schema_version <- NULL
+  legacy_fit_summary$source_validation <- NULL
+  legacy_fit_summary$source_reportability_fit <- NULL
+  legacy_fit_summary$validation <- NULL
+  legacy_fit_summary$status <- "warning"
+  legacy_fit_summary$diagnostics$psis$status <- "warning"
+  legacy_fit_summary$diagnostics$psis$pareto_k <-
+    c(PV1 = 0.2, PV2 = 0.91, PV3 = 0.4)
+  legacy_fit_summary$diagnostics$psis$pareto_k_max <- 0.91
+  expect_error(print(legacy_fit_summary), "inspection-only")
+  malformed_legacy_fit_summary <- legacy_fit_summary
+  malformed_legacy_fit_summary$method <- c("stack_psis", "other")
+  expect_error(
+    print(malformed_legacy_fit_summary),
+    "schema is unrecognized"
+  )
+
+  comparison_summary <- summary(current)
+  expect_identical(comparison_summary$summary_schema_version, "0.2.0")
+  expect_null(
+    current$source_fit_reportability$psis$diagnostics$weighted$proposal_draws
+  )
+  expect_null(
+    current$source_fit_reportability$psis$diagnostics$weighted$weights
+  )
+  expect_output(
+    print(comparison_summary),
+    "pvstackr method comparison summary"
+  )
+  expect_output(
+    print(unserialize(serialize(comparison_summary, NULL, version = 2L))),
+    "pvstackr method comparison summary"
+  )
+  legacy_comparison_summary <- comparison_summary
+  legacy_comparison_summary$summary_schema_version <- NULL
+  legacy_comparison_summary$source_validation <- NULL
+  legacy_comparison_summary$source_reportability_comparison <- NULL
+  legacy_comparison_summary$validation <- NULL
+  expect_error(print(legacy_comparison_summary), "inspection-only")
+  malformed_legacy_comparison_summary <- legacy_comparison_summary
+  malformed_legacy_comparison_summary$methods <- as.list(
+    malformed_legacy_comparison_summary$methods
+  )
+  expect_error(
+    print(malformed_legacy_comparison_summary),
+    "schema is unrecognized"
+  )
+
+  missing_marker <- current
+  missing_marker$validation <- NULL
+  expect_error(
+    pvstackr:::validate_pvstackr_method_comparison(missing_marker),
+    "inspection-only"
+  )
+
+  bad_stamp <- current
+  bad_stamp$validation$stamp <- paste0("sha256:", strrep("f", 64L))
+  expect_error(
+    pvstackr:::validate_pvstackr_method_comparison(bad_stamp),
+    "validation stamp"
+  )
+
+  bad_summary_stamp <- fit_summary
+  bad_summary_stamp$validation$stamp <- paste0("sha256:", strrep("f", 64L))
+  expect_error(print(bad_summary_stamp), "validation")
+
+  restamped_estimate_summary <- fit_summary
+  restamped_estimate_summary$estimates$estimate[[1L]] <- 987654321
+  restamped_estimate_summary <- pvstackr:::pv_summary_issue_validation_stamp(
+    restamped_estimate_summary,
+    "fit"
+  )
+  expect_error(print(restamped_estimate_summary), "source reportability")
+
+  restamped_warning_summary <- fit_summary
+  restamped_warning_summary$status <- "warning"
+  restamped_warning_summary$diagnostics$psis$status <- "warning"
+  restamped_warning_summary$diagnostics$psis$pareto_k <-
+    c(PV1 = 0.2, PV2 = 0.91, PV3 = 0.4)
+  restamped_warning_summary$diagnostics$psis$pareto_k_max <- 0.91
+  restamped_warning_summary <- pvstackr:::pv_summary_issue_validation_stamp(
+    restamped_warning_summary,
+    "fit"
+  )
+  expect_error(print(restamped_warning_summary), "source reportability")
+
+  blocked_fit_summary <- summary(compare_fit_psis(
+    c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4)
+  ))
+  promoted_blocked_summary <- blocked_fit_summary
+  visible_fields <- setdiff(
+    names(fit_summary),
+    c("source_validation", "source_reportability_fit", "validation")
+  )
+  promoted_blocked_summary[visible_fields] <- fit_summary[visible_fields]
+  promoted_blocked_summary <- pvstackr:::pv_summary_issue_validation_stamp(
+    promoted_blocked_summary,
+    "fit"
+  )
+  expect_error(print(promoted_blocked_summary), "source reportability")
+
+  restamped_comparison_summary <- comparison_summary
+  restamped_comparison_summary$estimate_table$estimate[
+    restamped_comparison_summary$estimate_table$method == "stack_psis"
+  ] <- 123456789
+  restamped_comparison_summary <- pvstackr:::pv_summary_issue_validation_stamp(
+    restamped_comparison_summary,
+    "comparison"
+  )
+  expect_error(
+    print(restamped_comparison_summary),
+    "validated source comparison"
+  )
+})
+
+test_that("blocked PSIS comparison metadata remain redacted after restamping", {
+  comparison <- pv_compare_methods(
+    reference = compare_fit_reference(),
+    psis = compare_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4))
+  )
+  psis_diag <- comparison$diagnostic_table$method_label == "psis"
+  comparison$diagnostic_table$pooling_source[psis_diag] <-
+    "legacy_psis_pooling"
+  comparison$diagnostic_table$pooling_hash[psis_diag] <-
+    "legacy_pooling_hash"
+  comparison$diagnostics$method_diagnostics <- comparison$diagnostic_table
+  comparison <- pvstackr:::pv_comparison_issue_validation_stamp(comparison)
+  expect_error(
+    pvstackr:::validate_pvstackr_method_comparison(comparison),
+    "retains reportable or pooling metadata"
+  )
+})
+
+test_that("comparison derivation remains bound to source fit projections", {
+  reference <- compare_fit_reference()
+  safe_psis <- compare_fit_psis()
+  blocked_psis <- compare_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4))
+
+  for (include_fits in c(FALSE, TRUE)) {
+    safe <- pv_compare_methods(
+      reference = reference,
+      psis = safe_psis,
+      include_fits = include_fits
+    )
+    blocked <- pv_compare_methods(
+      reference = reference,
+      psis = blocked_psis,
+      include_fits = include_fits
+    )
+    substituted <- blocked
+    derived_fields <- c(
+      "table", "estimate_table", "diagnostics", "diagnostic_table",
+      "agreement", "timing"
+    )
+    substituted[derived_fields] <- safe[derived_fields]
+    substituted <- pvstackr:::pv_comparison_issue_validation_stamp(substituted)
+    expect_error(
+      pvstackr:::validate_pvstackr_method_comparison(substituted),
+      "source projections",
+      info = paste("include_fits", include_fits)
+    )
+    expect_error(
+      get_estimates(substituted),
+      "source projections",
+      info = paste("include_fits", include_fits)
+    )
+  }
+})
+
 test_that("pv_compare_methods tolerates hollow blocked stack_direct fits", {
   per_pv <- compare_fit_reference()
   blocked_direct <- pvstackr:::new_pvstackr_fit(
     "stack_direct",
     status = "blocked",
     reason_codes = "preflight_failed",
-    control = pv_control(method = "stack_direct")
+    control = pv_control(method = "stack_direct", return_draws = FALSE)
   )
 
   comparison <- pv_compare_methods(list(per_pv = per_pv, direct = blocked_direct))
@@ -358,10 +666,10 @@ test_that("pv_compare_methods tolerates hollow blocked stack_direct fits", {
 test_that("pv_compare_methods aligns missing terms and computes agreement diagnostics", {
   per_pv <- compare_fit_reference()
   one_term <- compare_fit_psis_one_term()
-  warning <- compare_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4), fallback = "warn")
+  blocked <- compare_fit_psis(c(PV1 = 0.2, PV2 = 0.9, PV3 = 0.4), fallback = "warn")
 
   comparison <- pv_compare_methods(
-    fits = list(reference = per_pv, one_term = one_term, warning = warning),
+    fits = list(reference = per_pv, one_term = one_term, blocked = blocked),
     timings = list(one_term = 0.8, stack_psis = 1.1)
   )
 
@@ -373,7 +681,8 @@ test_that("pv_compare_methods aligns missing terms and computes agreement diagno
     comparison$agreement$n_available[comparison$agreement$method_label == "one_term"],
     1L
   )
-  expect_equal(comparison$diagnostics$warning_methods, "warning")
+  expect_equal(comparison$diagnostics$warning_methods, character())
+  expect_equal(comparison$diagnostics$blocked_methods, "blocked")
   expect_equal(
     comparison$timing$elapsed_seconds,
     c(NA_real_, 0.8, 1.1)
@@ -492,4 +801,53 @@ test_that("pv_compare_methods validates references and malformed inputs", {
     pvstackr:::validate_pvstackr_method_comparison(bad),
     "exactly one row"
   )
+})
+
+test_that("provenance-blocked PSIS fits remain non-reportable in comparisons", {
+  per_pv <- compare_fit_reference()
+  unverified <- pvstackr::pv_fit_stack_psis(
+    stacked_draws = compare_stacked_draws(),
+    psis_weights = compare_weights(),
+    pareto_k = c(PV1 = 0.2, PV2 = 0.3, PV3 = 0.4),
+    control = compare_control("stack_psis")
+  )
+  unsmoothed <- pvstackr::pv_fit_stack_psis(
+    stacked_draws = compare_stacked_draws(),
+    log_ratios = log(compare_weights()),
+    pareto_k = c(PV1 = 0.2, PV2 = 0.3, PV3 = 0.4),
+    control = compare_control("stack_psis")
+  )
+
+  for (fit in list(unverified = unverified, unsmoothed = unsmoothed)) {
+    comparison <- pv_compare_methods(
+      reference = per_pv,
+      diagnostic = fit,
+      reference_method = "reference"
+    )
+    row <- comparison$diagnostics$method_diagnostics[
+      comparison$diagnostics$method_diagnostics$method_label == "diagnostic",
+      ,
+      drop = FALSE
+    ]
+    expect_equal(row$status, "blocked")
+    expect_equal(row$n_available, 0L)
+    expect_true(row$psis_status %in% c("provenance_incomplete", "unsmoothed"))
+    expected_method <- if (identical(fit, unverified)) {
+      "unspecified_external"
+    } else {
+      "self_normalized_raw_importance"
+    }
+    expect_identical(row$weight_method, expected_method)
+    expect_equal(row$weight_ess_iid_min, 5.4, tolerance = 1e-14)
+    expect_equal(row$weight_ess_fraction_min, 0.9, tolerance = 1e-14)
+    expect_equal(row$max_normalized_weight_max, 2 / 9, tolerance = 1e-14)
+    expect_true(all(is.na(
+      comparison$table$estimate[
+        comparison$table$method_label == "diagnostic"
+      ]
+    )))
+    expect_invisible(
+      pvstackr:::validate_pvstackr_method_comparison(comparison)
+    )
+  }
 })

@@ -16,7 +16,7 @@ pv_compare_collect_fits <- function(..., fits = NULL) {
     if (!inherits(dots[[i]], "pvstackr_fit")) {
       pv_abort("Every method comparison input must be a `pvstackr_fit` object.")
     }
-    validate_pvstackr_fit(dots[[i]])
+    validate_pvstackr_fit(dots[[i]], tier = "deep")
   }
   labels <- names(dots)
   if (is.null(labels)) {
@@ -74,6 +74,9 @@ pv_compare_reference_label <- function(fits, reference_method = NULL) {
 }
 
 pv_compare_fit_n <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(as.integer(fit$n_fits))
+  }
   if (identical(fit$method, "per_pv") && !is.null(fit$target$M)) {
     return(as.integer(fit$target$M))
   }
@@ -122,6 +125,9 @@ pv_compare_elapsed <- function(label, method, timings) {
 }
 
 pv_compare_fit_target_hash <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$target_hash)
+  }
   if (!is.null(fit$target$target_hash)) {
     return(fit$target$target_hash)
   }
@@ -148,6 +154,9 @@ pv_compare_fit_target_hash <- function(fit) {
 }
 
 pv_compare_fit_target_source <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$target_source)
+  }
   if (!is.null(fit$target$target_source)) {
     return(fit$target$target_source)
   }
@@ -171,6 +180,9 @@ pv_compare_fit_target_source <- function(fit) {
 }
 
 pv_compare_fit_pooling_hash <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$pooling_hash)
+  }
   if (!is.null(fit$target$pooling_hash)) {
     return(fit$target$pooling_hash)
   }
@@ -197,6 +209,9 @@ pv_compare_fit_pooling_hash <- function(fit) {
 }
 
 pv_compare_fit_pooling_source <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$pooling_source)
+  }
   if (!is.null(fit$diagnostics$pooling$pooling_source)) {
     return(fit$diagnostics$pooling$pooling_source)
   }
@@ -262,6 +277,9 @@ pv_compare_shares_reference_hash <- function(hashes, reference_label, labels) {
 }
 
 pv_compare_fit_center <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$center)
+  }
   if (!identical(fit$method, "stack_direct")) {
     return(NA_character_)
   }
@@ -306,6 +324,9 @@ pv_compare_target_overlap_diagnostics <- function(method_diagnostics) {
 }
 
 pv_compare_fit_psis_status <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$psis_status)
+  }
   if (!is.null(fit$diagnostics$psis$status)) {
     return(fit$diagnostics$psis$status)
   }
@@ -320,6 +341,9 @@ pv_compare_fit_psis_status <- function(fit) {
 }
 
 pv_compare_fit_pareto_k_max <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$pareto_k_max)
+  }
   if (!is.null(fit$diagnostics$psis$pareto_k_max)) {
     return(as.numeric(fit$diagnostics$psis$pareto_k_max))
   }
@@ -331,6 +355,65 @@ pv_compare_fit_pareto_k_max <- function(fit) {
     }
   }
   NA_real_
+}
+
+pv_compare_fit_weight_method <- function(fit) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit$weight_method)
+  }
+  if (identical(fit$method, "stack_psis") &&
+      is.list(fit$diagnostics$psis) &&
+      is.character(fit$diagnostics$psis$weight_method) &&
+      length(fit$diagnostics$psis$weight_method) == 1L) {
+    return(fit$diagnostics$psis$weight_method)
+  }
+  NA_character_
+}
+
+pv_compare_fit_psis_provenance <- function(fit, field) {
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    return(fit[[field]])
+  }
+  if (!identical(fit$method, "stack_psis") ||
+      !is.list(fit$diagnostics$psis)) {
+    return(NA_character_)
+  }
+  diagnostic_field <- switch(
+    field,
+    psis_source = "source",
+    psis_producer = "producer",
+    psis_producer_version = "producer_version",
+    field
+  )
+  value <- fit$diagnostics$psis[[diagnostic_field]]
+  if (!is.character(value) || length(value) != 1L) NA_character_ else value
+}
+
+pv_compare_fit_weight_stat <- function(
+  fit,
+  field,
+  aggregate = c("min", "max")
+) {
+  aggregate <- match.arg(aggregate)
+  if (inherits(fit, "pvstackr_comparison_source_projection")) {
+    projection_field <- switch(
+      field,
+      weight_ess_iid = "weight_ess_iid_min",
+      weight_ess_fraction = "weight_ess_fraction_min",
+      max_normalized_weight = "max_normalized_weight_max",
+      field
+    )
+    return(fit[[projection_field]])
+  }
+  if (!identical(fit$method, "stack_psis") ||
+      !is.list(fit$diagnostics$psis)) {
+    return(NA_real_)
+  }
+  value <- fit$diagnostics$psis[[field]]
+  if (!is.numeric(value) || length(value) == 0L || any(!is.finite(value))) {
+    return(NA_real_)
+  }
+  if (identical(aggregate, "min")) min(value) else max(value)
 }
 
 pv_compare_fit_field <- function(fit, field, type = c("character", "logical")) {
@@ -387,6 +470,14 @@ pv_compare_one_row <- function(fit, label, term, reference, reference_label) {
   conf_level <- pv_compare_row_numeric(row, "conf_level")
   interval_role <- pv_compare_row_field(row, "interval_role", "character")
   coverage_claim_allowed <- pv_compare_row_field(row, "coverage_claim_allowed", "logical")
+  psis_source <- pv_compare_fit_psis_provenance(fit, "psis_source")
+  pareto_k_source <- pv_compare_fit_psis_provenance(fit, "pareto_k_source")
+  weight_method <- pv_compare_fit_weight_method(fit)
+  psis_producer <- pv_compare_fit_psis_provenance(fit, "psis_producer")
+  psis_producer_version <- pv_compare_fit_psis_provenance(
+    fit,
+    "psis_producer_version"
+  )
   conf_low <- if (has_row && "conf_low" %in% names(row)) row$conf_low else NA_real_
   conf_high <- if (has_row && "conf_high" %in% names(row)) row$conf_high else NA_real_
   ref_estimate <- if (ref_has_row) ref_row$estimate else NA_real_
@@ -419,6 +510,11 @@ pv_compare_one_row <- function(fit, label, term, reference, reference_label) {
     conf_level = conf_level,
     interval_role = interval_role,
     coverage_claim_allowed = coverage_claim_allowed,
+    psis_source = psis_source,
+    pareto_k_source = pareto_k_source,
+    weight_method = weight_method,
+    psis_producer = psis_producer,
+    psis_producer_version = psis_producer_version,
     conf_low = conf_low,
     conf_high = conf_high,
     reference_method = reference_label,
@@ -516,6 +612,52 @@ pv_compare_diagnostics <- function(table, fits, reference_label, timings) {
     shares_reference_pooling = shares_reference_pooling,
     psis_status = vapply(fits, pv_compare_fit_psis_status, character(1)),
     pareto_k_max = vapply(fits, pv_compare_fit_pareto_k_max, numeric(1)),
+    psis_source = vapply(
+      fits,
+      pv_compare_fit_psis_provenance,
+      character(1),
+      field = "psis_source"
+    ),
+    pareto_k_source = vapply(
+      fits,
+      pv_compare_fit_psis_provenance,
+      character(1),
+      field = "pareto_k_source"
+    ),
+    weight_method = vapply(fits, pv_compare_fit_weight_method, character(1)),
+    psis_producer = vapply(
+      fits,
+      pv_compare_fit_psis_provenance,
+      character(1),
+      field = "psis_producer"
+    ),
+    psis_producer_version = vapply(
+      fits,
+      pv_compare_fit_psis_provenance,
+      character(1),
+      field = "psis_producer_version"
+    ),
+    weight_ess_iid_min = vapply(
+      fits,
+      pv_compare_fit_weight_stat,
+      numeric(1),
+      field = "weight_ess_iid",
+      aggregate = "min"
+    ),
+    weight_ess_fraction_min = vapply(
+      fits,
+      pv_compare_fit_weight_stat,
+      numeric(1),
+      field = "weight_ess_fraction",
+      aggregate = "min"
+    ),
+    max_normalized_weight_max = vapply(
+      fits,
+      pv_compare_fit_weight_stat,
+      numeric(1),
+      field = "max_normalized_weight",
+      aggregate = "max"
+    ),
     n_fits = timing$n_fits,
     elapsed_seconds = timing$elapsed_seconds,
     stringsAsFactors = FALSE
@@ -533,7 +675,580 @@ pv_compare_diagnostics <- function(table, fits, reference_label, timings) {
   )
 }
 
+pv_comparison_schema_version <- function() {
+  "0.2.0"
+}
+
+pv_comparison_validation_schema <- function() {
+  "pvstackr_method_comparison_validation_v1"
+}
+
+pv_comparison_validation_sentinel <- function() {
+  paste0("sha256:", strrep("0", 64L))
+}
+
+pv_comparison_source_fit_validation <- function(fits) {
+  out <- lapply(fits, function(fit) {
+    validate_pvstackr_fit(fit, tier = "deep")
+    list(
+      schema_version = fit$validation$schema_version,
+      stamp = fit$validation$stamp
+    )
+  })
+  names(out) <- names(fits)
+  out
+}
+
+pv_comparison_source_fit_reportability <- function(fits) {
+  out <- lapply(fits, function(fit) {
+    if (identical(fit$method, "stack_psis")) {
+      pv_fit_summary_reportability_fit(fit)
+    } else {
+      NULL
+    }
+  })
+  names(out) <- names(fits)
+  out
+}
+
+pv_comparison_authority_fits <- function(fits, reportability) {
+  out <- fits
+  for (label in names(out)) {
+    if (!is.null(reportability[[label]])) {
+      out[[label]] <- reportability[[label]]
+    }
+  }
+  out
+}
+
+pv_comparison_validation_record <- function(
+  stamp = pv_comparison_validation_sentinel()
+) {
+  list(
+    schema_version = pv_comparison_validation_schema(),
+    policy_id = "source_fit_stamps_plus_owned_payload_sha256_v1",
+    canonicalizer_id = "r_xdr_v2_comparison_owned_payload_v1",
+    stamp = stamp
+  )
+}
+
+pv_comparison_validation_projection <- function(comparison) {
+  projected <- comparison
+  projected$validation$stamp <- pv_comparison_validation_sentinel()
+  if (!is.null(projected$fits)) {
+    projected$fits <- projected$source_fit_validation
+  }
+  projected
+}
+
+pv_comparison_validation_digest <- function(comparison) {
+  payload <- serialize(
+    pv_comparison_validation_projection(comparison),
+    NULL,
+    ascii = FALSE,
+    xdr = TRUE,
+    version = 2L
+  )
+  bytes <- c(
+    charToRaw("pvstackr-method-comparison-validation-v1"),
+    as.raw(0L),
+    payload
+  )
+  paste0("sha256:", digest::digest(bytes, algo = "sha256", serialize = FALSE))
+}
+
+pv_comparison_issue_validation_stamp <- function(comparison) {
+  comparison$validation <- pv_comparison_validation_record()
+  comparison$validation$stamp <- pv_comparison_validation_digest(comparison)
+  comparison
+}
+
+pv_comparison_contains_stack_psis <- function(comparison) {
+  values <- character()
+  if (is.character(comparison$methods)) {
+    values <- c(values, unname(comparison$methods))
+  }
+  if (is.data.frame(comparison$table) && "method" %in% names(comparison$table)) {
+    values <- c(values, as.character(comparison$table$method))
+  }
+  if (is.data.frame(comparison$diagnostic_table) &&
+      "method" %in% names(comparison$diagnostic_table)) {
+    values <- c(values, as.character(comparison$diagnostic_table$method))
+  }
+  any(values == "stack_psis", na.rm = TRUE)
+}
+
+pv_validate_comparison_source_fit_validation <- function(comparison, labels) {
+  source <- comparison$source_fit_validation
+  if (!is.list(source) || !identical(names(source), labels) ||
+      !identical(attributes(source), list(names = labels))) {
+    pv_abort("Current method comparison source-fit validation records must align with method labels.")
+  }
+  for (label in labels) {
+    record <- source[[label]]
+    fields <- c("schema_version", "stamp")
+    if (!is.list(record) || !identical(names(record), fields) ||
+        !identical(attributes(record), list(names = fields)) ||
+        !identical(record$schema_version, pv_fit_validation_schema()) ||
+        !is.character(record$stamp) || length(record$stamp) != 1L ||
+        is.na(record$stamp) ||
+        !grepl("^sha256:[0-9a-f]{64}$", record$stamp)) {
+      pv_abort("Current method comparison source-fit validation records are noncanonical.")
+    }
+  }
+  invisible(source)
+}
+
+pv_validate_comparison_validation <- function(comparison, labels) {
+  validation <- comparison$validation
+  fields <- c("schema_version", "policy_id", "canonicalizer_id", "stamp")
+  if (!is.list(validation) || !identical(names(validation), fields) ||
+      !identical(attributes(validation), list(names = fields)) ||
+      !identical(
+        validation,
+        pv_comparison_validation_record(validation$stamp %||% "")
+      ) || !grepl("^sha256:[0-9a-f]{64}$", validation$stamp)) {
+    pv_abort("Current method comparison validation record is noncanonical.")
+  }
+  pv_validate_comparison_source_fit_validation(comparison, labels)
+  if (!identical(comparison$schema_version, pv_comparison_schema_version())) {
+    pv_abort("Current method comparison schema version is unsupported.")
+  }
+  if (!identical(
+        comparison$provenance,
+        pv_provenance(
+          "pv_compare_methods",
+          schema_version = pv_comparison_schema_version()
+        )
+      )) {
+    pv_abort("Current method comparison provenance must match its schema authority.")
+  }
+  if (!identical(validation$stamp, pv_comparison_validation_digest(comparison))) {
+    pv_abort("Method comparison validation stamp does not match the current owned payload.")
+  }
+  invisible(validation)
+}
+
+pv_validate_stack_psis_derived_tables <- function(
+  estimate_table,
+  diagnostic_table,
+  context = "method comparison"
+) {
+  if (!is.data.frame(diagnostic_table) ||
+      !all(c(
+        "method", "method_label", "status", "reason_codes", "n_available",
+        "target_source", "target_hash", "pooling_source", "pooling_hash",
+        "df_method", "interval_role", "coverage_claim_allowed",
+        "n_descriptive_intervals", "psis_status", "pareto_k_max",
+        "psis_source", "pareto_k_source", "weight_method", "psis_producer",
+        "psis_producer_version", "weight_ess_iid_min",
+        "weight_ess_fraction_min", "max_normalized_weight_max"
+      ) %in% names(diagnostic_table))) {
+    pv_abort(sprintf("%s lacks the fields required by the PSIS derived-output firewall.", context))
+  }
+  psis_rows <- diagnostic_table[diagnostic_table$method == "stack_psis", , drop = FALSE]
+  if (nrow(psis_rows) == 0L) {
+    return(invisible(TRUE))
+  }
+  if (any(psis_rows$status == "warning")) {
+    pv_abort(sprintf("Legacy warning-status stack_psis %s output is inspection-only.", context))
+  }
+  numeric_result_fields <- intersect(
+    c(
+      "estimate", "se", "std.error", "df", "df_complete", "conf_level",
+      "conf_low", "conf_high", "estimate_diff", "se_ratio", "abs_z_diff"
+    ),
+    names(estimate_table)
+  )
+  for (i in seq_len(nrow(psis_rows))) {
+    row <- psis_rows[i, , drop = FALSE]
+    label <- as.character(row$method_label[[1L]])
+    status <- as.character(row$status[[1L]])
+    table_rows <- estimate_table[
+      as.character(estimate_table$method_label) == label,
+      ,
+      drop = FALSE
+    ]
+    weight_method <- as.character(row$weight_method[[1L]])
+    psis_source <- as.character(row$psis_source[[1L]])
+    pareto_k_source <- as.character(row$pareto_k_source[[1L]])
+    producer <- as.character(row$psis_producer[[1L]])
+    producer_version <- as.character(row$psis_producer_version[[1L]])
+    weight_values <- c(
+      row$weight_ess_iid_min[[1L]],
+      row$weight_ess_fraction_min[[1L]],
+      row$max_normalized_weight_max[[1L]]
+    )
+    if (!psis_source %in% c(
+      "supplied_psis_weights", "injected_psis_function",
+      "self_normalized_log_ratios"
+    ) || !pareto_k_source %in% c("supplied", "injected_function_output") ||
+        !weight_method %in% c(
+      "caller_declared_external_psis", "unspecified_external",
+      "self_normalized_raw_importance"
+    ) || any(!is.finite(weight_values)) || weight_values[[1L]] < 1 ||
+        weight_values[[2L]] <= 0 || weight_values[[2L]] > 1 ||
+        weight_values[[3L]] <= 0 || weight_values[[3L]] > 1) {
+      pv_abort(sprintf("stack_psis %s weight provenance and concentration diagnostics are incoherent.", context))
+    }
+    if (identical(status, "ok")) {
+      if (!identical(as.character(row$psis_status[[1L]]), "ok") ||
+          !identical(weight_method, "caller_declared_external_psis") ||
+          is.na(producer) || !nzchar(producer) ||
+          is.na(producer_version) || !nzchar(producer_version) ||
+          !is.finite(row$pareto_k_max[[1L]]) ||
+          row$pareto_k_max[[1L]] >= pv_legacy_psis_hard_threshold() ||
+          as.integer(row$n_available[[1L]]) < 1L) {
+        pv_abort(sprintf("Reportable stack_psis %s output fails the immutable Pareto-k firewall.", context))
+      }
+      next
+    }
+    if (!identical(status, "blocked") ||
+        !as.character(row$psis_status[[1L]]) %in% c(
+          "failed", "not_evaluated", "unsmoothed", "provenance_incomplete"
+        ) ||
+        as.integer(row$n_available[[1L]]) != 0L ||
+        !nzchar(as.character(row$reason_codes[[1L]]))) {
+      pv_abort(sprintf("Non-reportable stack_psis %s status metadata are incoherent.", context))
+    }
+    absent_metadata <- c(
+      row$target_source[[1L]], row$target_hash[[1L]],
+      row$pooling_source[[1L]], row$pooling_hash[[1L]],
+      row$df_method[[1L]], row$interval_role[[1L]]
+    )
+    if (any(!is.na(absent_metadata) & nzchar(as.character(absent_metadata))) ||
+        !is.na(row$coverage_claim_allowed[[1L]]) ||
+        as.integer(row$n_descriptive_intervals[[1L]]) != 0L ||
+        any(vapply(table_rows[numeric_result_fields], function(value) {
+          any(!is.na(value))
+        }, logical(1)))) {
+      pv_abort(sprintf("Blocked stack_psis %s output retains reportable or pooling metadata.", context))
+    }
+  }
+  invisible(TRUE)
+}
+
+pv_comparison_source_projection_validation_schema <- function() {
+  "pvstackr_comparison_source_projection_validation_v1"
+}
+
+pv_comparison_source_projection_validation_record <- function(
+  stamp = pv_comparison_validation_sentinel()
+) {
+  list(
+    schema_version = pv_comparison_source_projection_validation_schema(),
+    policy_id = "validated_fit_reportability_projection_sha256_v1",
+    stamp = stamp
+  )
+}
+
+pv_comparison_source_projection_digest <- function(projection) {
+  projected <- projection
+  projected$validation$stamp <- pv_comparison_validation_sentinel()
+  payload <- serialize(
+    projected,
+    NULL,
+    ascii = FALSE,
+    xdr = TRUE,
+    version = 2L
+  )
+  bytes <- c(
+    charToRaw("pvstackr-comparison-source-projection-v1"),
+    as.raw(0L),
+    payload
+  )
+  paste0("sha256:", digest::digest(bytes, algo = "sha256", serialize = FALSE))
+}
+
+pv_comparison_source_projection <- function(fit, source_validation = NULL) {
+  validate_pvstackr_fit(fit, tier = "deep")
+  source_validation <- source_validation %||% list(
+    schema_version = fit$validation$schema_version,
+    stamp = fit$validation$stamp
+  )
+  out <- list(
+    method = fit$method,
+    status = fit$status,
+    reason_codes = fit$reason_codes,
+    warnings = fit$warnings,
+    estimates = fit$estimates,
+    n_fits = pv_compare_fit_n(fit),
+    target_source = pv_compare_fit_target_source(fit),
+    target_hash = pv_compare_fit_target_hash(fit),
+    pooling_source = pv_compare_fit_pooling_source(fit),
+    pooling_hash = pv_compare_fit_pooling_hash(fit),
+    center = pv_compare_fit_center(fit),
+    psis_status = pv_compare_fit_psis_status(fit),
+    pareto_k_max = pv_compare_fit_pareto_k_max(fit),
+    psis_source = pv_compare_fit_psis_provenance(fit, "psis_source"),
+    pareto_k_source = pv_compare_fit_psis_provenance(fit, "pareto_k_source"),
+    weight_method = pv_compare_fit_weight_method(fit),
+    psis_producer = pv_compare_fit_psis_provenance(fit, "psis_producer"),
+    psis_producer_version = pv_compare_fit_psis_provenance(
+      fit,
+      "psis_producer_version"
+    ),
+    weight_ess_iid_min = pv_compare_fit_weight_stat(
+      fit,
+      "weight_ess_iid",
+      "min"
+    ),
+    weight_ess_fraction_min = pv_compare_fit_weight_stat(
+      fit,
+      "weight_ess_fraction",
+      "min"
+    ),
+    max_normalized_weight_max = pv_compare_fit_weight_stat(
+      fit,
+      "max_normalized_weight",
+      "max"
+    ),
+    source_validation = source_validation,
+    validation = NULL
+  )
+  class(out) <- c("pvstackr_comparison_source_projection", "list")
+  out$validation <- pv_comparison_source_projection_validation_record()
+  out$validation$stamp <- pv_comparison_source_projection_digest(out)
+  pv_validate_comparison_source_projection(out)
+  out
+}
+
+pv_comparison_source_fit_projection <- function(fits, source_validation) {
+  out <- lapply(names(fits), function(label) {
+    pv_comparison_source_projection(
+      fits[[label]],
+      source_validation[[label]]
+    )
+  })
+  names(out) <- names(fits)
+  out
+}
+
+pv_validate_comparison_source_projection <- function(projection) {
+  fields <- c(
+    "method", "status", "reason_codes", "warnings", "estimates", "n_fits",
+    "target_source", "target_hash", "pooling_source", "pooling_hash",
+    "center", "psis_status", "pareto_k_max", "psis_source",
+    "pareto_k_source", "weight_method", "psis_producer",
+    "psis_producer_version",
+    "weight_ess_iid_min", "weight_ess_fraction_min",
+    "max_normalized_weight_max", "source_validation",
+    "validation"
+  )
+  attrs <- attributes(projection)
+  if (!is.list(projection) || !identical(names(projection), fields) ||
+      !identical(names(attrs), c("names", "class")) ||
+      !identical(attrs$names, fields) ||
+      !identical(
+        attrs$class,
+        c("pvstackr_comparison_source_projection", "list")
+      )) {
+    pv_abort("Comparison source projection fields, order, class, and attributes must be exact.")
+  }
+  pv_validate_method(projection$method)
+  if (!is.character(projection$status) || length(projection$status) != 1L ||
+      is.na(projection$status) ||
+      !projection$status %in% c("ok", "warning", "blocked") ||
+      !is.data.frame(projection$estimates) ||
+      !is.numeric(projection$n_fits) || length(projection$n_fits) != 1L ||
+      (!is.na(projection$n_fits) && projection$n_fits < 1L) ||
+      !is.character(projection$reason_codes) ||
+      !is.character(projection$warnings) ||
+      !is.numeric(projection$pareto_k_max) ||
+      length(projection$pareto_k_max) != 1L ||
+      !is.character(projection$psis_source) ||
+      length(projection$psis_source) != 1L ||
+      !is.character(projection$pareto_k_source) ||
+      length(projection$pareto_k_source) != 1L ||
+      !is.character(projection$weight_method) ||
+      length(projection$weight_method) != 1L ||
+      !is.character(projection$psis_producer) ||
+      length(projection$psis_producer) != 1L ||
+      !is.character(projection$psis_producer_version) ||
+      length(projection$psis_producer_version) != 1L ||
+      !is.numeric(projection$weight_ess_iid_min) ||
+      length(projection$weight_ess_iid_min) != 1L ||
+      !is.numeric(projection$weight_ess_fraction_min) ||
+      length(projection$weight_ess_fraction_min) != 1L ||
+      !is.numeric(projection$max_normalized_weight_max) ||
+      length(projection$max_normalized_weight_max) != 1L ||
+      any(!vapply(
+        projection[c(
+          "method", "status", "reason_codes", "warnings", "n_fits",
+          "target_source", "target_hash", "pooling_source", "pooling_hash",
+          "center", "psis_status", "pareto_k_max", "psis_source",
+          "pareto_k_source", "weight_method", "psis_producer",
+          "psis_producer_version",
+          "weight_ess_iid_min", "weight_ess_fraction_min",
+          "max_normalized_weight_max"
+        )],
+        function(value) is.null(attributes(value)),
+        logical(1)
+      ))) {
+    pv_abort("Comparison source projection scalar and estimate fields are noncanonical.")
+  }
+  pv_validate_summary_source(
+    projection$source_validation,
+    pv_fit_validation_schema()
+  )
+  validation <- projection$validation
+  validation_fields <- c("schema_version", "policy_id", "stamp")
+  if (!is.list(validation) ||
+      !identical(names(validation), validation_fields) ||
+      !identical(attributes(validation), list(names = validation_fields)) ||
+      !identical(
+        validation,
+        pv_comparison_source_projection_validation_record(
+          validation$stamp %||% ""
+        )
+      ) || !grepl("^sha256:[0-9a-f]{64}$", validation$stamp) ||
+      !identical(
+        validation$stamp,
+        pv_comparison_source_projection_digest(projection)
+      )) {
+    pv_abort("Comparison source projection validation stamp is invalid.")
+  }
+  if (identical(projection$method, "stack_psis")) {
+    if (identical(projection$status, "warning")) {
+      pv_abort("Warning-status PSIS source projections are inspection-only.")
+    } else if (identical(projection$status, "ok")) {
+      if (!identical(projection$psis_status, "ok") ||
+          !identical(
+            projection$weight_method,
+            "caller_declared_external_psis"
+          ) ||
+          is.na(projection$psis_producer) ||
+          !nzchar(projection$psis_producer) ||
+          is.na(projection$psis_producer_version) ||
+          !nzchar(projection$psis_producer_version) ||
+          !is.finite(projection$pareto_k_max) ||
+          projection$pareto_k_max >= pv_legacy_psis_hard_threshold() ||
+          nrow(projection$estimates) < 1L) {
+        pv_abort("Reportable PSIS source projection fails the immutable gate.")
+      }
+    } else if (!projection$psis_status %in% c(
+      "failed", "not_evaluated", "unsmoothed", "provenance_incomplete"
+    ) ||
+        nrow(projection$estimates) != 0L ||
+        any(!is.na(c(
+          projection$target_source, projection$target_hash,
+          projection$pooling_source, projection$pooling_hash
+        ))) || length(projection$reason_codes) == 0L) {
+      pv_abort("Blocked PSIS source projection retains reportable metadata.")
+    }
+    weight_values <- c(
+      projection$weight_ess_iid_min,
+      projection$weight_ess_fraction_min,
+      projection$max_normalized_weight_max
+    )
+    if (!projection$weight_method %in% c(
+      "caller_declared_external_psis", "unspecified_external",
+      "self_normalized_raw_importance"
+    ) || any(!is.finite(weight_values)) || weight_values[[1L]] < 1 ||
+        weight_values[[2L]] <= 0 || weight_values[[2L]] > 1 ||
+        weight_values[[3L]] <= 0 || weight_values[[3L]] > 1) {
+      pv_abort("PSIS source projection weight diagnostics are incoherent.")
+    }
+  }
+  invisible(projection)
+}
+
+pv_validate_comparison_derivation <- function(comparison, labels) {
+  projections <- comparison$source_fit_projection
+  if (!is.list(projections) || !identical(names(projections), labels) ||
+      !identical(attributes(projections), list(names = labels))) {
+    pv_abort("Comparison source projections must align with method labels.")
+  }
+  for (label in labels) {
+    projection <- projections[[label]]
+    pv_validate_comparison_source_projection(projection)
+    if (!identical(
+          projection$source_validation,
+          comparison$source_fit_validation[[label]]
+        ) || !identical(
+          projection$method,
+          unname(comparison$methods[[label]])
+        )) {
+      pv_abort("Comparison source projection does not match its source-fit authority.")
+    }
+  }
+  expected_terms <- pv_compare_terms(projections)
+  expected_table <- pv_compare_table(
+    projections,
+    expected_terms,
+    comparison$reference_method
+  )
+  timing_values <- stats::setNames(
+    as.numeric(comparison$timing$elapsed_seconds),
+    labels
+  )
+  expected_diagnostics <- pv_compare_diagnostics(
+    expected_table,
+    projections,
+    comparison$reference_method,
+    timing_values
+  )
+  if (!identical(comparison$table, expected_table) ||
+      !identical(comparison$estimate_table, expected_table) ||
+      !identical(comparison$diagnostics, expected_diagnostics) ||
+      !identical(
+        comparison$diagnostic_table,
+        expected_diagnostics$method_diagnostics
+      ) || !identical(comparison$agreement, expected_diagnostics$agreement) ||
+      !identical(comparison$timing, expected_diagnostics$timing)) {
+    pv_abort("Method comparison must exactly reproduce its validated source projections.")
+  }
+  invisible(projections)
+}
+
+pv_validate_comparison_source_reportability <- function(comparison, labels) {
+  reportability <- comparison$source_fit_reportability
+  if (!is.list(reportability) || !identical(names(reportability), labels) ||
+      !identical(attributes(reportability), list(names = labels))) {
+    pv_abort("Comparison source reportability fits must align with method labels.")
+  }
+  for (label in labels) {
+    method <- unname(comparison$methods[[label]])
+    source <- reportability[[label]]
+    if (identical(method, "stack_psis")) {
+      if (!inherits(source, "pvstackr_fit")) {
+        pv_abort("Every comparison PSIS source requires a validated reportability fit.")
+      }
+      validate_pvstackr_fit(source, tier = "deep")
+      if (!identical(source$method, "stack_psis") ||
+          !identical(
+            comparison$source_fit_validation[[label]],
+            list(
+              schema_version = source$validation$schema_version,
+              stamp = source$validation$stamp
+            )
+          ) || !identical(
+            comparison$source_fit_projection[[label]],
+            pv_comparison_source_projection(
+              source,
+              comparison$source_fit_validation[[label]]
+            )
+          )) {
+        pv_abort("Comparison PSIS source authority and reportability projection disagree.")
+      }
+    } else if (!is.null(source)) {
+      pv_abort("Only stack_psis comparison sources may retain a reportability fit.")
+    }
+  }
+  invisible(reportability)
+}
+
 new_pvstackr_method_comparison <- function(table, diagnostics, fits, reference_method, include_fits = FALSE) {
+  source_fit_reportability <- pv_comparison_source_fit_reportability(fits)
+  authority_fits <- pv_comparison_authority_fits(
+    fits,
+    source_fit_reportability
+  )
+  source_fit_validation <- pv_comparison_source_fit_validation(authority_fits)
+  source_fit_projection <- pv_comparison_source_fit_projection(
+    authority_fits,
+    source_fit_validation
+  )
   comparison <- list(
     table = table,
     estimate_table = table,
@@ -545,12 +1260,20 @@ new_pvstackr_method_comparison <- function(table, diagnostics, fits, reference_m
     reference_method = reference_method,
     methods = vapply(fits, `[[`, character(1), "method"),
     method_labels = names(fits),
+    source_fit_validation = source_fit_validation,
+    source_fit_reportability = source_fit_reportability,
+    source_fit_projection = source_fit_projection,
     created_at = as.character(Sys.time()),
-    schema_version = pv_schema_version(),
-    provenance = pv_provenance("pv_compare_methods"),
+    schema_version = pv_comparison_schema_version(),
+    provenance = pv_provenance(
+      "pv_compare_methods",
+      schema_version = pv_comparison_schema_version()
+    ),
+    validation = NULL,
     warnings = character()
   )
   class(comparison) <- c("pvstackr_method_comparison", "list")
+  comparison <- pv_comparison_issue_validation_stamp(comparison)
   validate_pvstackr_method_comparison(comparison)
   comparison
 }
@@ -591,7 +1314,9 @@ pv_validate_comparison_table <- function(comparison, labels) {
   table_required <- c(
     "method", "method_label", "term", "status", "estimate", "se",
     "std.error", "df", "df_method", "df_complete", "conf_level",
-    "interval_role", "coverage_claim_allowed", "conf_low", "conf_high",
+    "interval_role", "coverage_claim_allowed", "psis_source",
+    "pareto_k_source", "weight_method", "psis_producer",
+    "psis_producer_version", "conf_low", "conf_high",
     "reference_method", "reference_estimate", "reference_se",
     "estimate_diff", "se_ratio", "abs_z_diff", "agreement_band",
     "reason_codes"
@@ -691,7 +1416,10 @@ pv_validate_comparison_diagnostics <- function(comparison, labels) {
     "n_descriptive_intervals", "target_source", "target_hash",
     "pooling_source", "pooling_hash", "center", "shared_target_hash",
     "shared_pooling_hash", "shared_external_target",
-    "shares_reference_target", "shares_reference_pooling"
+    "shares_reference_target", "shares_reference_pooling", "psis_status",
+    "pareto_k_max", "psis_source", "pareto_k_source", "weight_method",
+    "psis_producer", "psis_producer_version", "weight_ess_iid_min",
+    "weight_ess_fraction_min", "max_normalized_weight_max"
   )
   missing_method <- setdiff(method_required, names(method_diagnostics))
   if (length(missing_method) > 0L) {
@@ -824,14 +1552,43 @@ pv_validate_comparison_diagnostics <- function(comparison, labels) {
 
 validate_pvstackr_method_comparison <- function(comparison) {
   pv_assert_named_list(comparison, "comparison")
-  required <- c(
+  legacy_required <- c(
     "table", "estimate_table", "diagnostics", "diagnostic_table",
     "agreement", "timing", "fits", "reference_method", "methods",
     "method_labels", "created_at", "schema_version", "provenance", "warnings"
   )
+  current_required <- c(
+    "table", "estimate_table", "diagnostics", "diagnostic_table",
+    "agreement", "timing", "fits", "reference_method", "methods",
+    "method_labels", "source_fit_validation", "source_fit_reportability",
+    "source_fit_projection", "created_at", "schema_version", "provenance",
+    "validation", "warnings"
+  )
+  is_current <- all(c("source_fit_validation", "validation") %in% names(comparison))
+  required <- if (is_current) current_required else legacy_required
   missing <- setdiff(required, names(comparison))
   if (length(missing) > 0L) {
     pv_abort(sprintf("Method comparison is missing required field(s): %s.", paste(missing, collapse = ", ")))
+  }
+  if (!is_current && pv_comparison_contains_stack_psis(comparison)) {
+    pv_abort(
+      paste(
+        "Legacy method comparisons containing stack_psis are inspection-only",
+        "and must be rebuilt from current validated fits."
+      )
+    )
+  }
+  if (is_current) {
+    root_attrs <- attributes(comparison)
+    if (!identical(names(comparison), current_required) ||
+        !identical(names(root_attrs), c("names", "class")) ||
+        !identical(root_attrs$names, current_required) ||
+        !identical(
+          root_attrs$class,
+          c("pvstackr_method_comparison", "list")
+        )) {
+      pv_abort("Current method comparison fields, order, class, and root attributes must be exact.")
+    }
   }
   labels <- pv_validate_comparison_labels(comparison)
   if (!comparison$reference_method %in% comparison$method_labels) {
@@ -839,6 +1596,15 @@ validate_pvstackr_method_comparison <- function(comparison) {
   }
   pv_validate_comparison_table(comparison, labels)
   pv_validate_comparison_diagnostics(comparison, labels)
+  pv_validate_stack_psis_derived_tables(
+    comparison$estimate_table,
+    comparison$diagnostic_table
+  )
+  if (is_current) {
+    pv_validate_comparison_source_reportability(comparison, labels)
+    pv_validate_comparison_derivation(comparison, labels)
+    pv_validate_comparison_validation(comparison, labels)
+  }
   if (!is.null(comparison$fits)) {
     pv_assert_named_list(comparison$fits, "fits")
     if (!identical(names(comparison$fits), labels)) {
@@ -849,14 +1615,47 @@ validate_pvstackr_method_comparison <- function(comparison) {
       if (!inherits(fit, "pvstackr_fit")) {
         pv_abort("Retained comparison fits must be `pvstackr_fit` objects.")
       }
-      validate_pvstackr_fit(fit)
+      validate_pvstackr_fit(fit, tier = "cheap")
+      if (is_current) {
+        authority_fit <- if (identical(fit$method, "stack_psis")) {
+          pv_fit_summary_reportability_fit(fit)
+        } else {
+          fit
+        }
+        expected_reportability <- if (identical(fit$method, "stack_psis")) {
+          authority_fit
+        } else {
+          NULL
+        }
+        expected_validation <- list(
+          schema_version = authority_fit$validation$schema_version,
+          stamp = authority_fit$validation$stamp
+        )
+        if (!identical(
+              comparison$source_fit_reportability[[label]],
+              expected_reportability
+            ) || !identical(
+              comparison$source_fit_validation[[label]],
+              expected_validation
+            ) || !identical(
+              comparison$source_fit_projection[[label]],
+              pv_comparison_source_projection(
+                authority_fit,
+                expected_validation
+              )
+            )) {
+          pv_abort("Retained comparison fits must reproduce their source reportability authorities.")
+        }
+      }
       if (!identical(fit$method, unname(comparison$methods[[label]]))) {
         pv_abort("Retained comparison fit methods must align with method labels.")
       }
     }
   }
   pv_assert_scalar_string(comparison$created_at, "created_at")
-  pv_validate_schema_version(comparison$schema_version)
+  if (!is_current) {
+    pv_validate_schema_version(comparison$schema_version)
+  }
   pv_validate_named_list_field(comparison$provenance, "provenance")
   pv_validate_character_field(comparison$warnings, "warnings")
   invisible(comparison)
@@ -891,6 +1690,23 @@ validate_pvstackr_method_comparison <- function(comparison) {
 #' construction. `target_source` is provenance vocabulary, not necessarily a
 #' formal target object: `stack_psis` rows use `stack_psis_rubin_pooling` even
 #' though [get_target()] returns `NULL` for `stack_psis` fits.
+#' For `stack_psis`, the aligned estimate rows additionally retain
+#' `psis_source`, `pareto_k_source`, `weight_method`, `psis_producer`, and
+#' `psis_producer_version`. The method diagnostic table adds the minimum
+#' per-PV Kish-style iid weight ESS and ESS fraction, plus the maximum
+#' normalized weight. These fields preserve the source fit's bounded
+#' provenance and concentration diagnostics; they are not MCMC ESS or a
+#' substitute for Pareto-k gating.
+#'
+#' Current comparison objects record deep-valid compact PSIS source fits,
+#' canonical per-source reportability projections, each source authority's
+#' validation stamp, and an owned-payload SHA-256 stamp. Derived tables and
+#' diagnostics are recomputed from those projections during validation. A
+#' pre-marker serialized comparison containing
+#' `stack_psis` is inspection-only and must be rebuilt from current validated
+#' fits; its saved numeric table is not grandfathered. Independently of the
+#' stamp, warning-status PSIS rows are forbidden and blocked PSIS rows must
+#' carry no reportable numeric or pooling metadata.
 #'
 #' @param ... Two or more `pvstackr_fit` objects, or a single list of fits.
 #' @param fits Optional explicit list of `pvstackr_fit` objects.
@@ -904,9 +1720,10 @@ validate_pvstackr_method_comparison <- function(comparison) {
 #'
 #' @returns A `pvstackr_method_comparison` object with top-level
 #'   `estimate_table`, `diagnostic_table`, `agreement`, and `timing` fields.
-#'   `estimate_table` includes method-level interval metadata alongside the
-#'   aligned fixed-effect estimates. `diagnostic_table` includes method-level
-#'   target/pooling provenance and shared-provenance flags.
+#'   `estimate_table` includes method-level interval and PSIS provenance
+#'   metadata alongside the aligned fixed-effect estimates. `diagnostic_table`
+#'   includes method-level target/pooling provenance, PSIS source and bounded
+#'   weight-concentration summaries, and shared-provenance flags.
 #'
 #' @section Interpreting agreement:
 #' Agreement diagnostics are **descriptive**, not independent corroboration.
