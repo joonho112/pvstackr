@@ -29,6 +29,9 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
+      # The optional backends are not installed here (see the dependency step),
+      # so the check must not treat their absence as an error.
+      _R_CHECK_FORCE_SUGGESTS_: false
 
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +50,15 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          # Install the hard dependencies only. The optional Bayesian backends
+          # in Suggests pull rstan, a heavy source build, and the package is
+          # designed to install, load, and test without them: the backend and
+          # oracle tests skip when they are absent. testthat is requested
+          # explicitly because the tests need it.
+          dependencies: '"hard"'
+          extra-packages: |
+            any::rcmdcheck
+            any::testthat
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
