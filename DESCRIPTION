@@ -1,6 +1,6 @@
 Package: pvstackr
 Title: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values
-Version: 0.1.1
+Version: 0.2.0
 Authors@R:
     person("JoonHo", "Lee", , "jlee296@ua.edu", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0009-0006-4019-8703"))
@@ -18,14 +18,22 @@ Language: en-US
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.3.0)
+Imports:
+    digest
 Suggests:
+    brms,
+    cmdstanr,
+    posterior,
     knitr,
     rmarkdown,
     survey,
     testthat (>= 3.0.0)
-SystemRequirements: Optional CmdStan and a C++ toolchain for live cmdstanr/brms
-    workflows; sufficient memory for real PISA-scale data. These are not
-    required for installation, loading, examples, or default tests.
+Additional_repositories:
+    https://stan-dev.r-universe.dev
+SystemRequirements: Optional CmdStan and a C++ toolchain for live brms
+    sampling through the cmdstanr backend; sufficient memory for real
+    PISA-scale data. CmdStan and its toolchain are not required for package
+    installation, loading, examples, or default tests.
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: false
