@@ -47,7 +47,9 @@ weight columns already bound.}
 
 \item{file, file_refit}{Cache location and refit policy for \code{brms::brm()}.}
 
-\item{...}{Further arguments passed to \code{brms::brm()}.}
+\item{...}{Further arguments passed to \code{brms::brm()} by
+\code{pv_backend_brms_fit_function()}; accepted and ignored by
+\code{pv_backend_brms_draws_function()}.}
 
 \item{fit}{The object returned by the fit function.}
 
@@ -58,7 +60,13 @@ replacements for \code{posterior::as_draws_array()}, the
 without depending on those packages.}
 }
 \value{
-A \code{brmsfit}.
+\code{pv_backend_brms_fit_function()} returns a \code{brmsfit}.
+\code{pv_backend_brms_draws_function()} returns a base numeric matrix of the
+\verb{b_*} and \code{sigma} draws.
+\code{pv_backend_brms_sampler_diagnostics()} returns a normalized sampler
+diagnostics record: maximum R-hat, minimum bulk and tail ESS, divergence
+count, chains, post-warmup draws per chain, a completeness flag, and reason
+codes.
 }
 \description{
 The three functions that \code{pv_control(backend = "brms")} installs when no
@@ -67,15 +75,31 @@ stacked model, \code{pv_backend_brms_draws_function()} extracts its draws, and
 \code{pv_backend_brms_sampler_diagnostics()} reports its sampler diagnostics.
 }
 \details{
-They are exported so that the bundled backend and the injected route are the
-same code path rather than two implementations that have to be kept in step.
-Passing all three to \code{\link[=pv_fit]{pv_fit()}} as \code{fit_function}, \code{draws_function}, and
-\code{diagnose_function} reproduces \code{backend = "brms"} exactly, and each one can
-be replaced individually to attach a different engine.
+They are exported so that an injected adapter and the bundled backend run the
+same fitting, extraction, and diagnostic code rather than two implementations
+that have to be kept in step. Given the same data and seed, the two routes
+produce the same fit, the same draws matrix, and the same sampler numbers.
 
-A reportable fit needs all three. An adapter that supplies only a fit and a
-draws function leaves the sampler evidence incomplete, and the fit is then
-blocked rather than reported.
+Injecting the three is not the same as selecting the bundled backend, and the
+recorded provenance says so. An injected fit records
+\code{adapter_source = "injected"}, \code{resolved_backend = "injected"},
+\code{engine_id = "injected_fit_function"}, an empty \code{package_versions}, and a
+\code{cmdstan_state} that was never evaluated; its sampler evidence is labelled
+\code{injected_diagnose_function} rather than \code{bundled_brms_posterior_and_nuts}.
+Two things the bundled route does for you are the adapter's own
+responsibility when injected: checking that brms, posterior, and a usable
+Stan backend are present before sampling starts, and creating the cache
+directory. \code{cache_dir} is passed through as given, so create it first or pass
+\code{cache_dir = NULL}.
+
+A reportable injected fit needs all three. An adapter that supplies only a
+fit and a draws function leaves the sampler evidence incomplete, and the fit
+is blocked rather than reported.
+
+Under \code{pv_control(backend = "brms")} a supplied \code{draws_function} replaces the
+bundled one, but a supplied \code{diagnose_function} does not: the bundled sampler
+record always wins, and the fit records that the override was ignored.
+Supplying \code{fit_function} switches to the injected route as a whole.
 
 \code{pv_backend_brms_draws_function()} returns the fixed-effect (\verb{b_*}) and
 residual-scale (\code{sigma}) draws as a plain base matrix, the draw format the
@@ -91,10 +115,12 @@ fit is blocked downstream.
 }
 \section{Backend resolution}{
 
-Resolution happens before \code{pv_backend_brms_fit_function()} is called:
 cmdstanr is used only when both its namespace and a configured CmdStan are
 available, and rstan is selected only when cmdstanr is absent. A fit failure
-is not retried against the other backend.
+is not retried against the other backend. The bundled route resolves this
+before calling the fit function; reached through an injected adapter, the fit
+function applies the same policy itself, so \code{pv_control(backend = )} may name
+any accepted value.
 }
 
 \seealso{

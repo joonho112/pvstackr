@@ -2,13 +2,25 @@
 
 * The bundled brms adapter is now public: `pv_backend_brms_fit_function()`,
   `pv_backend_brms_draws_function()`, and
-  `pv_backend_brms_sampler_diagnostics()`. Passing all three to `pv_fit()` as
-  `fit_function`, `draws_function`, and `diagnose_function` reproduces
-  `pv_control(backend = "brms")` exactly, so the bundled route and the injected
-  route are one code path rather than two that have to be kept in step, and any
-  one of the three can be replaced to attach a different engine. A reportable
-  fit still needs all three: an adapter that supplies only a fit and a draws
+  `pv_backend_brms_sampler_diagnostics()`. Injecting all three into `pv_fit()`
+  runs the same fitting, extraction, and diagnostic code the bundled backend
+  runs, so the two routes are one implementation rather than two that have to be
+  kept in step, and any one of the three can be replaced to attach a different
+  engine. The routes are not interchangeable in what they record: an injected
+  fit carries injected engine and diagnostic provenance, and the bundled route
+  additionally checks backend availability before sampling. A reportable
+  injected fit needs all three; an adapter that supplies only a fit and a draws
   function leaves the sampler evidence incomplete and the fit is blocked.
+
+* `pv_backend_brms_fit_function()` now resolves the Stan backend itself when it
+  is reached through an injected adapter, instead of rejecting every
+  `pv_control(backend = )` value the bundled route would have resolved for it.
+  Cache directories remain the injected adapter's own responsibility, as the
+  recorded provenance has always said; create the directory first or pass
+  `cache_dir = NULL`. Under `backend = "brms"` a supplied `diagnose_function` is
+  still ignored in favour of the bundled sampler record, but the fit now always
+  records that the override was ignored, not only when the override happened to
+  return a `sampler` element.
 
 * A population-level prior (`class = "b"` with no `coef`) is now expanded onto
   the individual slope coefficients instead of being refused. `stack_direct`

@@ -2669,3 +2669,50 @@ test_that("090 errata E4 stores reportable FE labels once, only in estimand", {
   expect_true("PV_BIND_E071" %in% renamed_comparison$all_codes)
   expect_true("PV_BIND_E072" %in% renamed_comparison$all_codes)
 })
+
+test_that("cosmetic survey metadata does not block or shift the binding manifest", {
+  # PISA and its siblings arrive from SAS/SPSS with a `label` on nearly every
+  # column and a `format.*` string on many. Those must neither refuse the fit
+  # nor change the binding hash.
+  plain <- data.frame(
+    OUTCOME = c(1.5, 2.5, 3.5, 4.5),
+    escs = c(-1, -0.5, 0.5, 1),
+    female = c(0L, 1L, 0L, 1L)
+  )
+  labelled <- plain
+  attr(labelled$escs, "label") <- "Index of economic, social and cultural status"
+  attr(labelled$escs, "format.sas") <- "F8.2"
+  attr(labelled$female, "label") <- "Female"
+
+  bare <- pvstackr:::pv_binding_predictor_projection(plain, OUTCOME ~ escs + female)
+  tagged <- pvstackr:::pv_binding_predictor_projection(labelled, OUTCOME ~ escs + female)
+
+  expect_identical(tagged$schema_hash, bare$schema_hash)
+  expect_identical(tagged$ordered_values_hash, bare$ordered_values_hash)
+  expect_identical(
+    vapply(tagged$columns, function(x) x$values_hash, character(1)),
+    vapply(bare$columns, function(x) x$values_hash, character(1))
+  )
+})
+
+test_that("plain column canonicalization keeps classed columns for their own branch", {
+  strip <- pvstackr:::pv_binding_column_values
+
+  # Cosmetic attributes go; names stay.
+  tagged <- structure(c(a = 1, b = 2), label = "x", format.sas = "F8.2")
+  expect_identical(strip(tagged), c(a = 1, b = 2))
+
+  # Classed columns are handed on untouched, so the canonicaliser's typed
+  # branches still see their class and still police their own attributes.
+  f <- factor(c("a", "b"))
+  expect_identical(strip(f), f)
+  d <- as.Date("2026-08-14")
+  expect_identical(strip(d), d)
+
+  # A value change still moves the hash: stripping metadata is not stripping
+  # content.
+  expect_false(identical(
+    pvstackr:::pv_binding_hash_payload(list(v = strip(c(1, 2))), "predictor"),
+    pvstackr:::pv_binding_hash_payload(list(v = strip(c(1, 3))), "predictor")
+  ))
+})

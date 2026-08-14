@@ -382,13 +382,12 @@ pv_stack_sampler_diagnostics <- function(
         sampler = sampler
       ))
     }
-    if (is.list(raw) && !is.null(raw$sampler)) {
-      return(list(
-        custom_sampler_override_ignored = TRUE,
-        sampler = sampler
-      ))
-    }
-    return(list(sampler = sampler))
+    # The bundled record always wins. Say so whatever shape the override came
+    # back in, rather than only when it happened to carry a `sampler` element.
+    return(list(
+      custom_sampler_override_ignored = TRUE,
+      sampler = sampler
+    ))
   }
   if (is.null(diagnose_function)) {
     return(list(

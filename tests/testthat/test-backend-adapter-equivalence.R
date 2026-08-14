@@ -123,3 +123,81 @@ test_that("an injected fit function takes precedence over a bundled backend requ
   expect_identical(spec$selection_reason, "fit_function_supplied")
   expect_identical(spec$selection_policy, "caller_supplied_fit_function")
 })
+
+test_that("the exported fit function resolves the backend it is handed", {
+  skip_if_not_installed("brms")
+
+  # Reached through an injected adapter, `backend` is whatever pv_control() was
+  # given, not an already-resolved Stan backend. The function must resolve it
+  # rather than refuse the call.
+  seen <- new.env(parent = emptyenv())
+
+  for (requested in c("none", "injected", "brms", "cmdstanr")) {
+    seen$backend <- NULL
+    out <- with_mocked_bindings(
+      pv_backend_brms_fit_function(
+        formula = y ~ x, data = data.frame(y = 1, x = 1), family = NULL,
+        prior = NULL, chains = 1L, iter = 2L, warmup = 1L, cores = 1L,
+        seed = 1L, backend = requested, file = NULL, file_refit = "never"
+      ),
+      .package = "brms",
+      brm = function(..., backend) {
+        seen$backend <- backend
+        "fake-brmsfit"
+      }
+    )
+    expect_identical(out, "fake-brmsfit", info = requested)
+    expect_true(seen$backend %in% c("cmdstanr", "rstan"), info = requested)
+  }
+})
+
+test_that("an injected adapter owns its own cache directory", {
+  root <- file.path(tempfile("adapter-cache-"), "nested")
+
+  bundled <- pvstackr:::pv_stack_cache_spec(
+    cache_dir = root, cache_stem = "stem", package_managed = TRUE
+  )
+  expect_true(dir.exists(dirname(bundled$file)))
+  expect_true(bundled$directory_created)
+  expect_true(bundled$writable)
+  expect_identical(bundled$policy, NULL)
+
+  # The injected route deliberately does not create or probe the directory: the
+  # adapter owns it, and the fit validator requires the provenance to say so.
+  other <- file.path(tempfile("adapter-cache-"), "nested")
+  injected <- pvstackr:::pv_stack_cache_spec(
+    cache_dir = other, cache_stem = "stem", package_managed = FALSE
+  )
+  expect_false(dir.exists(dirname(injected$file)))
+  expect_false(injected$directory_created)
+  expect_true(is.na(injected$writable))
+
+  expect_identical(
+    pvstackr:::pv_stack_cache_provenance(injected)$policy,
+    "injected_adapter_managed"
+  )
+  expect_identical(
+    pvstackr:::pv_stack_cache_provenance(bundled)$policy,
+    "bundled_brms_managed"
+  )
+})
+
+test_that("the bundled route records that a diagnose override was ignored", {
+  diagnose <- adapter_equivalence_diagnose()
+  # An override returning a flat record, which is the shape the exported
+  # diagnose function itself returns.
+  out <- pvstackr:::pv_stack_sampler_diagnostics(
+    fit = list(),
+    bundled_backend = TRUE,
+    diagnose_function = function(fit) list(rhat_max = 1.0),
+    chains = 2L,
+    iter = 200L,
+    warmup = 100L,
+    bundled_sampler_function = diagnose
+  )
+
+  expect_true(out$custom_sampler_override_ignored)
+  # The bundled record, not the override, is what survives.
+  expect_identical(out$sampler$diagnostic_source, "bundled_brms_posterior_and_nuts")
+  expect_equal(out$sampler$rhat_max, 1.009)
+})

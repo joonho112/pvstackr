@@ -600,32 +600,32 @@ test_that("materialized prior policy permits only provably invariant tables", {
   )
 
   expect_identical(
-    pvstackr:::pv_stack_materialized_prior(sigma_prior, with_intercept),
+    pvstackr:::pv_stack_materialized_prior(sigma_prior, with_intercept, "b_pvstackrMM001"),
     sigma_prior
   )
   expect_identical(
-    pvstackr:::pv_stack_materialized_prior(global_b, no_intercept),
+    pvstackr:::pv_stack_materialized_prior(global_b, no_intercept, NULL),
     global_b
   )
   # A population-level prior is expanded onto the non-intercept columns rather
   # than refused: `0 + ...` on the materialized matrix would otherwise let it
   # reach the intercept column, which the original formula excludes.
-  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, with_intercept)
+  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, with_intercept, "b_pvstackrMM001")
   expect_identical(expanded$class, "b")
   expect_identical(expanded$coef, "pvstackrMM002")
   expect_identical(expanded$prior, "normal(0, 1)")
   expect_false("pvstackrMM001" %in% expanded$coef)
 
   expect_error(
-    pvstackr:::pv_stack_materialized_prior(coefficient_b, with_intercept),
+    pvstackr:::pv_stack_materialized_prior(coefficient_b, with_intercept, "b_pvstackrMM001"),
     "cannot be preserved exactly"
   )
   expect_error(
-    pvstackr:::pv_stack_materialized_prior(intercept_prior, with_intercept),
+    pvstackr:::pv_stack_materialized_prior(intercept_prior, with_intercept, "b_pvstackrMM001"),
     "cannot be preserved exactly"
   )
   expect_error(
-    pvstackr:::pv_stack_materialized_prior("opaque-prior", with_intercept),
+    pvstackr:::pv_stack_materialized_prior("opaque-prior", with_intercept, "b_pvstackrMM001"),
     "opaque"
   )
 })
@@ -640,7 +640,7 @@ test_that("population-level prior expansion preserves the original prior scope",
     stringsAsFactors = FALSE
   )
 
-  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, design)
+  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, design, "b_pvstackrMM001")
 
   # One row per slope, none for the intercept column, same distribution.
   expect_identical(nrow(expanded), 2L)
@@ -654,7 +654,7 @@ test_that("population-level prior expansion preserves the original prior scope",
     data.frame(prior = "student_t(3, 0, 10)", class = "sigma", coef = "",
                stringsAsFactors = FALSE)
   )
-  out <- pvstackr:::pv_stack_materialized_prior(mixed, design)
+  out <- pvstackr:::pv_stack_materialized_prior(mixed, design, "b_pvstackrMM001")
   expect_identical(nrow(out), 3L)
   expect_identical(out$prior[out$class == "sigma"], "student_t(3, 0, 10)")
   expect_setequal(out$coef[out$class == "b"], c("pvstackrMM002", "pvstackrMM003"))
@@ -662,7 +662,7 @@ test_that("population-level prior expansion preserves the original prior scope",
   # A scoped prior is still refused: expansion cannot preserve group scope.
   scoped <- cbind(global_b, group = "school", stringsAsFactors = FALSE)
   expect_error(
-    pvstackr:::pv_stack_materialized_prior(scoped, design),
+    pvstackr:::pv_stack_materialized_prior(scoped, design, "b_pvstackrMM001"),
     "cannot be preserved exactly"
   )
 
@@ -670,10 +670,65 @@ test_that("population-level prior expansion preserves the original prior scope",
   expect_error(
     pvstackr:::pv_stack_materialized_prior(
       global_b,
-      stats::setNames("b_Intercept", "b_pvstackrMM001")
+      stats::setNames("b_Intercept", "b_pvstackrMM001"),
+      "b_pvstackrMM001"
     ),
     "no non-intercept coefficient"
   )
+})
+
+test_that("prior expansion identifies the intercept structurally, not by label", {
+  # A data column named `Intercept` yields the reportable label `b_Intercept`
+  # too, so the label alone cannot say which column the model's intercept is.
+  # The design records the real one; these cases would silently mis-scope the
+  # prior if it did not.
+  global_b <- data.frame(
+    prior = "normal(0, 25)", class = "b", coef = "",
+    stringsAsFactors = FALSE
+  )
+  expand <- function(map, intercept) {
+    pvstackr:::pv_stack_materialized_prior(global_b, map, intercept)
+  }
+
+  # No model intercept, but a user column happens to be named `Intercept`:
+  # every column is a slope, so the prior stays population-level and covers all.
+  no_intercept <- stats::setNames(
+    c("b_Intercept", "b_x"),
+    c("b_pvstackrMM001", "b_pvstackrMM002")
+  )
+  expect_identical(expand(no_intercept, NULL), global_b)
+
+  # A model intercept and a user column named `Intercept`: only the model's own
+  # column is held out.
+  both <- stats::setNames(
+    c("b_Intercept", "b_Intercept", "b_x"),
+    c("b_pvstackrMM001", "b_pvstackrMM002", "b_pvstackrMM003")
+  )
+  expect_setequal(
+    expand(both, "b_pvstackrMM001")$coef,
+    c("pvstackrMM002", "pvstackrMM003")
+  )
+
+  # An intercept name the map does not contain is a broken design, not a
+  # licence to guess.
+  expect_error(
+    expand(both, "b_pvstackrMM999"),
+    "intercept column could not be located"
+  )
+})
+
+test_that("the materialized design records which column is the intercept", {
+  data <- stack_fixture_data()
+
+  with_intercept <- pvstackr:::pv_stack_materialized_design(
+    pvstackr:::pv_binding_resolve_model_bundle(data, OUTCOME ~ x + z)
+  )
+  expect_identical(with_intercept$intercept_backend_name, "b_pvstackrMM001")
+
+  without <- pvstackr:::pv_stack_materialized_design(
+    pvstackr:::pv_binding_resolve_model_bundle(data, OUTCOME ~ 0 + x + z)
+  )
+  expect_null(without$intercept_backend_name)
 })
 
 test_that("stack fit keeps heavy fields light by default", {

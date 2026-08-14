@@ -178,21 +178,39 @@ pv_backend_injected_engine_spec <- function(requested_backend) {
 #' stacked model, `pv_backend_brms_draws_function()` extracts its draws, and
 #' `pv_backend_brms_sampler_diagnostics()` reports its sampler diagnostics.
 #'
-#' They are exported so that the bundled backend and the injected route are the
-#' same code path rather than two implementations that have to be kept in step.
-#' Passing all three to [pv_fit()] as `fit_function`, `draws_function`, and
-#' `diagnose_function` reproduces `backend = "brms"` exactly, and each one can
-#' be replaced individually to attach a different engine.
+#' They are exported so that an injected adapter and the bundled backend run the
+#' same fitting, extraction, and diagnostic code rather than two implementations
+#' that have to be kept in step. Given the same data and seed, the two routes
+#' produce the same fit, the same draws matrix, and the same sampler numbers.
 #'
-#' A reportable fit needs all three. An adapter that supplies only a fit and a
-#' draws function leaves the sampler evidence incomplete, and the fit is then
-#' blocked rather than reported.
+#' Injecting the three is not the same as selecting the bundled backend, and the
+#' recorded provenance says so. An injected fit records
+#' `adapter_source = "injected"`, `resolved_backend = "injected"`,
+#' `engine_id = "injected_fit_function"`, an empty `package_versions`, and a
+#' `cmdstan_state` that was never evaluated; its sampler evidence is labelled
+#' `injected_diagnose_function` rather than `bundled_brms_posterior_and_nuts`.
+#' Two things the bundled route does for you are the adapter's own
+#' responsibility when injected: checking that brms, posterior, and a usable
+#' Stan backend are present before sampling starts, and creating the cache
+#' directory. `cache_dir` is passed through as given, so create it first or pass
+#' `cache_dir = NULL`.
+#'
+#' A reportable injected fit needs all three. An adapter that supplies only a
+#' fit and a draws function leaves the sampler evidence incomplete, and the fit
+#' is blocked rather than reported.
+#'
+#' Under `pv_control(backend = "brms")` a supplied `draws_function` replaces the
+#' bundled one, but a supplied `diagnose_function` does not: the bundled sampler
+#' record always wins, and the fit records that the override was ignored.
+#' Supplying `fit_function` switches to the injected route as a whole.
 #'
 #' @section Backend resolution:
-#' Resolution happens before `pv_backend_brms_fit_function()` is called:
 #' cmdstanr is used only when both its namespace and a configured CmdStan are
 #' available, and rstan is selected only when cmdstanr is absent. A fit failure
-#' is not retried against the other backend.
+#' is not retried against the other backend. The bundled route resolves this
+#' before calling the fit function; reached through an injected adapter, the fit
+#' function applies the same policy itself, so `pv_control(backend = )` may name
+#' any accepted value.
 #'
 #' @param formula Prepared stacked model formula, with the stacked outcome and
 #'   weight columns already bound.
@@ -202,9 +220,18 @@ pv_backend_injected_engine_spec <- function(requested_backend) {
 #' @param chains,iter,warmup,cores,seed Sampler settings from [pv_control()].
 #' @param backend Resolved Stan backend, `"cmdstanr"` or `"rstan"`.
 #' @param file,file_refit Cache location and refit policy for `brms::brm()`.
-#' @param ... Further arguments passed to `brms::brm()`.
+#' @param ... Further arguments passed to `brms::brm()` by
+#'   `pv_backend_brms_fit_function()`; accepted and ignored by
+#'   `pv_backend_brms_draws_function()`.
 #'
-#' @returns A `brmsfit`.
+#' @returns
+#' `pv_backend_brms_fit_function()` returns a `brmsfit`.
+#' `pv_backend_brms_draws_function()` returns a base numeric matrix of the
+#' `b_*` and `sigma` draws.
+#' `pv_backend_brms_sampler_diagnostics()` returns a normalized sampler
+#' diagnostics record: maximum R-hat, minimum bulk and tail ESS, divergence
+#' count, chains, post-warmup draws per chain, a completeness flag, and reason
+#' codes.
 #'
 #' @seealso [pv_fit()] and [pv_control()] for how an adapter is selected.
 #' @family backend adapters
@@ -217,7 +244,13 @@ pv_backend_brms_fit_function <- function(formula, data, family, prior, chains,
   }
   if (!is.character(backend) || length(backend) != 1L || is.na(backend) ||
       !backend %in% c("cmdstanr", "rstan")) {
-    pv_abort("The resolved bundled brms backend must be `cmdstanr` or `rstan`.")
+    # Reached through an injected adapter, where `backend` is whatever
+    # `pv_control()` was given rather than an already-resolved Stan backend.
+    # Resolve it here with the same policy the bundled route uses, so both
+    # routes pick the engine the same way.
+    backend <- pv_backend_resolve_brms_engine(
+      pv_backend_cmdstan_state()
+    )$resolved_backend
   }
   brms::brm(
     formula = formula,

@@ -295,11 +295,32 @@ pv_binding_ordered_labels_hash <- function(labels, domain, role) {
   )
 }
 
+# Survey files carry cosmetic metadata from their SAS, SPSS, or Stata origin:
+# nearly every PISA column arrives with a `label`, and many with a `format.*`
+# string. Those attributes are not part of the analysed content, and the
+# projections record the structural properties they do depend on -- type, factor
+# levels, orderedness, timezone -- as explicit manifest fields. Reducing a plain
+# atomic column to its values and names keeps the binding hash stable across
+# files that differ only in that metadata. Anything carrying a class is returned
+# untouched, so factors, Dates, and POSIXct still reach the canonicaliser's own
+# typed branches and any unaccounted attribute there is still refused.
+pv_binding_column_values <- function(x) {
+  if (!is.atomic(x) || !is.null(attr(x, "class", exact = TRUE))) {
+    return(x)
+  }
+  value_names <- names(x)
+  attributes(x) <- NULL
+  if (!is.null(value_names)) {
+    names(x) <- value_names
+  }
+  x
+}
+
 pv_binding_predictor_projection <- function(data, formula) {
   info <- pv_binding_formula_rhs_info(formula, data = data)
   predictor_names <- info$data_variables
   columns <- lapply(predictor_names, function(name) {
-    values <- data[[name]]
+    values <- pv_binding_column_values(data[[name]])
     type_id <- pv_binding_validate_predictor(values)
     factor_levels <- if (is.factor(values)) levels(values) else character()
     timezone <- if (inherits(values, "POSIXct")) attr(values, "tzone", exact = TRUE) else NULL
@@ -328,7 +349,7 @@ pv_binding_predictor_projection <- function(data, formula) {
     column[setdiff(names(column), "values_hash")]
   })
   ordered_value_payload <- lapply(predictor_names, function(name) {
-    list(name = name, values = data[[name]])
+    list(name = name, values = pv_binding_column_values(data[[name]]))
   })
 
   list(
@@ -1164,11 +1185,14 @@ pv_binding_pv_projection <- function(
   identity <- pv_binding_row_identity_digests(data, id_cols = id_cols, bound_cols = bound_cols)
   per_column_hashes <- vapply(pv_cols, function(name) {
     pv_binding_hash_payload(
-      list(role = "pv_column_values", name = name, values = data[[name]]),
+      list(role = "pv_column_values", name = name,
+           values = pv_binding_column_values(data[[name]])),
       "pv"
     )
   }, character(1))
-  ordered_payload <- lapply(pv_cols, function(name) list(name = name, values = data[[name]]))
+  ordered_payload <- lapply(pv_cols, function(name) {
+    list(name = name, values = pv_binding_column_values(data[[name]]))
+  })
   list(
     M = length(pv_cols),
     names = pv_cols,
@@ -1231,13 +1255,16 @@ pv_binding_weight_projection <- function(
     pv_binding_abort("PV_BIND_E081", "Weight policy and transform IDs are unsupported.", "weight")
   }
   identity <- pv_binding_row_identity_digests(data, id_cols = id_cols, bound_cols = bound_cols)
-  replicate_payload <- lapply(rep_weight_cols, function(name) list(name = name, values = data[[name]]))
+  replicate_payload <- lapply(rep_weight_cols, function(name) {
+    list(name = name, values = pv_binding_column_values(data[[name]]))
+  })
   list(
     base_name = weight_col[[1L]],
     replicate_names = rep_weight_cols,
     replicate_count = length(rep_weight_cols),
     base_values_hash = pv_binding_hash_payload(
-      list(role = "base_weight_values", name = weight_col[[1L]], values = data[[weight_col]]),
+      list(role = "base_weight_values", name = weight_col[[1L]],
+           values = pv_binding_column_values(data[[weight_col]])),
       "weight"
     ),
     replicate_values_hash = pv_binding_hash_payload(

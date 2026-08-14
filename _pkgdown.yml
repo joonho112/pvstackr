@@ -76,6 +76,13 @@ reference:
       - pv_fit_stack_psis
       - pv_control
 
+  - title: Attach a backend
+    desc: >
+      The bundled brms adapter, exported so an injected adapter can reuse it or
+      replace one piece of it.
+    contents:
+      - pv_backend_brms_fit_function
+
   - title: Compare methods
     desc: >
       Aligned fixed-effect comparison across methods with agreement diagnostics.
@@ -99,6 +106,12 @@ reference:
     contents:
       - pvstackr_fit_summary
       - pvstackr_method_comparison_summary
+
+  - title: Migration
+    desc: >
+      Reading objects written by an earlier release.
+    contents:
+      - pv_migrate_legacy_psis_fit
 
 articles:
   - title: Applied track

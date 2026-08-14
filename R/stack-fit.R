@@ -40,11 +40,21 @@ pv_stack_materialized_design <- function(model_bundle) {
   model_matrix <- model_bundle$model_matrix
   column_names <- sprintf("pvstackrMM%03d", seq_len(ncol(model_matrix)))
   reportable_fe_names <- paste0("b_", colnames(model_matrix))
+  intercept_index <- which(colnames(model_matrix) == "(Intercept)")
   reportable_fe_names[reportable_fe_names == "b_(Intercept)"] <- "b_Intercept"
+  backend_fe_names <- paste0("b_", column_names)
   list(
     column_names = column_names,
-    backend_fe_names = paste0("b_", column_names),
+    backend_fe_names = backend_fe_names,
     reportable_fe_names = reportable_fe_names,
+    # Identify the intercept by the model-matrix column name, which only the
+    # real intercept ever carries. The reportable name cannot be used: a data
+    # column named `Intercept` produces the same `b_Intercept` label.
+    intercept_backend_name = if (length(intercept_index) == 1L) {
+      backend_fe_names[[intercept_index]]
+    } else {
+      NULL
+    },
     offset_name = if (is.null(model_bundle$offset)) NULL else "pvstackrOffset"
   )
 }
@@ -149,7 +159,9 @@ pv_prepare_stack_data <- function(
     draw_name_map = if (is.null(materialized)) NULL else stats::setNames(
       materialized$reportable_fe_names,
       materialized$backend_fe_names
-    )
+    ),
+    intercept_backend_name = if (is.null(materialized)) NULL else
+      materialized$intercept_backend_name
   )
 }
 
@@ -181,6 +193,9 @@ pv_stack_cache_spec <- function(cache_dir = "cache", cache_stem = "pvstackr-stac
   directory_created <- FALSE
   writable <- NA
   resolved_dir <- path.expand(cache_dir)
+  # Only the bundled backend prepares the directory. An injected adapter owns its
+  # own cache, and the recorded provenance says so: `directory_created` is FALSE
+  # and `writable` is NA for that route, and the fit validator enforces it.
   if (package_managed) {
     if (file.exists(resolved_dir) && !dir.exists(resolved_dir)) {
       pv_abort("`cache_dir` exists but is not a directory.")
@@ -193,7 +208,7 @@ pv_stack_cache_spec <- function(cache_dir = "cache", cache_stem = "pvstackr-stac
         mode = "0700"
       )
       if (!isTRUE(created) || !dir.exists(resolved_dir)) {
-        pv_abort("Could not create `cache_dir` for the bundled brms backend.")
+        pv_abort("Could not create `cache_dir` for the stacked fit.")
       }
       directory_created <- TRUE
     }
@@ -201,7 +216,7 @@ pv_stack_cache_spec <- function(cache_dir = "cache", cache_stem = "pvstackr-stac
     cache_file <- file.path(resolved_dir, cache_stem)
     cache_targets <- c(cache_file, paste0(cache_file, ".rds"))
     if (any(dir.exists(cache_targets))) {
-      pv_abort("The bundled brms cache target collides with an existing directory.")
+      pv_abort("The stacked-fit cache target collides with an existing directory.")
     }
     probe <- tempfile(".pvstackr-write-probe-", tmpdir = resolved_dir)
     writable <- isTRUE(suppressWarnings(file.create(probe)))
@@ -209,7 +224,7 @@ pv_stack_cache_spec <- function(cache_dir = "cache", cache_stem = "pvstackr-stac
       unlink(probe, force = TRUE)
     }
     if (!writable) {
-      pv_abort("`cache_dir` is not writable for the bundled brms backend.")
+      pv_abort("`cache_dir` is not writable for the stacked fit.")
     }
   }
 
@@ -484,7 +499,8 @@ pv_stack_prior_policy <- function(prior) {
   )
 }
 
-pv_stack_materialized_prior <- function(prior, draw_name_map) {
+pv_stack_materialized_prior <- function(prior, draw_name_map,
+                                         intercept_backend_name = NULL) {
   if (is.null(draw_name_map) || is.null(prior)) {
     return(prior)
   }
@@ -527,15 +543,22 @@ pv_stack_materialized_prior <- function(prior, draw_name_map) {
   # would widen to cover the intercept as well. Expanding it to one row per
   # non-intercept column restores the original scope exactly rather than
   # approximating it; anything that cannot be expanded this way is refused above.
-  has_intercept <- "b_Intercept" %in% unname(draw_name_map)
   global_b <- prior$class == "b" & !nzchar(prior$coef)
-  if (!has_intercept || !any(global_b)) {
+  if (is.null(intercept_backend_name) || !any(global_b)) {
     return(prior)
+  }
+  if (!intercept_backend_name %in% names(draw_name_map)) {
+    pv_abort(
+      paste0(
+        "The materialized stack_direct intercept column could not be located, ",
+        "so a population-level prior cannot be scoped exactly."
+      )
+    )
   }
 
   slope_coefs <- sub(
     "^b_", "",
-    names(draw_name_map)[unname(draw_name_map) != "b_Intercept"]
+    setdiff(names(draw_name_map), intercept_backend_name)
   )
   if (length(slope_coefs) == 0L) {
     pv_abort(
@@ -791,7 +814,8 @@ pv_stack_fit <- function(
   }
   backend_prior <- pv_stack_materialized_prior(
     prior,
-    prepared$draw_name_map
+    prepared$draw_name_map,
+    prepared$intercept_backend_name
   )
   fit_args <- pv_stack_build_fit_args(
     prepared = prepared,
