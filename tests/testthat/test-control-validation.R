@@ -62,6 +62,8 @@ test_that("pv_control validates probabilities and choices", {
   expect_error(pv_control(conf_level = 1), "`conf_level`")
   expect_error(pv_control(conf_level = c(0.9, 0.95)), "`conf_level`")
   expect_error(pv_control(psis_k_threshold = 0), "`psis_k_threshold`")
+  expect_error(pv_control(psis_k_threshold = 0.7000001), "`psis_k_threshold`")
+  expect_error(pv_control(psis_k_threshold = 1), "`psis_k_threshold`")
   expect_error(pv_control(psis_k_threshold = Inf), "`psis_k_threshold`")
 })
 
@@ -104,6 +106,10 @@ test_that("pv_validate_control revalidates corrupted control values", {
 
   bad <- control
   bad$psis_k_threshold <- 0
+  expect_error(pvstackr:::pv_validate_control(bad), "`psis_k_threshold`")
+
+  bad <- control
+  bad$psis_k_threshold <- 0.8
   expect_error(pvstackr:::pv_validate_control(bad), "`psis_k_threshold`")
 
   bad <- control
@@ -184,5 +190,33 @@ test_that("internal target validation blocks unsafe covariance targets", {
   expect_error(
     pvstackr:::pv_validate_target_matrix(2 * target, c("alpha", "beta"), raw_fe_cov = target),
     "proportional"
+  )
+})
+
+test_that("control rejects root and nested retention payload injection", {
+  control <- pv_control(method = "per_pv")
+  root_injected <- control
+  root_injected$raw_data <- data.frame(secret = "CONTROL_ROOT_SENTINEL")
+  expect_error(
+    pvstackr:::pv_validate_control(root_injected),
+    "exact canonical"
+  )
+
+  attribute_injected <- control
+  attr(attribute_injected, "raw_data") <- data.frame(
+    secret = "CONTROL_ATTRIBUTE_SENTINEL"
+  )
+  expect_error(
+    pvstackr:::pv_validate_control(attribute_injected),
+    "exact canonical"
+  )
+
+  nested_injected <- control
+  attr(nested_injected$verbose, "raw_data") <- data.frame(
+    secret = "CONTROL_NESTED_SENTINEL"
+  )
+  expect_error(
+    pvstackr:::pv_validate_control(nested_injected),
+    "bare canonical scalars"
   )
 })

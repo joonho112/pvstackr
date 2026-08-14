@@ -362,7 +362,19 @@ pv_validate_target_matrix <- function(target, fe_names, raw_fe_cov = NULL, allow
   target
 }
 
+pv_validate_psis_k_threshold <- function(x, name = "psis_k_threshold") {
+  pv_assert_scalar_number(
+    x,
+    name,
+    lower = 0,
+    upper = 0.7,
+    inclusive_lower = FALSE,
+    inclusive_upper = TRUE
+  )
+}
+
 pv_validate_control <- function(control) {
+  original_control <- control
   pv_assert_named_list(control, "control")
   required <- c(
     "method",
@@ -382,9 +394,12 @@ pv_validate_control <- function(control) {
     "keep_log_lik",
     "verbose"
   )
-  missing <- setdiff(required, names(control))
-  if (length(missing) > 0L) {
-    pv_abort(sprintf("`control` is missing required field(s): %s.", paste(missing, collapse = ", ")))
+  root_attributes <- attributes(control)
+  if (!identical(names(control), required) ||
+      !identical(names(root_attributes), c("names", "class")) ||
+      !identical(root_attributes$names, required) ||
+      !identical(root_attributes$class, c("pvstackr_control", "list"))) {
+    pv_abort("`control` must use the exact canonical field order, class, and attributes.")
   }
   control$method <- pv_validate_method(control$method)
   control$chains <- pv_assert_scalar_number(control$chains, "chains", integer = TRUE, lower = 1)
@@ -397,14 +412,7 @@ pv_validate_control <- function(control) {
   control["seed"] <- list(pv_assert_scalar_number(control$seed, "seed", integer = TRUE, lower = 0, allow_null = TRUE))
   control$backend <- pv_validate_backend(control$backend)
   control$conf_level <- pv_assert_probability(control$conf_level, "conf_level")
-  control$psis_k_threshold <- pv_assert_scalar_number(
-    control$psis_k_threshold,
-    "psis_k_threshold",
-    lower = 0,
-    upper = 1,
-    inclusive_lower = FALSE,
-    inclusive_upper = TRUE
-  )
+  control$psis_k_threshold <- pv_validate_psis_k_threshold(control$psis_k_threshold)
   control$center <- pv_validate_center(control$center)
   control$allow_target_nearpd <- pv_validate_target_repair_control(control$allow_target_nearpd)
   control$return_draws <- pv_assert_scalar_logical(control$return_draws, "return_draws")
@@ -412,5 +420,27 @@ pv_validate_control <- function(control) {
   control$keep_backend_fit <- pv_assert_scalar_logical(control$keep_backend_fit, "keep_backend_fit")
   control$keep_log_lik <- pv_assert_scalar_logical(control$keep_log_lik, "keep_log_lik")
   control$verbose <- pv_assert_scalar_logical(control$verbose, "verbose")
-  control
+  canonical <- list(
+    method = unname(as.character(control$method)),
+    chains = as.integer(control$chains),
+    iter = as.integer(control$iter),
+    warmup = as.integer(control$warmup),
+    cores = as.integer(control$cores),
+    seed = if (is.null(control$seed)) NULL else as.integer(control$seed),
+    backend = unname(as.character(control$backend)),
+    conf_level = as.numeric(control$conf_level),
+    psis_k_threshold = as.numeric(control$psis_k_threshold),
+    center = unname(as.character(control$center)),
+    allow_target_nearpd = as.logical(control$allow_target_nearpd),
+    return_draws = as.logical(control$return_draws),
+    keep_data = as.logical(control$keep_data),
+    keep_backend_fit = as.logical(control$keep_backend_fit),
+    keep_log_lik = as.logical(control$keep_log_lik),
+    verbose = as.logical(control$verbose)
+  )
+  class(canonical) <- c("pvstackr_control", "list")
+  if (!identical(original_control, canonical)) {
+    pv_abort("`control` fields must be bare canonical scalars without nested attributes.")
+  }
+  canonical
 }
