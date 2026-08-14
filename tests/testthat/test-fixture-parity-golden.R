@@ -239,7 +239,10 @@ test_that("cached tiny fit public contract matches compact golden signature", {
     df = c(1.021194, 1.402308, 1.013730),
     conf_low = c(442.318045, 44.414570, -41.606872),
     conf_high = c(473.470132, 49.352151, 45.894276),
-    target_hash = rep("4a4d40f8", 3L)
+    target_hash = rep(
+      "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa",
+      3L
+    )
   )
 
   expect_equal(fit$method, "stack_direct")

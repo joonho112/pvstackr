@@ -38,3 +38,7 @@ renv.lock
 *.synctex.gz
 /doc/
 /Meta/
+
+# Maintainer-only trees (excluded from the public repository and the tarball)
+/dev/
+/log/

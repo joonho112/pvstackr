@@ -9,6 +9,13 @@ skip_if_no_guidance_source <- function() {
   )
 }
 
+skip_if_no_dev_file <- function(...) {
+  skip_if_not(
+    file.exists(file.path(guidance_pkg_root(), ...)),
+    "maintainer dev/ scripts are not distributed with the package"
+  )
+}
+
 # The real-data guidance now lives in the Applied track as
 # `a5-real-pisa-guidance.Rmd` (renamed from the former `real-pisa-guidance.Rmd`
 # in the documentation overhaul; see log/056).
@@ -64,6 +71,7 @@ test_that("real PISA guidance records licensing and scope boundaries", {
 
 test_that("real PISA guidance does not equate package per_pv SEs with stack_direct", {
   skip_if_no_guidance_source()
+  skip_if_no_dev_file("dev", "facts-and-notation.md")
 
   guidance <- paste(readLines(guidance_path(), warn = FALSE), collapse = "\n")
   facts <- paste(
@@ -156,6 +164,8 @@ test_that("real PISA guidance vignette renders without real PISA data", {
 
 test_that("build hygiene blocks common real-data formats and PISA folders", {
   skip_if_no_guidance_source()
+  skip_if_no_dev_file("dev", "check-build-hygiene.R")
+
   script <- paste(readLines(file.path(guidance_pkg_root(), "dev", "check-build-hygiene.R"), warn = FALSE), collapse = "\n")
   expect_match(script, "[Pp][Ii][Ss][Aa]", fixed = TRUE)
   for (extension in c("sav", "por", "sas7bdat", "sas7bcat", "xpt", "dta", "duckdb", "db")) {

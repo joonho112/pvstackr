@@ -9,6 +9,13 @@ skip_if_not_source_package <- function() {
   )
 }
 
+skip_if_no_dev_file <- function(...) {
+  skip_if_not(
+    file.exists(file.path(light_check_pkg_root(), ...)),
+    "maintainer dev/ scripts are not distributed with the package"
+  )
+}
+
 light_check_read <- function(...) {
   paste(readLines(file.path(light_check_pkg_root(), ...), warn = FALSE), collapse = "\n")
 }
@@ -127,6 +134,8 @@ test_that("tiny fixture workflow does not load heavy optional backends", {
 
 test_that("development check script preserves the light check policy", {
   skip_if_not_source_package()
+  skip_if_no_dev_file("dev", "02_check.R")
+
   script <- light_check_read("dev", "02_check.R")
 
   expect_match(script, "--no-build-vignettes", fixed = TRUE)
@@ -180,6 +189,8 @@ test_that("installed package-controlled payload stays light", {
 
 test_that("light verifier script exists and uses sentinel optional packages", {
   skip_if_not_source_package()
+  skip_if_no_dev_file("dev", "verify-light-path.R")
+
   script <- light_check_read("dev", "verify-light-path.R")
 
   expect_match(script, "sentinel", fixed = TRUE)
@@ -281,6 +292,8 @@ test_that("survey oracle checks remain opt-in and sentinel-safe", {
 
 test_that("build hygiene blocks heavy backend and real-data directories", {
   skip_if_not_source_package()
+  skip_if_no_dev_file("dev", "check-build-hygiene.R")
+
   script <- light_check_read("dev", "check-build-hygiene.R")
 
   for (directory in c("cache", "results", "data-cache", "cloud", "pisa", "stan", "cmdstan", "brms")) {

@@ -356,52 +356,6 @@ test_that("pv_fit_direct accepts a draws_function returning a draws_matrix-class
   expect_equal(fit$estimates, plain_fit$estimates, tolerance = 0)
 })
 
-# Mimic the object an `as_draws_matrix()` draws_function would return without
-# taking a dependency on the posterior package (deliberately absent per the
-# light-check contract): a matrix carrying the draws_matrix S3 class plus
-# draw-id row names, so is.matrix() is TRUE but identical() differs from a
-# plain matrix on class -- the exact shape that tripped the strict CCC check.
-as_draws_matrix_like <- function(x) {
-  structure(
-    x,
-    dimnames = list(as.character(seq_len(nrow(x))), colnames(x)),
-    class = c("draws_matrix", "draws", "matrix", "array")
-  )
-}
-
-test_that("pv_fit_direct accepts a draws_function returning a draws_matrix-classed object", {
-  data <- fit_direct_fixture_data()
-  target <- fit_direct_target(OUTCOME ~ x, data = data)
-  record <- new.env(parent = emptyenv())
-  record$n <- 0L
-
-  plain_fit <- pv_fit_direct(
-    data = data,
-    formula = OUTCOME ~ x,
-    target = target,
-    control = fit_direct_control(),
-    fit_function = fake_fit_direct_fit(record, target),
-    draws_function = function(fit) fit$draws
-  )
-
-  fit <- pv_fit_direct(
-    data = data,
-    formula = OUTCOME ~ x,
-    target = target,
-    control = fit_direct_control(),
-    fit_function = fake_fit_direct_fit(record, target),
-    draws_function = function(fit) as_draws_matrix_like(fit$draws)
-  )
-
-  expect_s3_class(fit, "pvstackr_fit")
-  expect_equal(fit$status, "ok")
-  expect_invisible(pvstackr:::validate_pvstackr_fit(fit))
-  expect_identical(class(fit$draws), c("matrix", "array"))
-  expect_identical(class(fit$ccc$draws_calibrated), c("matrix", "array"))
-  expect_equal(fit$draws, plain_fit$draws, tolerance = 0)
-  expect_equal(fit$estimates, plain_fit$estimates, tolerance = 0)
-})
-
 test_that("pv_fit_direct preflight rejects incompatible calls before fitting", {
   data <- fit_direct_fixture_data()
   target <- fit_direct_target(OUTCOME ~ x, data = data)
