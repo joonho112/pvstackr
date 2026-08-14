@@ -234,6 +234,6 @@ get_estimates(fit_ref)      # interval_role = "reference_*"; coverage_claim_allo
 #> 1 reference_classic_rubin                  FALSE    fixed_effect
 #> 2 reference_classic_rubin                  FALSE    fixed_effect
 #>        target_source target_hash     pooling_source pooling_hash
-#> 1 per_pv_rubin_draws    282ef82f per_pv_rubin_draws     282ef82f
-#> 2 per_pv_rubin_draws    282ef82f per_pv_rubin_draws     282ef82f
+#> 1 per_pv_rubin_draws    c226f7bb per_pv_rubin_draws     c226f7bb
+#> 2 per_pv_rubin_draws    c226f7bb per_pv_rubin_draws     c226f7bb
 ```

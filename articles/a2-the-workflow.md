@@ -81,13 +81,13 @@ design
 #>   final weight: W_FSTUWT
 #>   replicate weights: 4
 #>   fay_k: 0.5
-#>   design hash: 9ce6c146
+#>   design hash: fa78c04b
 ```
 
 The compact print confirms what was detected: 12 rows, the formula
 `OUTCOME ~ x + female`, \\M = 2\\ plausible values, the final weight
 `W_FSTUWT`, \\R = 4\\ replicate weights, the Fay coefficient
-`fay_k = 0.5`, and a stable content hash (`4776c0f1`) you can use to
+`fay_k = 0.5`, and a stable content hash (`fa78c04b`) you can use to
 detect silent design changes.
 
 Three points about the call shape:

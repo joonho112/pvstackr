@@ -213,7 +213,7 @@ design
 #>   final weight: W_FSTUWT
 #>   replicate weights: 4
 #>   fay_k: 0.5
-#>   design hash: 4776c0f1
+#>   design hash: fa78c04b
 
 target <- pv_brr_target(
   data = pisa_tiny,

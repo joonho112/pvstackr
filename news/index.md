@@ -2,6 +2,18 @@
 
 ## pvstackr 0.2.0
 
+- Content hashes and validation stamps no longer depend on the R version
+  that wrote them. Both hashed the whole serialization stream, whose
+  fourteen-byte header records the writing R version. The eight-hex
+  content hashes (`design_hash`, `target_hash`, and the fixture digests)
+  are compared fail-closed when a legacy target is revalidated, so that
+  comparison could never succeed across two R versions, and the
+  validation stamps made a saved fit refuse its own accessors after an R
+  upgrade. The header is now excluded from both. **Hash values change**:
+  content hashes computed by earlier releases will not match the ones
+  this release derives, so a stored `design_hash` from 0.1.x or
+  0.2.0-dev is expected to differ.
+
 - Validation stamps no longer depend on the R version that wrote them.
   The stamp hashed the whole serialization stream, whose fourteen-byte
   header records the writing R version, so a saved fit failed its own
