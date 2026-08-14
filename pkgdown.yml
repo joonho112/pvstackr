@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   a1-getting-started: a1-getting-started.html
@@ -12,7 +12,7 @@ articles:
   m3-stacked-bridge: m3-stacked-bridge.html
   m4-ccc-calibration: m4-ccc-calibration.html
   m5-methods-and-coverage: m5-methods-and-coverage.html
-last_built: 2026-06-09T22:01Z
+last_built: 2026-08-14T16:28Z
 urls:
   reference: https://joonho112.github.io/pvstackr/reference
   article: https://joonho112.github.io/pvstackr/articles

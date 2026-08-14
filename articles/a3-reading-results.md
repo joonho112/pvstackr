@@ -109,9 +109,10 @@ their *provenance*. Three things to notice before reading any value.
 
 **The three terms.** Rows are `b_Intercept`, `b_x`, and `b_female` — the
 fixed-effect block, with the `b_` prefix marking each as a fixed-effect
-coefficient. There are no variance-component rows: v0.1 calibrates and
-reports \\\beta\_{\text{FE}}\\ only, a scope reminder carried over from
-A1/A2 and confirmed by the `parameter_scope` column below.
+coefficient. There are no variance-component rows: the package
+calibrates and reports \\\beta\_{\text{FE}}\\ only, a scope reminder
+carried over from A1/A2 and confirmed by the `parameter_scope` column
+below.
 
 **Dual snake_case / broom naming.** Several columns appear twice under
 two spellings: the package-native snake_case (`se`, `conf_low`,
@@ -145,10 +146,14 @@ where each row came from:
 ``` r
 
 est[, c("term", "parameter_scope", "target_source", "target_hash")]
-#>          term parameter_scope          target_source target_hash
-#> 1 b_Intercept    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 2         b_x    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 3    b_female    fixed_effect external_brr_fay_rubin    4a4d40f8
+#>          term parameter_scope          target_source
+#> 1 b_Intercept    fixed_effect external_brr_fay_rubin
+#> 2         b_x    fixed_effect external_brr_fay_rubin
+#> 3    b_female    fixed_effect external_brr_fay_rubin
+#>                                                               target_hash
+#> 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
 ```
 
 - `parameter_scope == "fixed_effect"` confirms every row is in the
@@ -310,7 +315,7 @@ round(tg$df, 3)      # degrees of freedom per coefficient
 #> b_Intercept         b_x    b_female 
 #>       1.021       1.402       1.014
 tg$target_hash       # content fingerprint (matches the estimate table)
-#> [1] "4a4d40f8"
+#> [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"
 ```
 
 This is the *source* of the reportable SE: the standard errors in
@@ -358,8 +363,8 @@ weaken the fixed-effect report, which is fully specified by the target.
 dg <- get_diagnostics(fit)
 
 names(dg)
-#> [1] "preflight"          "stack_fit"          "stack_fit_warnings"
-#> [4] "ccc"
+#> [1] "preflight"          "sampler"            "sampler_gate"      
+#> [4] "stack_fit"          "stack_fit_warnings" "ccc"
 ```
 
 The list holds `preflight` (the resolved formula, term names, and target
@@ -457,7 +462,7 @@ Bug reports and feature requests:
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -478,16 +483,16 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] pvstackr_0.1.0
+#> [1] pvstackr_0.2.0
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
 #>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
 #> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.2.0       fs_2.1.0
+#> [25] rlang_1.3.0       fs_2.1.0
 ```
 
 ## References

@@ -17,7 +17,7 @@ method contract but keep interval and provenance fields intact."><meta property=
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ method contract but keep interval and provenance fields intact."><meta property=
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Access pvstackr Estimates</h1>
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a>, <a href="https://github.com/joonho112/pvstackr/blob/main/R/legacy-psis.R" class="external-link"><code>R/legacy-psis.R</code></a></small>
       <div class="d-none name"><code>get_estimates.Rd</code></div>
     </div>
 
@@ -75,6 +75,9 @@ method contract but keep interval and provenance fields intact.</p>
 <span><span class="fu">get_estimates</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'pvstackr_method_comparison'</span></span>
+<span><span class="fu">get_estimates</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'pvstackr_legacy_psis_inspection'</span></span>
 <span><span class="fu">get_estimates</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -96,7 +99,9 @@ method contract but keep interval and provenance fields intact.</p>
 tables include interval/provenance columns such as <code>df_method</code>,
 <code>df_complete</code>, <code>interval_role</code>, <code>coverage_claim_allowed</code>,
 <code>target_source</code>, <code>target_hash</code>, <code>pooling_source</code>, and <code>pooling_hash</code> when
-those columns are part of the method contract.</p>
+those columns are part of the method contract. An inspection-only legacy
+PSIS object fails explicitly instead of returning historical numeric
+output.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -123,10 +128,14 @@ those columns are part of the method contract.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1       0.95 442.31804 473.47013 442.31804 473.47013 descriptive_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2       0.95  44.41457  49.35215  44.41457  49.35215 descriptive_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3       0.95 -41.60687  45.89428 -41.60687  45.89428 descriptive_classic_rubin</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed parameter_scope          target_source target_hash</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed parameter_scope          target_source</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                                               target_hash</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -138,7 +147,7 @@ those columns are part of the method contract.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

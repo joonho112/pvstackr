@@ -41,10 +41,10 @@ them descriptive.
 
 Two scope notes, stated up front so nothing later surprises you:
 
-- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect
-  block \\\beta\_{\text{FE}}\\ (intercept and slopes). Variance
-  components are estimated but **not** calibrated, and are not part of
-  the reportable output.
+- **Fixed effects only.** The package calibrates and reports the
+  fixed-effect block \\\beta\_{\text{FE}}\\ (intercept and slopes).
+  Variance components are estimated but **not** calibrated, and are not
+  part of the reportable output.
 - **“One fit” is an architecture statement, not a speed claim.** It
   describes the *topology* of the method (one stacked fit instead of
   \\M\\ separate ones); this vignette makes no benchmarked timing
@@ -120,9 +120,20 @@ fit <- pv_fit(
   formula       = OUTCOME ~ x + female,           # OUTCOME is a placeholder
   target        = your_target,                    # from pv_brr_target()
   method        = "stack_direct",
-  control       = pv_control(method = "stack_direct"),
-  fit_function  = your_fit_function,              # the modelling backend
-  draws_function = your_draws_function            # optional posterior draws
+  control       = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# Or drive your own engine, which takes all three adapter functions:
+fit <- pv_fit(
+  data              = your_data,
+  formula           = OUTCOME ~ x + female,
+  target            = your_target,
+  method            = "stack_direct",
+  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = your_fit_function,          # estimates the stacked model
+  draws_function    = your_draws_function,        # extracts posterior draws
+  diagnose_function = your_diagnose_function,     # reports sampler diagnostics
+  cache_dir         = NULL
 )
 ```
 
@@ -215,7 +226,7 @@ print(fit)
 #>   fixed effects: 3
 #>   target: external_brr_fay_rubin
 #>   draws: not retained
-#>   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc
+#>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 ```
 
@@ -409,7 +420,7 @@ Bug reports and feature requests:
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -430,16 +441,16 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] pvstackr_0.1.0
+#> [1] pvstackr_0.2.0
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
 #>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
 #> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.2.0       fs_2.1.0
+#> [25] rlang_1.3.0       fs_2.1.0
 ```
 
 ## References

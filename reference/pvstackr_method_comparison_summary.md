@@ -84,6 +84,12 @@ The `print` methods return their input invisibly.
 
   Per-method timing metadata.
 
+- `summary_schema_version`, `source_validation`,
+  `source_reportability_comparison`, `validation`:
+
+  The current summary schema, deep-valid compact source comparison and
+  its stamp, and the owned-summary SHA-256 record used before printing.
+
 ## See also
 
 [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md),

@@ -180,5 +180,5 @@ design
 #>   final weight: W_FSTUWT
 #>   replicate weights: 4
 #>   fay_k: 0.5
-#>   design hash: 4776c0f1
+#>   design hash: 9ce6c146
 ```

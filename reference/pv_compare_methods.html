@@ -17,7 +17,7 @@ reference method, and recording agreement and timing diagnostics."><meta propert
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -107,9 +107,10 @@ comparison object.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A <code>pvstackr_method_comparison</code> object with top-level
 <code>estimate_table</code>, <code>diagnostic_table</code>, <code>agreement</code>, and <code>timing</code> fields.
-<code>estimate_table</code> includes method-level interval metadata alongside the
-aligned fixed-effect estimates. <code>diagnostic_table</code> includes method-level
-target/pooling provenance and shared-provenance flags.</p>
+<code>estimate_table</code> includes method-level interval and PSIS provenance
+metadata alongside the aligned fixed-effect estimates. <code>diagnostic_table</code>
+includes method-level target/pooling provenance, PSIS source and bounded
+weight-concentration summaries, and shared-provenance flags.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -133,7 +134,23 @@ descriptive; close agreement is not automatic independent corroboration when
 compared methods share a target hash, pooling hash, target source, or estimand
 construction. <code>target_source</code> is provenance vocabulary, not necessarily a
 formal target object: <code>stack_psis</code> rows use <code>stack_psis_rubin_pooling</code> even
-though <code><a href="get_target.html">get_target()</a></code> returns <code>NULL</code> for <code>stack_psis</code> fits.</p>
+though <code><a href="get_target.html">get_target()</a></code> returns <code>NULL</code> for <code>stack_psis</code> fits.
+For <code>stack_psis</code>, the aligned estimate rows additionally retain
+<code>psis_source</code>, <code>pareto_k_source</code>, <code>weight_method</code>, <code>psis_producer</code>, and
+<code>psis_producer_version</code>. The method diagnostic table adds the minimum
+per-PV Kish-style iid weight ESS and ESS fraction, plus the maximum
+normalized weight. These fields preserve the source fit's bounded
+provenance and concentration diagnostics; they are not MCMC ESS or a
+substitute for Pareto-k gating.</p>
+<p>Current comparison objects record deep-valid compact PSIS source fits,
+canonical per-source reportability projections, each source authority's
+validation stamp, and an owned-payload SHA-256 stamp. Derived tables and
+diagnostics are recomputed from those projections during validation. A
+pre-marker serialized comparison containing
+<code>stack_psis</code> is inspection-only and must be rebuilt from current validated
+fits; its saved numeric table is not grandfathered. Independently of the
+stamp, warning-status PSIS rows are forbidden and blocked PSIS rows must
+carry no reportable numeric or pooling metadata.</p>
     </div>
     <div class="section level2">
     <h2 id="interpreting-agreement">Interpreting agreement<a class="anchor" aria-label="anchor" href="#interpreting-agreement"></a></h2>
@@ -193,13 +210,20 @@ are descriptive/reference even with Barnard-Rubin degrees of freedom.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 4 5.759265e+03   classic          NA       0.95   reference_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 5 1.642548e+06   classic          NA       0.95   reference_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 6 8.726226e+05   classic          NA       0.95   reference_classic_rubin</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed   conf_low  conf_high reference_method</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE 442.318045 473.470132           per_pv</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE  44.414570  49.352151           per_pv</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE -41.606872  45.894276           per_pv</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4                  FALSE  -2.031670   1.967547           per_pv</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5                  FALSE  -2.015842   2.063551           per_pv</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6                  FALSE  -2.100082   1.977132           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed psis_source pareto_k_source weight_method</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                  FALSE        &lt;NA&gt;            &lt;NA&gt;          &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   psis_producer psis_producer_version   conf_low  conf_high reference_method</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1          &lt;NA&gt;                  &lt;NA&gt; 442.318045 473.470132           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          &lt;NA&gt;                  &lt;NA&gt;  44.414570  49.352151           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3          &lt;NA&gt;                  &lt;NA&gt; -41.606872  45.894276           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4          &lt;NA&gt;                  &lt;NA&gt;  -2.031670   1.967547           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5          &lt;NA&gt;                  &lt;NA&gt;  -2.015842   2.063551           per_pv</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6          &lt;NA&gt;                  &lt;NA&gt;  -2.100082   1.977132           per_pv</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   reference_estimate reference_se estimate_diff  se_ratio  abs_z_diff</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1        -0.03206137     1.020013    457.926150 1.2620545 278.8090409</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2         0.02385441     1.040680     46.859506 0.3572597  42.4029899</span>
@@ -225,7 +249,7 @@ are descriptive/reference even with Barnard-Rubin degrees of freedom.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

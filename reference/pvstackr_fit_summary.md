@@ -79,6 +79,12 @@ The `print` methods return their input invisibly.
   The reportable fixed-effect estimate table and the structured
   diagnostics list.
 
+- `summary_schema_version`, `source_validation`,
+  `source_reportability_fit`, `validation`:
+
+  The current summary schema, deep-valid compact source fit and its
+  stamp, and the owned-summary SHA-256 record used before printing.
+
 ## See also
 
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),

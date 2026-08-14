@@ -40,9 +40,6 @@ You can install the development version of `pvstackr` from
 
 # install.packages("pak")
 pak::pak("joonho112/pvstackr")
-
-# CRAN release coming soon:
-# install.packages("pvstackr")
 ```
 
 Optional live Bayesian backends (e.g. `cmdstanr`/`brms`) and their
@@ -80,13 +77,32 @@ The public method IDs are:
 | Method | Role |
 |----|----|
 | `stack_direct` | Default calibrated-reporting path: a design-based external Rubin/BRR-Fay fixed-effect target for reported estimates and SEs, plus one stacked backend fit used to calibrate draws and diagnose agreement. |
-| `stack_psis` | Diagnostic/reference method: one stacked draw source plus supplied/precomputed or injected PSIS weights, Pareto-k diagnostics, and model-based Rubin pooling of PSIS-weighted fixed-effect summaries. |
+| `stack_psis` | Diagnostic/reference method: one stacked draw source plus externally produced weights, Pareto-k diagnostics, explicit PSIS producer/version provenance, and model-based Rubin pooling of weighted fixed-effect summaries. |
 | `per_pv` | Per-PV Bayesian/backend reference: one fit or posterior-draw source per plausible value, with fixed-effect centers and model-based within-PV covariance combined by Rubin pooling. |
 
-In the current package stage, all three method IDs are implemented
-through injected or precomputed light paths. `stack_psis` currently
-expects supplied or injected PSIS weights and Pareto-k diagnostics
-rather than depending on a live PSIS backend.
+`stack_direct` can run without any adapter of your own:
+`pv_control(backend = "brms")` fits the stacked model with `brms`. It
+uses `cmdstanr` when that package is installed and CmdStan is
+configured, and `rstan` when `cmdstanr` is not installed at all; an
+installed `cmdstanr` without a working CmdStan is an error rather than a
+silent fallback. `brms` stays in Suggests, so nothing heavy is needed to
+install, load, or test the package. To attach a different engine, inject
+a fit function, a draws function, and a diagnose function; the bundled
+adapter is exported
+([`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+and its two companions) so you can reuse it and replace only the part
+that differs. All three are required for a reportable fit — an adapter
+that reports no sampler diagnostics leaves the evidence incomplete and
+the fit is blocked.
+
+`per_pv` and `stack_psis` remain injected or precomputed light paths.
+`stack_psis` expects supplied or injected weights, Pareto-k diagnostics,
+and a caller-declared external PSIS producer and version rather than
+depending on a live PSIS backend. Raw self-normalized log ratios and
+external weights without that provenance are diagnostic-only and fail
+closed. Diagnostics include per-PV Kish-style iid weight ESS and maximum
+normalized weight; these are not MCMC ESS or autocorrelation-adjusted
+`loo` diagnostics.
 
 ## Scope
 
@@ -104,12 +120,12 @@ BRR-Fay target with Barnard-Rubin df and explicit `df_complete`;
 intervals even when they use Barnard-Rubin df.
 
 The package should not be read as claiming unqualified “same inference
-with one MCMC.” In v0.1, calibrated reporting is scoped to fixed effects
-and is not a full posterior for all model parameters.
+with one MCMC.” Calibrated reporting is scoped to fixed effects and is
+not a full posterior for all model parameters.
 
 ## Current `stack_direct` Boundary
 
-`stack_direct` v0.1 requires an external `pvstackr_brr_target` from
+`stack_direct` requires an external `pvstackr_brr_target` from
 [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
 The public wrapper checks formula RHS equality, fixed-effect name
 alignment, target provenance, and target policy before fitting. Group
@@ -243,7 +259,7 @@ fit
 #>   fixed effects: 3
 #>   target: external_brr_fay_rubin
 #>   draws: not retained
-#>   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc
+#>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 
 get_estimates(fit)[
@@ -256,10 +272,10 @@ get_estimates(fit)[
 #> 3    b_female   2.143702 3.5550309 1.013730 -41.60687  45.89428
 
 get_target(fit)$target_hash
-#> [1] "4a4d40f8"
+#> [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"
 names(get_diagnostics(fit))
-#> [1] "preflight"          "stack_fit"          "stack_fit_warnings"
-#> [4] "ccc"
+#> [1] "preflight"          "sampler"            "sampler_gate"      
+#> [4] "stack_fit"          "stack_fit_warnings" "ccc"
 get_draws(fit)
 #> NULL
 ```
@@ -316,14 +332,26 @@ fit <- pv_fit(
   method = "stack_direct",
   control = pv_control(
     method = "stack_direct",
-    backend = "injected",
+    backend = "brms",
     iter = 2000L,
     warmup = 1000L,
     chains = 4L,
     seed = 20260607
-  ),
-  fit_function = fit_stacked_model,
-  draws_function = extract_fixed_effect_draws
+  )
+)
+
+# To drive a different engine, inject all three adapter functions instead.
+# The bundled ones are exported, so you can reuse the parts you do not replace.
+fit <- pv_fit(
+  data = design$data,
+  formula = design$formula,
+  target = target,
+  method = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = pv_backend_brms_fit_function,
+  draws_function    = pv_backend_brms_draws_function,
+  diagnose_function = pv_backend_brms_sampler_diagnostics,
+  cache_dir         = NULL
 )
 
 summary(fit)
@@ -407,8 +435,7 @@ by the OECD or the PISA programme.
 ## License
 
 MIT © JoonHo Lee. See
-[LICENSE.md](https://joonho112.github.io/pvstackr/LICENSE.md) for
-details.
+[LICENSE.md](https://joonho112.github.io/pvstackr/LICENSE) for details.
 
 # Package index
 
@@ -442,6 +469,8 @@ Build the external Rubin / BRR-Fay fixed-effect target.
 - [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
   [`print(`*`<pvstackr_brr_target>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
   : Assemble a Rubin/BRR-Fay Fixed-Effect Target
+- [`pv_revalidate_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_revalidate_brr_target.md)
+  : Revalidate a Legacy BRR-Fay Target Against Its Original Inputs
 
 ## Fit a method
 
@@ -458,6 +487,16 @@ The dispatcher, the three method engines, and fitting controls.
 - [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
   [`print(`*`<pvstackr_control>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
   : Construct pvstackr Fitting Controls
+
+## Attach a backend
+
+The bundled brms adapter, exported so an injected adapter can reuse it
+or replace one piece of it.
+
+- [`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  [`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  [`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  : Bundled brms adapter for the stacked fit
 
 ## Compare methods
 
@@ -494,6 +533,16 @@ and comparison objects.
   [`summary(`*`<pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   [`print(`*`<summary.pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   : Display Methods for pvstackr Method Comparisons
+
+## Migration
+
+Reading objects written by an earlier release.
+
+- [`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`print(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`summary(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`print(`*`<summary.pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  : Convert a Legacy PSIS Fit to a Safe Inspection Object
 
 # Articles
 

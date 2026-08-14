@@ -30,6 +30,8 @@ Build the external Rubin / BRR-Fay fixed-effect target.
 - [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
   [`print(`*`<pvstackr_brr_target>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
   : Assemble a Rubin/BRR-Fay Fixed-Effect Target
+- [`pv_revalidate_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_revalidate_brr_target.md)
+  : Revalidate a Legacy BRR-Fay Target Against Its Original Inputs
 
 ## Fit a method
 
@@ -46,6 +48,16 @@ The dispatcher, the three method engines, and fitting controls.
 - [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
   [`print(`*`<pvstackr_control>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
   : Construct pvstackr Fitting Controls
+
+## Attach a backend
+
+The bundled brms adapter, exported so an injected adapter can reuse it
+or replace one piece of it.
+
+- [`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  [`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  [`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  : Bundled brms adapter for the stacked fit
 
 ## Compare methods
 
@@ -82,3 +94,13 @@ and comparison objects.
   [`summary(`*`<pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   [`print(`*`<summary.pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   : Display Methods for pvstackr Method Comparisons
+
+## Migration
+
+Reading objects written by an earlier release.
+
+- [`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`print(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`summary(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  [`print(`*`<summary.pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  : Convert a Legacy PSIS Fit to a Safe Inspection Object

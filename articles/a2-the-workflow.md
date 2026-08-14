@@ -40,10 +40,10 @@ Everything below runs on the package’s bundled **synthetic** `pisa_tiny`
 fixture, so the whole article is offline and deterministic. Two scope
 reminders carried over from A1, because they govern what you may report:
 
-- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect
-  block \\\beta\_{\text{FE}}\\ (intercept and slopes). Variance
-  components are estimated but not calibrated and are not part of the
-  reportable output.
+- **Fixed effects only.** The package calibrates and reports the
+  fixed-effect block \\\beta\_{\text{FE}}\\ (intercept and slopes).
+  Variance components are estimated but not calibrated and are not part
+  of the reportable output.
 - **Coverage lives on one path.** A row’s interval is coverage-claimable
   only under `stack_direct` backed by an external design-based BRR-Fay
   target with Barnard-Rubin degrees of freedom. The bundled cached fit
@@ -81,7 +81,7 @@ design
 #>   final weight: W_FSTUWT
 #>   replicate weights: 4
 #>   fay_k: 0.5
-#>   design hash: 4776c0f1
+#>   design hash: 9ce6c146
 ```
 
 The compact print confirms what was detected: 12 rows, the formula
@@ -209,9 +209,10 @@ the BRR–Fay sandwich, Rubin pooling, the Barnard–Rubin degrees of
 freedom, and the design-variance coverage result lives in the **Method
 track, M2**.
 
-**The target is fixed-effect-only.** The v0.1 engine builds a target for
-the fixed-effect block and rejects random-effect (group) terms outright.
-Asking for `(1 | CNTSCHID)` is an error by design, not an oversight:
+**The target is fixed-effect-only.** The target engine builds a target
+for the fixed-effect block and rejects random-effect (group) terms
+outright. Asking for `(1 | CNTSCHID)` is an error by design, not an
+oversight:
 
 ``` r
 
@@ -239,10 +240,9 @@ of **M3**.
 
 ### 4.1 The path we run here — load the cached fit
 
-A live `stack_direct` fit needs a modelling backend (an injected fitting
-engine), which this offline vignette does not assemble. The package
-therefore ships a cached fit so the example is fast and MCMC-free. Load
-it:
+A live `stack_direct` fit needs a modelling backend, which this offline
+vignette does not run. The package therefore ships a cached fit so the
+example is fast and MCMC-free. Load it:
 
 ``` r
 
@@ -258,7 +258,7 @@ fit
 #>   fixed effects: 3
 #>   target: external_brr_fay_rubin
 #>   draws: not retained
-#>   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc
+#>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 ```
 
@@ -274,31 +274,63 @@ exactly why, and what would change it.
 
 On real data you would call
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-directly and hand it a backend. The chunk below shows that **shape**; it
-is **not run** here, because no live backend is assembled in this
-vignette:
+directly and hand it a backend. The simplest route asks for the bundled
+one, which needs no adapter of your own:
 
 ``` r
 
 fit <- pv_fit(
-  data           = pisa_tiny,
-  formula        = OUTCOME ~ x + female,
-  target         = target,                                  # from Section 3
-  method         = "stack_direct",
-  control        = pv_control(
-                     method  = "stack_direct",
-                     backend = "injected"                   # backend policy
-                   ),
-  fit_function   = your_fit_function,                       # the modelling backend
-  draws_function = your_draws_function                      # extract posterior draws
+  data    = pisa_tiny,
+  formula = OUTCOME ~ x + female,
+  target  = target,                                         # from Section 3
+  method  = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "brms")
 )
 ```
 
-The two adapter slots are the whole story of “going live”:
-`fit_function` is the engine that estimates the stacked model, and
-`draws_function` pulls posterior draws from the backend fit so CCC can
-calibrate them. Their contracts — and how a real Bayesian backend slots
-in — are sketched in Section 7 and detailed for real data in **A5**.
+`brms` is in Suggests, so it is needed only when you actually ask for
+this backend. It samples through `cmdstanr` when that package is
+installed and CmdStan is configured, and through `rstan` when `cmdstanr`
+is not installed. An installed `cmdstanr` without a working CmdStan
+raises an error rather than falling back silently.
+
+To drive a different engine, inject three functions instead. The chunk
+below shows that **shape**; it is **not run** here, because no live
+backend is assembled in this vignette:
+
+``` r
+
+fit <- pv_fit(
+  data              = pisa_tiny,
+  formula           = OUTCOME ~ x + female,
+  target            = target,
+  method            = "stack_direct",
+  control           = pv_control(
+                        method  = "stack_direct",
+                        backend = "cmdstanr"                # passed to your engine
+                      ),
+  fit_function      = your_fit_function,      # estimates the stacked model
+  draws_function    = your_draws_function,    # extracts posterior draws
+  diagnose_function = your_diagnose_function, # reports sampler diagnostics
+  cache_dir         = NULL                    # an injected adapter owns its cache
+)
+```
+
+All three slots matter. `fit_function` is the engine that estimates the
+stacked model, `draws_function` pulls posterior draws so CCC can
+calibrate them, and `diagnose_function` reports the sampler evidence. A
+fit that arrives without that evidence is **blocked rather than
+reported**, so the third slot is not optional for a reportable analysis.
+
+You do not have to write all three from scratch: the bundled adapter’s
+own functions are exported as
+[`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+[`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+and
+[`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+so you can pass those and replace only the piece that differs for your
+engine. Their contracts — and how a real Bayesian backend slots in — are
+sketched in Section 7 and detailed for real data in **A5**.
 
 ## 5. Inspect and report
 
@@ -317,7 +349,7 @@ summary(fit)
 #>   fixed effects: 3
 #>   target: external_brr_fay_rubin
 #>   draws: not retained
-#>   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc
+#>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 #>         term   estimate        se       df  conf_low conf_high
 #>  b_Intercept 457.894088 1.2873118 1.021194 442.31804 473.47013
@@ -475,7 +507,7 @@ conventions in **M4**, and the precise statement of why only
 
 The same
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-shape from Section 4.2 reaches a real Bayesian backend through the two
+shape from Section 4.2 reaches a real Bayesian backend through the three
 adapter slots, with no change to the rest of the call. The sketch below
 is **not run** — no live backend executes in any vignette — and is
 purely illustrative of how an adapter conforms to the package’s object
@@ -495,14 +527,22 @@ my_draws_function <- function(backend_fit, ...) {
   # ... extract a draws matrix from backend_fit ...
 }
 
+# diagnose_function: report the sampler diagnostics. Without it the sampler
+# evidence is incomplete and the fit is blocked rather than reported.
+my_diagnose_function <- function(backend_fit, ...) {
+  # ... return R-hat, ESS, and divergences from backend_fit ...
+}
+
 fit <- pv_fit(
-  data           = your_real_pisa_data,
-  formula        = OUTCOME ~ x + female,
-  target         = your_target,
-  method         = "stack_direct",
-  control        = pv_control(method = "stack_direct", backend = "injected"),
-  fit_function   = my_fit_function,
-  draws_function = my_draws_function
+  data              = your_real_pisa_data,
+  formula           = OUTCOME ~ x + female,
+  target            = your_target,
+  method            = "stack_direct",
+  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function      = my_fit_function,
+  draws_function    = my_draws_function,
+  diagnose_function = my_diagnose_function,
+  cache_dir         = NULL
 )
 ```
 
@@ -559,7 +599,7 @@ notation**.
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -580,16 +620,16 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] pvstackr_0.1.0
+#> [1] pvstackr_0.2.0
 #> 
 #> loaded via a namespace (and not attached):
-#>  [1] vctrs_0.7.3       cli_3.6.6         knitr_1.51        rlang_1.2.0      
-#>  [5] xfun_0.58         otel_0.2.0        textshaping_1.0.5 jsonlite_2.0.0   
+#>  [1] vctrs_0.7.3       cli_3.6.6         knitr_1.51        rlang_1.3.0      
+#>  [5] xfun_0.60         otel_0.2.0        textshaping_1.0.5 jsonlite_2.0.0   
 #>  [9] glue_1.8.1        htmltools_0.5.9   ragg_1.5.2        sass_0.4.10      
 #> [13] rmarkdown_2.31    evaluate_1.0.5    jquerylib_0.1.4   fastmap_1.2.0    
-#> [17] yaml_2.3.12       lifecycle_1.0.5   compiler_4.6.0    fs_2.1.0         
+#> [17] yaml_2.3.12       lifecycle_1.0.5   compiler_4.6.1    fs_2.1.0         
 #> [21] systemfonts_1.3.2 digest_0.6.39     R6_2.6.1          pillar_1.11.1    
-#> [25] bslib_0.11.0      tools_4.6.0       pkgdown_2.2.0     cachem_1.1.0     
+#> [25] bslib_0.12.0      tools_4.6.1       pkgdown_2.2.1     cachem_1.1.0     
 #> [29] desc_1.4.3
 ```
 

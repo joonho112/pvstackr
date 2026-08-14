@@ -1,10 +1,9 @@
 # Fit the PSIS-Reweighted Stacked Method
 
 `pv_fit_stack_psis()` implements the `stack_psis` API for this package
-stage: one stacked draw source, supplied/precomputed or injected
-per-plausible-value PSIS weights, Pareto-k diagnostics, model-based
-Rubin pooling of PSIS-weighted fixed-effect summaries, and explicit
-gating when Pareto-k diagnostics fail.
+stage: one stacked draw source, externally produced per-plausible-value
+weights and Pareto-k diagnostics, model-based Rubin pooling of weighted
+fixed-effect summaries, and explicit provenance and diagnostic gates.
 
 ## Usage
 
@@ -25,6 +24,8 @@ pv_fit_stack_psis(
   pareto_k = NULL,
   log_ratios = NULL,
   psis_function = NULL,
+  psis_producer = NULL,
+  psis_producer_version = NULL,
   fallback = c("block", "warn"),
   weight_col = NULL,
   rep_weight_cols = NULL,
@@ -87,8 +88,9 @@ pv_fit_stack_psis(
 
 - psis_weights:
 
-  Optional normalized or unnormalized PSIS weight matrix, one column per
-  plausible value.
+  Optional normalized or unnormalized external weight matrix, one column
+  per plausible value. The numeric matrix alone does not establish that
+  PSIS smoothing occurred.
 
 - pareto_k:
 
@@ -103,9 +105,18 @@ pv_fit_stack_psis(
 
   Optional function returning `weights` and `pareto_k`.
 
+- psis_producer, psis_producer_version:
+
+  Optional bounded scalar strings identifying the external PSIS producer
+  and its version. Both are required together for supplied or injected
+  weights to be reportable. They record a caller declaration;
+  package-verified `loo` execution is deferred.
+
 - fallback:
 
-  Behavior when Pareto-k exceeds the threshold: `"block"` or `"warn"`.
+  Requested behavior when Pareto-k fails: `"block"` or the legacy
+  `"warn"`. Both choices now fail closed; `"warn"` cannot make failed
+  PSIS output reportable.
 
 - weight_col, rep_weight_cols, fay_k, id_cols:
 
@@ -131,10 +142,14 @@ A `pvstackr_fit` object with `method = "stack_psis"`.
 
 This function does not depend on `loo`, `brms`, or `cmdstanr` directly
 and does not run a live PSIS routine from the `loo` package by default.
-Users may supply PSIS weights plus Pareto-k values, or inject a
-`psis_function(log_ratios)` that returns `weights` and `pareto_k`. In
-v0.1, reportable output is fixed-effect-only; group terms such as
-`(1 | school)` and `(1 || school)` are rejected.
+Users may supply weights plus Pareto-k values, or inject a
+`psis_function(log_ratios)` that returns `weights` and `pareto_k`.
+Numeric weights or a function name cannot prove that Pareto smoothing
+occurred. Reportable output therefore also requires both `psis_producer`
+and `psis_producer_version`; these fields are caller-declared
+provenance, not package verification. In v0.2, reportable output is
+fixed-effect-only; group terms such as `(1 | school)` and
+`(1 || school)` are rejected.
 
 `stack_psis` interval metadata is diagnostic/reference vocabulary, not a
 design-coverage claim. Classic Rubin pooling is labeled
@@ -143,15 +158,41 @@ design-coverage claim. Classic Rubin pooling is labeled
 `df_complete`. Both roles set `coverage_claim_allowed = FALSE` because
 the pooled covariance is model-based weighted covariance of the stacked
 draws. The pooling provenance is labeled `stack_psis_rubin_pooling`.
-PSIS diagnostics record their weight source as `supplied_weights`,
-`psis_function`, or `log_ratios_self_normalized`; the last path
-self-normalizes the log ratios and does not by itself run Pareto
-smoothing.
+Diagnostics separate the input route (`supplied_psis_weights`,
+`injected_psis_function`, or `self_normalized_log_ratios`), the Pareto-k
+source, and the weight method. The self-normalized path does not run
+Pareto smoothing and is always blocked from estimates. Supplied or
+injected weights without producer/version provenance are likewise
+diagnostic-only.
 
-If any Pareto-k exceeds `control$psis_k_threshold`, the default
-`fallback = "block"` returns a blocked `pvstackr_fit` with diagnostics
-but no reportable estimates. `fallback = "warn"` retains estimates with
-warning status for diagnostic comparison workflows.
+Every path records per-PV weight-concentration diagnostics after column
+normalization: `weight_ess_iid = 1 / sum(w^2)`, its draw-count fraction,
+and the largest normalized weight. This is a Kish-style iid weight
+diagnostic, not MCMC ESS, the `loo` relative-efficiency diagnostic, or
+an autocorrelation-adjusted PSIS effective sample size. These quantities
+explain weight concentration but do not relax or replace the Pareto-k
+gate.
+
+Reportability uses an immutable fail-closed gate: every plausible value
+must have a finite Pareto-k strictly below `control$psis_k_threshold`,
+and that threshold cannot exceed `0.7`. Failed, unevaluated, unsmoothed,
+or provenance-incomplete input always returns a blocked `pvstackr_fit`
+with no reportable estimates, raw weights, or draws; bounded ESS and
+maximum-weight diagnostics remain available. The legacy
+`fallback = "warn"` argument remains accepted for call compatibility and
+emits a deprecation warning, but it cannot relax the gate and is
+recorded only as the requested policy.
+
+When `control$return_draws = TRUE`, retained normalized weights are used
+to recompute the ESS, maximum-weight, and weighted-summary diagnostics
+during deep validation
+(`weight_diagnostic_authority = "retained_weights_recomputed"`). When
+weights are intentionally redacted, these bounded diagnostics are
+protected by the package-owned validation stamp and cross-field
+feasibility checks (`"owned_stamp_bounded_projection"`), but the
+original weight vector cannot be independently reconstructed from the
+compact object. This is an explicit portability and threat-model
+boundary, not a stronger statistical claim.
 
 ## Reportable scope and coverage
 
@@ -202,8 +243,10 @@ Other pvstackr-fitting:
 
 ``` r
 set.seed(1)
-# Injected stack_psis demo: a stacked draw matrix plus supplied PSIS weights
-# and Pareto-k (the function does not run `loo` by default). Fixed-effect
+# Fail-closed stack_psis demo: equal placeholder weights and arbitrary
+# Pareto-k values do not establish that PSIS ran. This example deliberately
+# omits producer/version, so it remains diagnostic-only.
+# Fixed-effect
 # columns are named like `b_*`; weights have one column per plausible value.
 M <- 2L
 stacked_draws <- matrix(
@@ -219,29 +262,21 @@ fit_psis <- pv_fit_stack_psis(
   pareto_k      = pareto_k,
   control       = pv_control(method = "stack_psis")
 )
-fit_psis                    # a stack_psis pvstackr_fit
+fit_psis                    # blocked: provenance_incomplete
 #> pvstackr fit
 #>   method: stack_psis
-#>   status: ok
-#>   fixed effects: 2
+#>   status: blocked
+#>   fixed effects: 0
 #>   target: none
 #>   draws: not retained
-#>   diagnostics: psis, pooling, weighted
-#>   interval note: intervals are descriptive rather than coverage-claimable.
-get_estimates(fit_psis)     # interval_role = "psis_*"; coverage_claim_allowed = FALSE
-#>          term    estimate       se std.error         df df_method df_complete
-#> 1 b_Intercept  0.03808867 4.335938  4.335938 4.5036e+15   classic          NA
-#> 2         b_x -0.07074459 4.828052  4.828052 4.5036e+15   classic          NA
-#>   conf_level  conf_low conf_high  conf.low conf.high      interval_role
-#> 1       0.95 -8.460193  8.536371 -8.460193  8.536371 psis_classic_rubin
-#> 2       0.95 -9.533552  9.392063 -9.533552  9.392063 psis_classic_rubin
-#>   coverage_claim_allowed parameter_scope            target_source target_hash
-#> 1                  FALSE    fixed_effect stack_psis_rubin_pooling    90cfbed1
-#> 2                  FALSE    fixed_effect stack_psis_rubin_pooling    90cfbed1
-#>             pooling_source pooling_hash psis_status pareto_k_max
-#> 1 stack_psis_rubin_pooling     90cfbed1          ok          0.2
-#> 2 stack_psis_rubin_pooling     90cfbed1          ok          0.2
-#>   psis_k_threshold
-#> 1              0.7
-#> 2              0.7
+#>   diagnostics: psis, redaction
+#>   reason codes: psis_weight_provenance_incomplete
+#>   warnings: 1
+get_diagnostics(fit_psis)$psis[c("status", "weight_method")]
+#> $status
+#> [1] "provenance_incomplete"
+#> 
+#> $weight_method
+#> [1] "unspecified_external"
+#> 
 ```

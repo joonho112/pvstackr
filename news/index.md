@@ -1,5 +1,161 @@
 # Changelog
 
+## pvstackr 0.2.0
+
+- Validation stamps no longer depend on the R version that wrote them.
+  The stamp hashed the whole serialization stream, whose fourteen-byte
+  header records the writing R version, so a saved fit failed its own
+  stamp when it was read back under a different R version and its
+  accessors refused to return anything. The header is now excluded, and
+  the four stamps – fit, summary, method comparison, and comparison
+  source projection – are portable across R versions and machines. The
+  bundled example fit was regenerated under the corrected scheme.
+
+- The bundled brms adapter is now public:
+  [`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+  [`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+  and
+  [`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md).
+  Injecting all three into
+  [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+  runs the same fitting, extraction, and diagnostic code the bundled
+  backend runs, so the two routes are one implementation rather than two
+  that have to be kept in step, and any one of the three can be replaced
+  to attach a different engine. The routes are not interchangeable in
+  what they record: an injected fit carries injected engine and
+  diagnostic provenance, and the bundled route additionally checks
+  backend availability before sampling. A reportable injected fit needs
+  all three; an adapter that supplies only a fit and a draws function
+  leaves the sampler evidence incomplete and the fit is blocked.
+
+- [`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+  now resolves the Stan backend itself when it is reached through an
+  injected adapter, instead of rejecting every `pv_control(backend = )`
+  value the bundled route would have resolved for it. Cache directories
+  remain the injected adapter’s own responsibility, as the recorded
+  provenance has always said; create the directory first or pass
+  `cache_dir = NULL`. Under `backend = "brms"` a supplied
+  `diagnose_function` is still ignored in favour of the bundled sampler
+  record, but the fit now always records that the override was ignored,
+  not only when the override happened to return a `sampler` element.
+
+- A population-level prior (`class = "b"` with no `coef`) is now
+  expanded onto the individual slope coefficients instead of being
+  refused. `stack_direct` materializes the model matrix and fits
+  `0 + ...`, which turns the intercept into an ordinary column, so
+  passing such a prior through unchanged would have silently widened it
+  to cover the intercept. Expanding it restores the scope the prior had
+  against the original formula. Priors whose scope cannot be reproduced
+  exactly – intercept-class, coefficient-specific, grouped, or opaque –
+  are still refused before the backend runs, and supplying any explicit
+  prior still raises the `explicit_prior_warning` reason code.
+
+- `stack_psis` now separates the weight input route, Pareto-k source,
+  and smoothing provenance. Supplied or injected weights can enter the
+  reportable caller-declared external-PSIS route only when the caller
+  records both an external producer and version; this records a
+  declaration, not package verification; otherwise they fail closed, as
+  do raw self-normalized log ratios. Every path records per-PV
+  Kish-style iid weight ESS, its draw-count fraction, and the maximum
+  normalized weight. These are weight-concentration diagnostics, not
+  MCMC ESS,
+  [`loo::relative_eff()`](https://mc-stan.org/loo/reference/relative_eff.html),
+  or a replacement for the immutable Pareto-k gate. Mixed weight routes
+  are rejected rather than silently prioritized. The legacy
+  `fallback = "warn"` request now emits its scheduled deprecation
+  warning and still behaves as immutable fail-closed `"block"`.
+
+- New bundled brms backend for the stacked fit:
+  `pv_fit(method = "stack_direct")` with `pv_control(backend = "brms")`
+  now runs without an injected `fit_function`/`draws_function` pair. The
+  bundled adapter fits the prepared stacked formula with
+  [`brms::brm()`](https://paulbuerkner.com/brms/reference/brm.html)
+  (through cmdstanr when it is installed and CmdStan is configured,
+  rstan when cmdstanr is absent; an installed cmdstanr without a working
+  CmdStan is an error, not a fallback) and returns fixed-effect and
+  residual-scale draws as a plain base matrix. brms is in Suggests;
+  injected adapters remain the mechanism for other engines, and
+  `per_pv`/`stack_psis` inputs are unchanged.
+
+- Final `pvstackr_fit` objects now carry an exact validation record. A
+  deep tier preserves the full semantic checks, while a cheap tier
+  re-hashes the current package-owned payload with domain-separated
+  SHA-256 and rejects stale stamps. This catches same-moment draw
+  replacements, coordinated proposal/weight row changes, hidden leaf
+  attributes, and self-rehashed data-free design snapshots that
+  summary-only validation cannot distinguish. Opaque retained backend
+  objects are explicit fast-tier exceptions and force deep validation.
+  Public fit accessors and fit print/summary methods use the rehash
+  tier, avoiding repeated method-specific recomputation while still
+  reading every mutable retained payload byte.
+
+- Blocked fits now use a generic fail-closed retention firewall.
+  Effective `return_draws`, `keep_data`, `keep_backend_fit`, and
+  `keep_log_lik` are always `FALSE`; reportable estimates and heavy
+  design, stack-fit, CCC, draw, weight, pooling, backend, and
+  log-likelihood payloads are absent. Blocked `stack_direct` fits may
+  retain only a canonical independently valid external target plus exact
+  slim sampler or scalar CCC gate evidence, while blocked `stack_psis`
+  fits retain only the canonical Pareto-k/provenance decision record and
+  bounded weight-concentration diagnostics. The recursive validator also
+  rejects hidden payloads in nested fields or leaf attributes. Because
+  `per_pv` has no typed blocked schema, relabeling a reportable
+  reference fit as blocked is rejected.
+
+- Historical PSIS results now have an explicit inspection-only migration
+  path.
+  [`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  returns current validated fits unchanged but projects any non-current
+  `stack_psis` fit to bounded Pareto-k evidence and a redaction record;
+  saved estimates, draws, pooling, weights, backend objects, and data
+  are not migrated, and estimate/draw accessors refuse the inspection
+  object. New method comparisons and fit/comparison summaries carry
+  deep-valid compact source reportability objects, canonical source
+  projections, and owned-payload SHA-256 records. Pre-marker serialized
+  comparisons or summaries containing PSIS are refused and must be
+  rebuilt, while an independent semantic gate also rejects warning PSIS
+  rows and any blocked row retaining numeric or pooling metadata.
+
+## pvstackr 0.1.1
+
+Patch release fixing two bugs found while preparing the LSAE software
+article. Point estimates are unchanged for every method; the fixes
+affect `stack_psis` interval width and the acceptance of
+[`posterior::draws_matrix`](https://mc-stan.org/posterior/reference/draws_matrix.html)
+inputs.
+
+### Bug fixes
+
+- **`stack_psis` PSIS-weighted covariance.** `pv_weighted_mean_cov()`
+  applied `sqrt(weights)` to only one factor of the cross-product
+  (`crossprod(centered * sqrt(weights), centered)`), weighting each draw
+  by `sqrt(w)` instead of `w`. This inflated `stack_psis`
+  within-imputation covariances by roughly the square root of the draw
+  count. Weighted-mean point estimates were unaffected, but `stack_psis`
+  standard errors and intervals reported by 0.1.0 are inflated and
+  should be recomputed. Added a direct regression test for the
+  weighted-covariance formula.
+
+- **CCC validation of
+  [`posterior::draws_matrix`](https://mc-stan.org/posterior/reference/draws_matrix.html)
+  inputs.** When a `draws_function` returned a
+  [`posterior::draws_matrix`](https://mc-stan.org/posterior/reference/draws_matrix.html)
+  (the natural output of
+  [`posterior::as_draws_matrix()`](https://mc-stan.org/posterior/reference/draws_matrix.html)
+  on a `brmsfit`), `validate_pvstackr_ccc()` compared `draws_fe_cal`
+  against the fixed-effect block of `draws_calibrated` with a strict
+  [`identical()`](https://rdrr.io/r/base/identical.html). The
+  `draws_matrix` S3 class and draw-id row names made that check fail
+  even when the values matched, aborting with “CCC `draws_fe_cal` must
+  equal the fixed-effect block of `draws_calibrated`”. Draw matrices are
+  now normalized to plain base matrices at the ingestion boundary
+  (`ccc_as_draw_matrix()`), so the identity check compares values and
+  column names rather than S3 provenance. Added regression tests for a
+  `draws_matrix`-classed input through calibration and validation, plus
+  (under the optional backend-smoke suite) a genuine
+  [`posterior::as_draws_matrix()`](https://mc-stan.org/posterior/reference/draws_matrix.html)
+  through the full `stack_direct` CCC path.
+
 ## pvstackr 0.1.0
 
 First public release. `pvstackr` calibrates a stacked Bayesian-backend
@@ -95,7 +251,8 @@ and intervals to a design-based reference.
   A5 explains how to connect to it without bundling licensed files.
 - **`stack_psis` expects supplied diagnostics.** It uses PSIS weights
   and Pareto-k diagnostics that you supply or inject; the package does
-  not run live `loo::psis()` in v0.1.
+  not run live
+  [`loo::psis()`](https://mc-stan.org/loo/reference/psis.html) in v0.1.
 - **Not affiliated.** This is an independent research package and is not
   affiliated with or endorsed by the OECD or the PISA programme.
 - **Method paper forthcoming.** The methodology manuscript is in

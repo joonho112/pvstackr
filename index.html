@@ -34,7 +34,7 @@
 
     <a class="navbar-brand me-2" href="index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -98,10 +98,7 @@
 <p>You can install the development version of <code>pvstackr</code> from <a href="https://github.com/joonho112/pvstackr" class="external-link">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
-<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"joonho112/pvstackr"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># CRAN release coming soon:</span></span>
-<span><span class="co"># install.packages("pvstackr")</span></span></code></pre></div>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"joonho112/pvstackr"</span><span class="op">)</span></span></code></pre></div>
 <p>Optional live Bayesian backends (e.g. <code>cmdstanr</code>/<code>brms</code>) and their toolchains are <strong>not</strong> required for installation, loading, examples, or the default tests.</p>
 </div>
 <div class="section level2">
@@ -139,7 +136,7 @@
 </tr>
 <tr>
 <td><code>stack_psis</code></td>
-<td>Diagnostic/reference method: one stacked draw source plus supplied/precomputed or injected PSIS weights, Pareto-k diagnostics, and model-based Rubin pooling of PSIS-weighted fixed-effect summaries.</td>
+<td>Diagnostic/reference method: one stacked draw source plus externally produced weights, Pareto-k diagnostics, explicit PSIS producer/version provenance, and model-based Rubin pooling of weighted fixed-effect summaries.</td>
 </tr>
 <tr>
 <td><code>per_pv</code></td>
@@ -147,19 +144,20 @@
 </tr>
 </tbody>
 </table>
-<p>In the current package stage, all three method IDs are implemented through injected or precomputed light paths. <code>stack_psis</code> currently expects supplied or injected PSIS weights and Pareto-k diagnostics rather than depending on a live PSIS backend.</p>
+<p><code>stack_direct</code> can run without any adapter of your own: <code>pv_control(backend = "brms")</code> fits the stacked model with <code>brms</code>. It uses <code>cmdstanr</code> when that package is installed and CmdStan is configured, and <code>rstan</code> when <code>cmdstanr</code> is not installed at all; an installed <code>cmdstanr</code> without a working CmdStan is an error rather than a silent fallback. <code>brms</code> stays in Suggests, so nothing heavy is needed to install, load, or test the package. To attach a different engine, inject a fit function, a draws function, and a diagnose function; the bundled adapter is exported (<code><a href="reference/pv_backend_brms_fit_function.html">pv_backend_brms_fit_function()</a></code> and its two companions) so you can reuse it and replace only the part that differs. All three are required for a reportable fit — an adapter that reports no sampler diagnostics leaves the evidence incomplete and the fit is blocked.</p>
+<p><code>per_pv</code> and <code>stack_psis</code> remain injected or precomputed light paths. <code>stack_psis</code> expects supplied or injected weights, Pareto-k diagnostics, and a caller-declared external PSIS producer and version rather than depending on a live PSIS backend. Raw self-normalized log ratios and external weights without that provenance are diagnostic-only and fail closed. Diagnostics include per-PV Kish-style iid weight ESS and maximum normalized weight; these are not MCMC ESS or autocorrelation-adjusted <code>loo</code> diagnostics.</p>
 </div>
 <div class="section level2">
 <h2 id="scope">Scope<a class="anchor" aria-label="anchor" href="#scope"></a>
 </h2>
 <p>The <code>stack_direct</code> path uses a one-stacked-fit architecture for Bayesian/backend fitting while preserving a design-based external Rubin/BRR-Fay fixed-effect target. <code>per_pv</code> and <code>stack_psis</code> are reference/diagnostic paths: they use model-based within-PV covariance in Rubin pooling and do not construct or calibrate to the external BRR-Fay target.</p>
 <p>Interval metadata follows that method boundary. Coverage-claimable intervals are reserved for <code>stack_direct</code> rows backed by an external BRR-Fay target with Barnard-Rubin df and explicit <code>df_complete</code>; <code>per_pv</code> and <code>stack_psis</code> intervals remain descriptive/reference intervals even when they use Barnard-Rubin df.</p>
-<p>The package should not be read as claiming unqualified “same inference with one MCMC.” In v0.1, calibrated reporting is scoped to fixed effects and is not a full posterior for all model parameters.</p>
+<p>The package should not be read as claiming unqualified “same inference with one MCMC.” Calibrated reporting is scoped to fixed effects and is not a full posterior for all model parameters.</p>
 </div>
 <div class="section level2">
 <h2 id="current-stack_direct-boundary">Current <code>stack_direct</code> Boundary<a class="anchor" aria-label="anchor" href="#current-stack_direct-boundary"></a>
 </h2>
-<p><code>stack_direct</code> v0.1 requires an external <code>pvstackr_brr_target</code> from <code><a href="reference/pv_brr_target.html">pv_brr_target()</a></code>. The public wrapper checks formula RHS equality, fixed-effect name alignment, target provenance, and target policy before fitting. Group terms such as <code>(1 | school)</code> and <code>(1 || school)</code> are rejected in this version because the current BRR-Fay target engine is fixed-effect-only.</p>
+<p><code>stack_direct</code> requires an external <code>pvstackr_brr_target</code> from <code><a href="reference/pv_brr_target.html">pv_brr_target()</a></code>. The public wrapper checks formula RHS equality, fixed-effect name alignment, target provenance, and target policy before fitting. Group terms such as <code>(1 | school)</code> and <code>(1 || school)</code> are rejected in this version because the current BRR-Fay target engine is fixed-effect-only.</p>
 <p>Reportable <code>pvstackr_fit</code> objects contain the design, target, stacked fit, CCC calibration object, fixed-effect estimate table, and calibrated fixed-effect draws when requested by <code>control$return_draws</code>. Variance components and sampler diagnostic columns may be retained inside nested backend or stack-fit components, but they are not calibrated reportable estimates.</p>
 <p>Under the default <code>control$center = "target"</code>, the reported fixed-effect estimate and standard error are the external Rubin/BRR-Fay target values: <code>estimate</code> is the target coefficient after CCC centering, and <code>se</code> is <code>sqrt(diag(target$T_MI))</code> with the target degrees of freedom and interval metadata. The stacked fit supplies the raw draw cloud for calibration, retained calibrated fixed-effect draws when requested, and center-separation agreement diagnostics. It is not a replacement source for the headline Rubin/BRR-Fay fixed-effect numbers.</p>
 <p>Reportable <code>stack_direct</code> fits require <code>control$center = "target"</code>. The posterior-centered CCC convention is reserved for diagnostic/exploratory checks because it retains the raw stacked posterior center while using the external target covariance.</p>
@@ -251,7 +249,7 @@
 <span><span class="co">#&gt;   fixed effects: 3</span></span>
 <span><span class="co">#&gt;   target: external_brr_fay_rubin</span></span>
 <span><span class="co">#&gt;   draws: not retained</span></span>
-<span><span class="co">#&gt;   diagnostics: preflight, stack_fit, stack_fit_warnings, ccc</span></span>
+<span><span class="co">#&gt;   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc</span></span>
 <span><span class="co">#&gt;   interval note: intervals are descriptive rather than coverage-claimable.</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/get_estimates.html">get_estimates</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">[</span></span>
@@ -264,10 +262,10 @@
 <span><span class="co">#&gt; 3    b_female   2.143702 3.5550309 1.013730 -41.60687  45.89428</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/get_target.html">get_target</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">$</span><span class="va">target_hash</span></span>
-<span><span class="co">#&gt; [1] "4a4d40f8"</span></span>
+<span><span class="co">#&gt; [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="reference/get_diagnostics.html">get_diagnostics</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "preflight"          "stack_fit"          "stack_fit_warnings"</span></span>
-<span><span class="co">#&gt; [4] "ccc"</span></span>
+<span><span class="co">#&gt; [1] "preflight"          "sampler"            "sampler_gate"      </span></span>
+<span><span class="co">#&gt; [4] "stack_fit"          "stack_fit_warnings" "ccc"</span></span>
 <span><span class="fu"><a href="reference/get_draws.html">get_draws</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; NULL</span></span></code></pre></div>
 </div>
@@ -304,14 +302,26 @@
 <span>  method <span class="op">=</span> <span class="st">"stack_direct"</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="reference/pv_control.html">pv_control</a></span><span class="op">(</span></span>
 <span>    method <span class="op">=</span> <span class="st">"stack_direct"</span>,</span>
-<span>    backend <span class="op">=</span> <span class="st">"injected"</span>,</span>
+<span>    backend <span class="op">=</span> <span class="st">"brms"</span>,</span>
 <span>    iter <span class="op">=</span> <span class="fl">2000L</span>,</span>
 <span>    warmup <span class="op">=</span> <span class="fl">1000L</span>,</span>
 <span>    chains <span class="op">=</span> <span class="fl">4L</span>,</span>
 <span>    seed <span class="op">=</span> <span class="fl">20260607</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  fit_function <span class="op">=</span> <span class="va">fit_stacked_model</span>,</span>
-<span>  draws_function <span class="op">=</span> <span class="va">extract_fixed_effect_draws</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># To drive a different engine, inject all three adapter functions instead.</span></span>
+<span><span class="co"># The bundled ones are exported, so you can reuse the parts you do not replace.</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/pv_fit.html">pv_fit</a></span><span class="op">(</span></span>
+<span>  data <span class="op">=</span> <span class="va">design</span><span class="op">$</span><span class="va">data</span>,</span>
+<span>  formula <span class="op">=</span> <span class="va">design</span><span class="op">$</span><span class="va">formula</span>,</span>
+<span>  target <span class="op">=</span> <span class="va">target</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"stack_direct"</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="reference/pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"stack_direct"</span>, backend <span class="op">=</span> <span class="st">"cmdstanr"</span><span class="op">)</span>,</span>
+<span>  fit_function      <span class="op">=</span> <span class="va">pv_backend_brms_fit_function</span>,</span>
+<span>  draws_function    <span class="op">=</span> <span class="va">pv_backend_brms_draws_function</span>,</span>
+<span>  diagnose_function <span class="op">=</span> <span class="va">pv_backend_brms_sampler_diagnostics</span>,</span>
+<span>  cache_dir         <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
@@ -421,7 +431,7 @@
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT © JoonHo Lee. See <a href="LICENSE.html">LICENSE.md</a> for details.</p>
+<p>MIT © JoonHo Lee. See <a href="LICENSE">LICENSE.md</a> for details.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -467,7 +477,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

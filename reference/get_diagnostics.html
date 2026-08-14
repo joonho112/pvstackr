@@ -17,7 +17,7 @@ into the reportable estimate table."><meta property="og:image" content="https://
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ into the reportable estimate table."><meta property="og:image" content="https://
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Access pvstackr Diagnostics</h1>
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a>, <a href="https://github.com/joonho112/pvstackr/blob/main/R/legacy-psis.R" class="external-link"><code>R/legacy-psis.R</code></a></small>
       <div class="d-none name"><code>get_diagnostics.Rd</code></div>
     </div>
 
@@ -75,6 +75,9 @@ into the reportable estimate table.</p>
 <span><span class="fu">get_diagnostics</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'pvstackr_method_comparison'</span></span>
+<span><span class="fu">get_diagnostics</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'pvstackr_legacy_psis_inspection'</span></span>
 <span><span class="fu">get_diagnostics</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -92,13 +95,21 @@ into the reportable estimate table.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A structured diagnostics list.</p>
+    <p>A structured diagnostics list. For a legacy PSIS inspection object
+this is bounded Pareto-k evidence plus its redaction record; historical
+pooling, weights, estimates, and draws are never returned.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>Diagnostic keys are method-specific; inspect <code>names(get_diagnostics(x))</code>. A
-<code>stack_direct</code> fit carries <code>preflight</code>, <code>stack_fit</code>, <code>stack_fit_warnings</code>, and
-<code>ccc</code>; a <code>per_pv</code> fit carries <code>reference</code> and <code>pooling</code>; a <code>stack_psis</code> fit
+current <code>stack_direct</code> fit carries top-level <code>sampler</code> and <code>sampler_gate</code>
+records plus <code>preflight</code>, <code>stack_fit</code>, <code>stack_fit_warnings</code>, and <code>ccc</code>;
+sampler-blocked fits retain only slim preflight/sampler/gate evidence and the
+independently valid external target, rebuilt from an exact recursive
+allowlist with no formula object in preflight and a safe formula environment
+on the target snapshot. A legacy cached stack-direct fit may
+predate the sampler keys. A <code>per_pv</code> fit carries <code>reference</code> and <code>pooling</code>;
+a <code>stack_psis</code> fit
 carries <code>psis</code> (status and Pareto-k), <code>pooling</code>, and <code>weighted</code>. A method
 comparison instead carries comparison-level keys such as <code>agreement</code>,
 <code>method_diagnostics</code>, <code>timing</code>, and <code>target_overlap</code> (the shared-provenance
@@ -121,8 +132,8 @@ summary).</p>
 <span class="r-in"><span>  <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="va">path</span><span class="op">)</span><span class="op">$</span><span class="va">fit</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu">get_diagnostics</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "preflight"          "stack_fit"          "stack_fit_warnings"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [4] "ccc"               </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "preflight"          "sampler"            "sampler_gate"      </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [4] "stack_fit"          "stack_fit_warnings" "ccc"               </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -134,7 +145,7 @@ summary).</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

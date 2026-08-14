@@ -18,6 +18,9 @@ get_estimates(x, ...)
 
 # S3 method for class 'pvstackr_method_comparison'
 get_estimates(x, ...)
+
+# S3 method for class 'pvstackr_legacy_psis_inspection'
+get_estimates(x, ...)
 ```
 
 ## Arguments
@@ -36,7 +39,8 @@ A data frame of reportable fixed-effect estimates. Fit estimate tables
 include interval/provenance columns such as `df_method`, `df_complete`,
 `interval_role`, `coverage_claim_allowed`, `target_source`,
 `target_hash`, `pooling_source`, and `pooling_hash` when those columns
-are part of the method contract.
+are part of the method contract. An inspection-only legacy PSIS object
+fails explicitly instead of returning historical numeric output.
 
 ## See also
 
@@ -67,8 +71,12 @@ if (nzchar(path)) {
 #> 1       0.95 442.31804 473.47013 442.31804 473.47013 descriptive_classic_rubin
 #> 2       0.95  44.41457  49.35215  44.41457  49.35215 descriptive_classic_rubin
 #> 3       0.95 -41.60687  45.89428 -41.60687  45.89428 descriptive_classic_rubin
-#>   coverage_claim_allowed parameter_scope          target_source target_hash
-#> 1                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 2                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 3                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
+#>   coverage_claim_allowed parameter_scope          target_source
+#> 1                  FALSE    fixed_effect external_brr_fay_rubin
+#> 2                  FALSE    fixed_effect external_brr_fay_rubin
+#> 3                  FALSE    fixed_effect external_brr_fay_rubin
+#>                                                               target_hash
+#> 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
 ```

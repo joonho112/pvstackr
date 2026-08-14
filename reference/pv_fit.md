@@ -95,7 +95,7 @@ If `control` is `NULL` it is constructed with
 verbatim to the dispatched fitter, so consult that fitter's signature
 for the available extras (for example, the injected backend adapters of
 [`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md),
-or the injected PSIS weights of
+or caller-declared external PSIS weights of
 [`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md)).
 
 In this package stage, only `stack_direct` output is coverage-claimable:
@@ -138,12 +138,22 @@ target <- pv_brr_target(
   id_cols = design$id_cols
 )
 
-# A live stack_direct fit needs an injected/precomputed backend:
+# A live stack_direct fit needs a backend. The bundled one needs no adapter:
 if (FALSE) { # \dontrun{
 fit <- pv_fit(
   data = pisa_tiny, formula = OUTCOME ~ x + female,
   target = target, method = "stack_direct",
-  fit_function = my_backend_adapter, draws_function = my_draws_adapter
+  control = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# Injecting an adapter takes all three functions; a fit that arrives without
+# sampler diagnostics is blocked rather than reported.
+fit <- pv_fit(
+  data = pisa_tiny, formula = OUTCOME ~ x + female,
+  target = target, method = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  fit_function = my_backend_adapter, draws_function = my_draws_adapter,
+  diagnose_function = my_diagnose_adapter, cache_dir = NULL
 )
 } # }
 
@@ -164,8 +174,12 @@ if (nzchar(path)) {
 #> 1       0.95 442.31804 473.47013 442.31804 473.47013 descriptive_classic_rubin
 #> 2       0.95  44.41457  49.35215  44.41457  49.35215 descriptive_classic_rubin
 #> 3       0.95 -41.60687  45.89428 -41.60687  45.89428 descriptive_classic_rubin
-#>   coverage_claim_allowed parameter_scope          target_source target_hash
-#> 1                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 2                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
-#> 3                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8
+#>   coverage_claim_allowed parameter_scope          target_source
+#> 1                  FALSE    fixed_effect external_brr_fay_rubin
+#> 2                  FALSE    fixed_effect external_brr_fay_rubin
+#> 3                  FALSE    fixed_effect external_brr_fay_rubin
+#>                                                               target_hash
+#> 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
+#> 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa
 ```

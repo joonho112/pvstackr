@@ -21,7 +21,7 @@ convention, and how heavy a fitted object is allowed to be."><meta property="og:
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -133,7 +133,9 @@ no fixed seed.</p></dd>
 <dt id="arg-backend">backend<a class="anchor" aria-label="anchor" href="#arg-backend"></a></dt>
 <dd><p>Backend policy. Character scalar; one of <code>"none"</code>,
 <code>"injected"</code>, <code>"brms"</code>, or <code>"cmdstanr"</code>. Default <code>"none"</code>. In this package
-stage the backend fit is injected or precomputed.</p></dd>
+stage <code>"brms"</code> selects the bundled brms adapter (with deterministic
+cmdstanr/rstan resolution), while other live engines use an injected
+<code>fit_function</code> adapter or precomputed draws.</p></dd>
 
 
 <dt id="arg-conf-level">conf_level<a class="anchor" aria-label="anchor" href="#arg-conf-level"></a></dt>
@@ -142,9 +144,10 @@ Numeric scalar in <code>(0, 1)</code>. Default <code>0.95</code>.</p></dd>
 
 
 <dt id="arg-psis-k-threshold">psis_k_threshold<a class="anchor" aria-label="anchor" href="#arg-psis-k-threshold"></a></dt>
-<dd><p>Pareto-k warning threshold for <code>stack_psis</code>. Numeric
-scalar in <code>(0, 1]</code>. Default <code>0.7</code>, matching the Vehtari et al. unreliable-k
-cutoff.</p></dd>
+<dd><p>Pareto-k reportability threshold for <code>stack_psis</code>.
+Numeric scalar in <code>(0, 0.7]</code>. Default <code>0.7</code>; values below <code>0.7</code> may impose
+a stricter gate, but the package-level ceiling cannot be relaxed. Every
+plausible value must have a finite Pareto-k strictly below this threshold.</p></dd>
 
 
 <dt id="arg-center">center<a class="anchor" aria-label="anchor" href="#arg-center"></a></dt>
@@ -162,8 +165,10 @@ supported. Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-return-draws">return_draws<a class="anchor" aria-label="anchor" href="#arg-return-draws"></a></dt>
-<dd><p>Logical scalar. Whether fitted objects retain reportable
-fixed-effect draws (read via <code><a href="get_draws.html">get_draws()</a></code>). Default <code>TRUE</code>.</p></dd>
+<dd><p>Logical scalar. Whether fitted objects retain their
+method-specific fixed-effect draw representation. For <code>stack_direct</code>, read
+the calibrated matrix via <code><a href="get_draws.html">get_draws()</a></code>. Per-PV matrices and the PSIS
+proposal/weight pair remain in <code><a href="get_diagnostics.html">get_diagnostics()</a></code>. Default <code>TRUE</code>.</p></dd>
 
 
 <dt id="arg-keep-data">keep_data<a class="anchor" aria-label="anchor" href="#arg-keep-data"></a></dt>
@@ -173,7 +178,9 @@ data frame. Default <code>FALSE</code> (fits stay light).</p></dd>
 
 <dt id="arg-keep-backend-fit">keep_backend_fit<a class="anchor" aria-label="anchor" href="#arg-keep-backend-fit"></a></dt>
 <dd><p>Logical scalar. Whether fitted objects may retain the
-heavy backend fit object. Default <code>FALSE</code> (fits stay light).</p></dd>
+heavy, opaque backend fit object. This requires <code>keep_data = TRUE</code> on
+public composite fits because a backend object may contain analysis data.
+Default <code>FALSE</code> (fits stay light).</p></dd>
 
 
 <dt id="arg-keep-log-lik">keep_log_lik<a class="anchor" aria-label="anchor" href="#arg-keep-log-lik"></a></dt>
@@ -224,10 +231,25 @@ estimate table; treat <code>"posterior"</code> as a CCC check, never a deliverab
 
 
 <p>The retention flags govern how much a fitted <code>pvstackr_fit</code> carries, and the
-defaults keep fits light. <code>return_draws</code> (default <code>TRUE</code>) retains the
-reportable fixed-effect draws used downstream by <code><a href="get_draws.html">get_draws()</a></code>; the remaining
-flags default to <code>FALSE</code>. <code>keep_data</code> retains the user data frame,
-<code>keep_backend_fit</code> retains the heavy backend fit object, and <code>keep_log_lik</code>
+defaults keep fits light. <code>return_draws</code> (default <code>TRUE</code>) retains only the
+method-specific fixed-effect draw representation: calibrated top-level draws
+for <code>stack_direct</code>, fixed-effect-only per-PV matrices in diagnostics for
+<code>per_pv</code>, and a fixed-effect proposal matrix paired with normalized PV
+weights in diagnostics for <code>stack_psis</code>. <code><a href="get_draws.html">get_draws()</a></code> exposes only the
+synthesized top-level <code>stack_direct</code> matrix; use <code><a href="get_diagnostics.html">get_diagnostics()</a></code> for the
+other two representations. Package-owned raw full stacked draws, nuisance
+draws, and duplicate calibrated matrices are never retained in a final
+composite fit. This does not inspect or override explicitly authorized
+opaque backend objects (<code>keep_backend_fit</code>) or log-likelihood matrices
+(<code>keep_log_lik</code>), which have separate retention authorities.
+Blocked fits fail closed and record effective <code>return_draws</code>, <code>keep_data</code>,
+<code>keep_backend_fit</code>, and <code>keep_log_lik</code> values of <code>FALSE</code>, irrespective of
+the original retention request. <code>keep_data</code> retains the user data frame in the
+top-level design; otherwise the fit stores a metadata/hash-only design
+snapshot with a base-environment formula. Package-owned stacked-data copies
+are not retained inside composite fits. <code>keep_backend_fit</code> retains an opaque
+backend object and therefore requires <code>keep_data = TRUE</code>, because the package
+cannot prove that an arbitrary backend object is data-free. <code>keep_log_lik</code>
 retains log-likelihood draws. Enable the <code>FALSE</code>-by-default flags only when
 you need the extra payload (for example, re-extraction or model checking), as
 each materially increases the size of the saved object.</p>
@@ -276,7 +298,7 @@ each materially increases the size of the saved object.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

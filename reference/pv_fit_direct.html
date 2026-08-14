@@ -5,10 +5,10 @@
       fontURL: "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/output/chtml/fonts/woff-v2"
     }
   };
-</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Fit the Direct Stacked Plausible-Value Model — pv_fit_direct"><meta name="description" content="pv_fit_direct() runs the v0.1 stack_direct path: fixed-effect-only
+</script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet"><script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet"><link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet"><script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Fit the Direct Stacked Plausible-Value Model — pv_fit_direct"><meta name="description" content="pv_fit_direct() runs the current stack_direct path: fixed-effect-only
 compatibility preflight, one stacked plausible-value fit, CCC calibration to
 an external BRR-Fay/Rubin target, and assembly of a reportable
-pvstackr_fit object."><meta property="og:description" content="pv_fit_direct() runs the v0.1 stack_direct path: fixed-effect-only
+pvstackr_fit object."><meta property="og:description" content="pv_fit_direct() runs the current stack_direct path: fixed-effect-only
 compatibility preflight, one stacked plausible-value fit, CCC calibration to
 an external BRR-Fay/Rubin target, and assembly of a reportable
 pvstackr_fit object."><meta property="og:image" content="https://joonho112.github.io/pvstackr/logo.svg"></head><body>
@@ -19,7 +19,7 @@ pvstackr_fit object."><meta property="og:image" content="https://joonho112.githu
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -61,7 +61,7 @@ pvstackr_fit object."><meta property="og:image" content="https://joonho112.githu
     </div>
 
     <div class="ref-description section level2">
-    <p><code>pv_fit_direct()</code> runs the v0.1 <code>stack_direct</code> path: fixed-effect-only
+    <p><code>pv_fit_direct()</code> runs the current <code>stack_direct</code> path: fixed-effect-only
 compatibility preflight, one stacked plausible-value fit, CCC calibration to
 an external BRR-Fay/Rubin target, and assembly of a reportable
 <code>pvstackr_fit</code> object.</p>
@@ -109,14 +109,20 @@ an external BRR-Fay/Rubin target, and assembly of a reportable
 
 
 <dt id="arg-family">family<a class="anchor" aria-label="anchor" href="#arg-family"></a></dt>
-<dd><p>Optional backend family object passed to the injected fit
-function.</p></dd>
+<dd><p>Optional family representation. Reportable <code>stack_direct</code>
+accepts only Gaussian/identity semantics and passes a package-owned
+canonical <code>stats::gaussian("identity")</code> object to the backend; executable
+closures supplied by the caller are never forwarded.</p></dd>
 
 
 <dt id="arg-prior">prior<a class="anchor" aria-label="anchor" href="#arg-prior"></a></dt>
-<dd><p>Optional backend prior object. Explicit priors are allowed but
-reported as warning-level diagnostics because the current identity result
-is scoped to MLE/flat-prior fixed-effect regimes.</p></dd>
+<dd><p>Optional backend prior object. Under the materialized
+<code>stack_direct</code> design, only recognized invariant prior tables are passed
+through; coefficient-, intercept-, scoped-, and opaque priors fail before
+backend execution because their identities cannot be preserved exactly.
+Accepted explicit priors are still reported as warning-level diagnostics
+because the current identity result is scoped to MLE/flat-prior
+fixed-effect regimes.</p></dd>
 
 
 <dt id="arg-fit-function">fit_function<a class="anchor" aria-label="anchor" href="#arg-fit-function"></a></dt>
@@ -139,7 +145,17 @@ fixed-effect convention, including distributional names such as
 
 
 <dt id="arg-diagnose-function">diagnose_function<a class="anchor" aria-label="anchor" href="#arg-diagnose-function"></a></dt>
-<dd><p>Optional backend diagnostic extractor.</p></dd>
+<dd><p>Injected backend diagnostic extractor. Required for
+a reportable injected fit: without it the sampler evidence is incomplete and
+the fit is blocked.
+Its existing named-list fields are preserved, while sampler fields are
+normalized under <code>stack_fit$diagnostics$sampler</code>. A missing, malformed, or
+failed extractor produces explicit incomplete diagnostics and reason codes.
+When the bundled brms adapter is used, pvstackr automatically obtains
+R-hat and bulk/tail ESS from posterior summaries and divergences from brms
+NUTS parameters. The normalized record includes total and per-chain ESS
+minima, chain count, post-warmup draws per chain, source, and completeness.
+Extraction records diagnostics but does not itself change fit status.</p></dd>
 
 
 <dt id="arg-log-lik-function">log_lik_function<a class="anchor" aria-label="anchor" href="#arg-log-lik-function"></a></dt>
@@ -151,8 +167,18 @@ fixed-effect convention, including distributional names such as
 
 
 <dt id="arg-cache-dir-cache-stem">cache_dir, cache_stem<a class="anchor" aria-label="anchor" href="#arg-cache-dir-cache-stem"></a></dt>
-<dd><p>Cache location metadata passed to the injected
-fit function.</p></dd>
+<dd><p>Cache directory and safe file stem. For the
+bundled brms backend, pvstackr creates the directory, verifies that it is
+writable, and uses brms <code>file_refit = "on_change"</code>. Set <code>cache_dir = NULL</code>
+to disable file caching. Injected adapters continue to own their cache
+implementation and receive these values only as fit arguments.</p>
+<p><code>"on_change"</code> tracks the data and the formula, <strong>not</strong> the sampler
+settings. Re-running with a different <code>seed</code>, or with different <code>chains</code>,
+<code>iter</code>, or <code>warmup</code>, reloads the cached fit: a changed chain or draw count
+is caught by the sampler gate and blocks the fit, but a changed seed
+returns the identical draws with no warning. Pass <code>cache_dir = NULL</code>, or a
+distinct <code>cache_stem</code>, when the sampler settings are what you are
+varying – a seed-stability check in particular.</p></dd>
 
 
 <dt id="arg-additional-args">additional_args<a class="anchor" aria-label="anchor" href="#arg-additional-args"></a></dt>
@@ -166,13 +192,22 @@ function.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>In v0.1, <code>stack_direct</code> is fixed-effect-only and requires an external
+    <p>The current <code>stack_direct</code> contract is fixed-effect-only and requires an external
 <code>pvstackr_brr_target</code> from <code><a href="pv_brr_target.html">pv_brr_target()</a></code>. The formula RHS and derived
 fixed-effect names must match the target exactly. Group terms such as
 <code>(1 | school)</code> are rejected until a two-level target engine is implemented.</p>
 <p>The returned <code>pvstackr_fit</code> has <code>status = "ok"</code>, <code>"warning"</code>, or
 <code>"blocked"</code>. Yellow CCC center separation and explicit priors produce
 warning-status fits; red CCC center separation blocks reportable estimates.
+Frozen sampler gates also promote R-hat or ESS findings to warning status and
+block incomplete diagnostics, hard R-hat/ESS failures, configuration
+mismatches, or any divergence before CCC calibration. A sampler-blocked fit
+retains the independently valid external target but removes design data,
+stack/backend fit, CCC payload, estimates, and draws. Its retained target is
+an exact canonical allowlisted snapshot whose formula uses the safe base
+environment and whose warnings are empty. Its preflight record is a
+formula-free snapshot, so extensions and caller/private environments are not
+retained.
 CCC calibration-matrix conditioning is also gated by <code>kappa_A</code>: values at or
 above <code>1e6</code> produce warning-status fits, and values at or above <code>1e8</code> block
 reportable estimates. Reportable estimates and retained draws are
@@ -256,7 +291,9 @@ multiple imputation. <em>Biometrika</em>, 86(4), 948-955.</p>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">pv_fit_direct</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  data <span class="op">=</span> <span class="va">pisa_tiny</span>, formula <span class="op">=</span> <span class="va">OUTCOME</span> <span class="op">~</span> <span class="va">x</span> <span class="op">+</span> <span class="va">female</span>,</span></span>
 <span class="r-in"><span>  target <span class="op">=</span> <span class="va">target</span>,</span></span>
-<span class="r-in"><span>  fit_function <span class="op">=</span> <span class="va">my_backend_adapter</span>, draws_function <span class="op">=</span> <span class="va">my_draws_adapter</span></span></span>
+<span class="r-in"><span>  control <span class="op">=</span> <span class="fu"><a href="pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"stack_direct"</span>, backend <span class="op">=</span> <span class="st">"cmdstanr"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  fit_function <span class="op">=</span> <span class="va">my_backend_adapter</span>, draws_function <span class="op">=</span> <span class="va">my_draws_adapter</span>,</span></span>
+<span class="r-in"><span>  diagnose_function <span class="op">=</span> <span class="va">my_diagnose_adapter</span>, cache_dir <span class="op">=</span> <span class="cn">NULL</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
@@ -276,10 +313,14 @@ multiple imputation. <em>Biometrika</em>, 86(4), 948-955.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1       0.95 442.31804 473.47013 442.31804 473.47013 descriptive_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2       0.95  44.41457  49.35215  44.41457  49.35215 descriptive_classic_rubin</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 3       0.95 -41.60687  45.89428 -41.60687  45.89428 descriptive_classic_rubin</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed parameter_scope          target_source target_hash</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE    fixed_effect external_brr_fay_rubin    4a4d40f8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   coverage_claim_allowed parameter_scope          target_source</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                  FALSE    fixed_effect external_brr_fay_rubin</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                                               target_hash</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -291,7 +332,7 @@ multiple imputation. <em>Biometrika</em>, 86(4), 948-955.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

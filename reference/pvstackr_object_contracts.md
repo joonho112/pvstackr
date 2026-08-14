@@ -2,7 +2,7 @@
 
 This page records the package-level object contracts used by the current
 public API. These contracts are intentionally conservative while
-`pvstackr` is in its v0.1 method stage.
+`pvstackr` is in its fixed-effect method stage.
 
 ## Current Method Boundary
 
@@ -17,13 +17,13 @@ posterior draws. `stack_psis` carries no formal target; its estimates
 are diagnostic/reference Rubin pooling of PSIS-weighted stacked draw
 summaries using model-based weighted covariance.
 
-## `stack_direct` v0.1 Boundary
+## `stack_direct` Boundary
 
 `stack_direct` requires an external `pvstackr_brr_target` from
 [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
 The wrapper checks formula RHS equality, fixed-effect name alignment,
 target provenance, and target policy before fitting. Group terms such as
-`(1 | school)` and `(1 || school)` are not accepted for the v0.1 BRR-Fay
+`(1 | school)` and `(1 || school)` are not accepted for the BRR-Fay
 target path because the current target engine is fixed-effect-only.
 
 ## `pvstackr_ccc` Contract
@@ -60,10 +60,26 @@ A reportable `stack_direct` `pvstackr_fit` with status `"ok"` or
 calibrated fixed-effect draws when `control$return_draws = TRUE`.
 Reportable `stack_direct` fits must use `control$center = "target"` so
 fixed-effect estimates are the external Rubin/BRR-Fay target centers.
-Top-level `warnings` are reserved for interpretation-level diagnostics
-such as explicit priors or yellow center separation. Routine backend
-draw-column drops, such as sampler columns named `lp__`, are retained in
-nested stack-fit diagnostics instead of becoming top-level fit warnings.
+Top-level calibrated fixed-effect draws are the only retained
+individual-draw matrix: nested raw stacked draws, nuisance draws, full
+calibrated draws, and duplicate calibrated fixed-effect matrices are
+removed for either retention setting. Blocked fits retain no individual
+draws and record effective `return_draws = FALSE`. Top-level `warnings`
+are reserved for interpretation-level diagnostics such as explicit
+priors or yellow center separation. Routine backend draw-column drops,
+such as sampler columns named `lp__`, are retained in nested stack-fit
+diagnostics instead of becoming top-level fit warnings.
+
+Every current `pvstackr_fit` also carries an exact `validation` record
+with a validation-schema ID, semantic-policy ID, canonicalizer ID,
+fast-path eligibility flag, and a domain-separated SHA-256 stamp. Deep
+validation evaluates the full method contract and then verifies this
+stamp. Cheap validation still re-hashes the current package-owned
+payload; it never trusts the stored stamp alone. Fits that retain opaque
+backend objects are not fast-path eligible and fall back to deep
+validation because backend implementation state is outside the portable
+stamp boundary. The stamp is tamper-evident for stale or uncoordinated
+mutations, not an external digital signature or proof of authorship.
 
 A reportable `per_pv` `pvstackr_fit` with status `"ok"` or `"warning"`
 must contain a non-null `pvstackr_reference_pool` target and a non-empty
@@ -75,9 +91,9 @@ and `id_cols` are provenance/design metadata for this path; they are not
 automatically supplied to `fit_function` and do not affect Rubin
 pooling. Weighted backend fits must be handled by the backend adapter,
 data supplied to the backend, or backend-specific `additional_args`.
-Per-PV draws, when retained, remain nested in diagnostics rather than
-top-level reportable draws because Rubin pooling does not synthesize a
-single calibrated top-level draw matrix.
+Per-PV draws, when retained, remain fixed-effect-only matrices nested in
+diagnostics rather than top-level reportable draws because Rubin pooling
+does not synthesize a single calibrated top-level draw matrix.
 
 A reportable `stack_psis` `pvstackr_fit` with status `"ok"` or
 `"warning"` must contain PSIS diagnostics, pooling diagnostics, weighted
@@ -85,11 +101,20 @@ per-PV summaries, and a non-empty fixed-effect estimate table. The
 pooling is diagnostic/reference Rubin pooling of PSIS-weighted
 fixed-effect summaries using model-based weighted covariance; this path
 does not construct an external BRR-Fay target. Group terms such as
-`(1 | school)` and `(1 || school)` are rejected for this v0.1
+`(1 | school)` and `(1 || school)` are rejected for this
 fixed-effect-only path. Failed Pareto-k diagnostics cannot be reported
 as `status = "ok"`. With the default block fallback, failed PSIS
-diagnostics produce a blocked fit with diagnostics but no reportable
-estimates.
+diagnostics produce a blocked fit containing only the canonical
+scalar/vector Pareto-k decision record and its redaction manifest, with
+no reportable estimates, target, design, stack fit, CCC, or draws. All
+heavy-retention controls are recorded as effective `FALSE` for a blocked
+fit, irrespective of the original request. When `return_draws = TRUE` on
+a reportable fit, diagnostics retain the fixed-effect-only proposal
+matrix together with its normalized PV weight matrix; these two payloads
+are retained or removed as a pair. Package-owned nuisance draws and
+nested full stack draws are never retained in a final PSIS fit.
+Explicitly authorized opaque backend objects and log-likelihood matrices
+remain governed separately by `keep_backend_fit` and `keep_log_lik`.
 
 ## `pvstackr_method_comparison` Contract
 
@@ -136,15 +161,57 @@ not a guarantee that
 returns a non-null object.
 [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
 returns retained top-level reportable draws only; per-PV reference draws
-and PSIS weights remain diagnostic artifacts accessible through
+and the PSIS fixed-effect proposal/weight pair remain diagnostic
+artifacts accessible through
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
+Current fit accessors and fit print/summary methods use the rehash
+validation tier: they rescan the current package-owned payload and
+compare its SHA-256 stamp without repeating method-specific semantic
+recomputation. This is linear in retained payload bytes rather than an
+O(1) cache lookup. Opaque-backend fits remain ineligible and fall back
+to deep validation.
+
+Historical `stack_psis` fits that do not satisfy the current fit
+envelope must be passed to
+[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md).
+The migrator never promotes saved estimates, pooling summaries, weights,
+or draws. It returns an explicit inspection-only object containing
+bounded Pareto-k decision evidence and a redaction manifest;
+[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
+and
+[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
+refuse that object, while
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+remains available. Current comparisons and fit or comparison summaries
+carry source and owned-payload validation stamps. Pre-marker serialized
+comparisons/summaries containing `stack_psis` are refused and must be
+rebuilt, closing derived-table paths that no longer carry their source
+fit.
+
+Current live `stack_direct` fits expose normalized sampler diagnostics
+and a frozen reportability gate through
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
+A sampler- or CCC-blocked fit retains only its independently valid
+external BRR-Fay target plus the exact slim gate evidence required to
+reproduce the blocked status; CCC evidence is scalar-only. Design data,
+stack/backend fit, full CCC matrices, estimates, and draws are absent,
+and every heavy-retention control is recorded as effective `FALSE`. The
+target is rebuilt from an exact recursive allowlist with empty warnings
+and a safe formula environment; the slim preflight snapshot does not
+retain a formula object. A recursive fail-closed validator rejects
+result-like fields, matrices/arrays/data frames, raw or complex
+payloads, executable/external objects, hidden leaf attributes, and
+noncanonical diagnostic variants anywhere outside that independent
+target. Current `per_pv` fits have no typed blocked-object path, so a
+reportable reference fit cannot be relabeled as blocked. Legacy cached
+schema-0.1 stack fits remain readable without the newer sampler gate.
 
 ## Reporting Scope
 
-In v0.1, calibrated reporting is fixed-effect-only. Variance-component
-or sampler-diagnostic columns may be retained inside backend or
-stack-fit components, but they are not calibrated to the Rubin/BRR-Fay
-target and are not included in the reportable estimate table.
+Calibrated reporting is fixed-effect-only. Variance-component or
+sampler-diagnostic columns may be retained inside backend or stack-fit
+components, but they are not calibrated to the Rubin/BRR-Fay target and
+are not included in the reportable estimate table.
 
 ## Interval Metadata
 
@@ -184,7 +251,19 @@ summaries. `stack_psis` fits do not carry a formal target object; their
 estimate rows use `target_source = "stack_psis_rubin_pooling"` and
 `pooling_source = "stack_psis_rubin_pooling"` to record diagnostic
 pooling provenance. PSIS input-source diagnostics use a separate
-vocabulary: `supplied_weights`, `psis_function`, and
-`log_ratios_self_normalized`. The `log_ratios_self_normalized` path
-self-normalizes the supplied log ratios and does not by itself run
-Pareto smoothing.
+vocabulary: `supplied_psis_weights`, `injected_psis_function`, and
+`self_normalized_log_ratios`. `pareto_k_source` distinguishes supplied
+diagnostics from injected-function output, while `weight_method`
+distinguishes caller-declared external PSIS from unspecified external
+weights and self-normalized raw importance weights. Only the
+caller-declared path can expose estimates; the declaration records
+producer/version but is not package verification. Each path records
+bounded per-PV Kish-style iid weight ESS (`weight_ess_iid`), its
+draw-count fraction (`weight_ess_fraction`), and
+`max_normalized_weight`. These concentration diagnostics are not MCMC
+ESS and never replace the immutable Pareto-k gate. If normalized weights
+are retained, deep validation recomputes these diagnostics. A compact or
+blocked object instead records
+`weight_diagnostic_authority = "owned_stamp_bounded_projection"`:
+feasibility and the owned payload stamp remain checkable, but the
+redacted original weights cannot be independently reconstructed.

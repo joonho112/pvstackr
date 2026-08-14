@@ -179,16 +179,15 @@ consult those vignettes for the line-by-line reading of the objects.
 
 ### 4.1 stack_direct requires an external BRR–Fay target
 
-In the v0.1 method stage, a reportable `stack_direct` fit requires an
-**external** Rubin / BRR–Fay fixed-effect target built by
+A reportable `stack_direct` fit requires an **external** Rubin / BRR–Fay
+fixed-effect target built by
 [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
 The target is **fixed-effect-only**: it forms a BRR–Fay sandwich
 covariance per plausible value and pools the \\M\\ results with Rubin’s
 rules into the total \\T\_{\text{MI}} = \bar U + (1 + 1/M)\\B\\ (Rubin
 1987; Barnard and Rubin 1999). Random-effect (group) terms such as
-`(1 | CNTSCHID)` or `(1 || CNTSCHID)` are **not accepted by the v0.1
-BRR-Fay target engine**, by design — see A2 §3 for the error this
-raises.
+`(1 | CNTSCHID)` or `(1 || CNTSCHID)` are **not accepted by the BRR-Fay
+target engine**, by design — see A2 §3 for the error this raises.
 
 ``` r
 
@@ -209,10 +208,12 @@ target
 
 With a design and a target in hand, `pv_fit(method = "stack_direct")`
 fits **one** stacked model on the N \* M rows and calibrates it (via
-CCC) to the external target. On real data you supply a live Bayesian
-backend through the two adapter slots (`fit_function`,
-`draws_function`); this vignette runs **no** live backend, so the chunk
-shows only the shape — the adapter contracts are sketched in A2 §7.
+CCC) to the external target. On real data you either ask for the bundled
+backend with `pv_control(backend = "brms")`, or supply your own engine
+through the three adapter slots (`fit_function`, `draws_function`,
+`diagnose_function` — all three are required for a reportable fit). This
+vignette runs **no** live backend, so the chunk shows only the shape;
+the adapter contracts are sketched in A2 §7.
 
 ``` r
 
@@ -235,8 +236,10 @@ fit <- pv_fit(
                      keep_backend_fit = FALSE,
                      keep_log_lik     = FALSE
                    ),
-  fit_function   = your_fit_function,    # your modelling backend (see A2 §7)
-  draws_function = your_draws_function   # extract posterior draws for CCC
+  fit_function      = your_fit_function,      # your modelling backend (see A2 §7)
+  draws_function    = your_draws_function,    # extract posterior draws for CCC
+  diagnose_function = your_diagnose_function, # sampler diagnostics; required
+  cache_dir         = NULL                    # an injected adapter owns its cache
 )
 
 summary(fit)
@@ -467,7 +470,7 @@ Bug reports and feature requests:
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -489,12 +492,12 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
 #>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
 #> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.2.0       fs_2.1.0
+#> [25] rlang_1.3.0       fs_2.1.0
 ```
 
 ## References

@@ -14,6 +14,9 @@ get_draws(x, ...)
 
 # S3 method for class 'pvstackr_fit'
 get_draws(x, ...)
+
+# S3 method for class 'pvstackr_legacy_psis_inspection'
+get_draws(x, ...)
 ```
 
 ## Arguments
@@ -30,16 +33,17 @@ get_draws(x, ...)
 
 The retained reportable draw matrix, or `NULL` when draws were not
 retained or the method does not synthesize top-level reportable draws.
-Per-PV reference draws and PSIS weights, when retained, remain available
-in diagnostics rather than through this top-level reportable-draw
-accessor.
+Per-PV reference draws and the PSIS proposal/weight pair, when retained,
+remain available in diagnostics rather than through this top-level
+reportable-draw accessor. An inspection-only legacy PSIS object fails
+explicitly instead of returning historical draws.
 
 ## Details
 
 This accessor returns only the synthesized top-level reportable draw
-matrix. Per-PV reference draws (`per_pv`) and PSIS importance weights
-(`stack_psis`), when retained, are not surfaced here; they live in the
-fit's diagnostics (see
+matrix. Per-PV reference draws (`per_pv`) and the PSIS fixed-effect
+proposal/weight pair (`stack_psis`), when retained, are not surfaced
+here; they live in the fit's diagnostics (see
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)),
 not in this top-level reportable-draw accessor.
 

@@ -46,9 +46,10 @@ pv_compare_methods(
 
 A `pvstackr_method_comparison` object with top-level `estimate_table`,
 `diagnostic_table`, `agreement`, and `timing` fields. `estimate_table`
-includes method-level interval metadata alongside the aligned
-fixed-effect estimates. `diagnostic_table` includes method-level
-target/pooling provenance and shared-provenance flags.
+includes method-level interval and PSIS provenance metadata alongside
+the aligned fixed-effect estimates. `diagnostic_table` includes
+method-level target/pooling provenance, PSIS source and bounded
+weight-concentration summaries, and shared-provenance flags.
 
 ## Details
 
@@ -78,7 +79,23 @@ pooling hash, target source, or estimand construction. `target_source`
 is provenance vocabulary, not necessarily a formal target object:
 `stack_psis` rows use `stack_psis_rubin_pooling` even though
 [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
-returns `NULL` for `stack_psis` fits.
+returns `NULL` for `stack_psis` fits. For `stack_psis`, the aligned
+estimate rows additionally retain `psis_source`, `pareto_k_source`,
+`weight_method`, `psis_producer`, and `psis_producer_version`. The
+method diagnostic table adds the minimum per-PV Kish-style iid weight
+ESS and ESS fraction, plus the maximum normalized weight. These fields
+preserve the source fit's bounded provenance and concentration
+diagnostics; they are not MCMC ESS or a substitute for Pareto-k gating.
+
+Current comparison objects record deep-valid compact PSIS source fits,
+canonical per-source reportability projections, each source authority's
+validation stamp, and an owned-payload SHA-256 stamp. Derived tables and
+diagnostics are recomputed from those projections during validation. A
+pre-marker serialized comparison containing `stack_psis` is
+inspection-only and must be rebuilt from current validated fits; its
+saved numeric table is not grandfathered. Independently of the stamp,
+warning-status PSIS rows are forbidden and blocked PSIS rows must carry
+no reportable numeric or pooling metadata.
 
 ## Interpreting agreement
 
@@ -141,13 +158,20 @@ if (nzchar(path)) {
 #> 4 5.759265e+03   classic          NA       0.95   reference_classic_rubin
 #> 5 1.642548e+06   classic          NA       0.95   reference_classic_rubin
 #> 6 8.726226e+05   classic          NA       0.95   reference_classic_rubin
-#>   coverage_claim_allowed   conf_low  conf_high reference_method
-#> 1                  FALSE 442.318045 473.470132           per_pv
-#> 2                  FALSE  44.414570  49.352151           per_pv
-#> 3                  FALSE -41.606872  45.894276           per_pv
-#> 4                  FALSE  -2.031670   1.967547           per_pv
-#> 5                  FALSE  -2.015842   2.063551           per_pv
-#> 6                  FALSE  -2.100082   1.977132           per_pv
+#>   coverage_claim_allowed psis_source pareto_k_source weight_method
+#> 1                  FALSE        <NA>            <NA>          <NA>
+#> 2                  FALSE        <NA>            <NA>          <NA>
+#> 3                  FALSE        <NA>            <NA>          <NA>
+#> 4                  FALSE        <NA>            <NA>          <NA>
+#> 5                  FALSE        <NA>            <NA>          <NA>
+#> 6                  FALSE        <NA>            <NA>          <NA>
+#>   psis_producer psis_producer_version   conf_low  conf_high reference_method
+#> 1          <NA>                  <NA> 442.318045 473.470132           per_pv
+#> 2          <NA>                  <NA>  44.414570  49.352151           per_pv
+#> 3          <NA>                  <NA> -41.606872  45.894276           per_pv
+#> 4          <NA>                  <NA>  -2.031670   1.967547           per_pv
+#> 5          <NA>                  <NA>  -2.015842   2.063551           per_pv
+#> 6          <NA>                  <NA>  -2.100082   1.977132           per_pv
 #>   reference_estimate reference_se estimate_diff  se_ratio  abs_z_diff
 #> 1        -0.03206137     1.020013    457.926150 1.2620545 278.8090409
 #> 2         0.02385441     1.040680     46.859506 0.3572597  42.4029899

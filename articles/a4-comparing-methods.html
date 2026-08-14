@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +81,7 @@
       <img src="../logo.svg" class="logo" alt=""><h1>A4: Comparing methods — choosing stack_direct, per_pv, or stack_psis</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee</h4>
             
-            <h4 data-toc-skip class="date">2026-06-09</h4>
+            <h4 data-toc-skip class="date">2026-08-14</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/vignettes/a4-comparing-methods.Rmd" class="external-link"><code>vignettes/a4-comparing-methods.Rmd</code></a></small>
       <div class="d-none name"><code>a4-comparing-methods.Rmd</code></div>
@@ -116,14 +116,15 @@ is to show the <strong>comparison machinery</strong> and the
 <strong>interval semantics</strong> that separate the methods, and to
 state the two cautions that govern when agreement means something.</p>
 <div class="alert alert-warning">
-<p>A note on the worked example below. To compare three methods offline
-we feed <code>per_pv</code> and <code>stack_psis</code>
+<p>A note on the worked example below. We feed <code>per_pv</code>
 <strong>synthetic, injected</strong> posterior draws (random noise
 centred near the fixture’s coefficients), because the package ships only
-one cached fit and runs no live MCMC. Their point estimates are
-therefore <em>manufactured for illustration</em> and will not coincide
-with <code>stack_direct</code> the way a real comparison would. Read
-this article for the <strong>structure</strong> of a comparison and the
+one cached fit and runs no live MCMC. For <code>stack_psis</code>, the
+example deliberately supplies equal placeholder weights and arbitrary
+Pareto-<span class="math inline">\(\hat k\)</span> values
+<strong>without</strong> claiming that PSIS ran. The fit therefore fails
+closed and remains visible as a blocked comparison row. Read this
+article for the <strong>structure</strong> of a comparison and the
 <strong>interval semantics</strong>, not as a substantive agreement
 result.</p>
 </div>
@@ -198,8 +199,8 @@ PSIS-weighted summaries. One fit, model-based covariance — a
 <p>The <strong>“fit count” column is topology, not speed.</strong> It
 records how many model fits a method’s architecture requires — one
 stacked fit versus <span class="math inline">\(M\)</span> separate ones
-— not a benchmarked runtime. v0.1 makes no “faster” claim; see the
-honesty triad in Section 7.</p>
+— not a benchmarked runtime. The current package makes no “faster”
+claim; see the honesty triad in Section 7.</p>
 </div>
 <p>Two scope reminders carried over from A1–A3, because they bound this
 whole comparison: the reportable surface is <strong>fixed effects
@@ -217,12 +218,13 @@ fits — so the only setup is building three fits that share the same
 fixed-effect names (<code>b_Intercept</code>, <code>b_x</code>,
 <code>b_female</code>).</p>
 <p>The first fit is the cached <code>stack_direct</code> fixture you
-already met in A1. The other two are built from <strong>injected
-synthetic draws</strong>: <code><a href="../reference/pv_fit_reference.html">pv_fit_reference()</a></code> accepts a list
-of per-PV posterior draw matrices, and <code><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis()</a></code>
-accepts a stacked draw matrix with supplied PSIS weights and
-Pareto-<span class="math inline">\(\hat k\)</span> values. No live MCMC
-runs anywhere below.</p>
+already met in A1. The other two use injected synthetic inputs:
+<code><a href="../reference/pv_fit_reference.html">pv_fit_reference()</a></code> accepts a list of per-PV posterior draw
+matrices, and <code><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis()</a></code> accepts a stacked draw
+matrix plus weight diagnostics. No live MCMC or PSIS routine runs below.
+Consequently, the PSIS example intentionally omits producer/version and
+must remain blocked; a string label is not evidence that smoothing
+occurred.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"b_Intercept"</span>, <span class="st">"b_x"</span>, <span class="st">"b_female"</span><span class="op">)</span></span>
 <span></span>
@@ -245,8 +247,9 @@ runs anywhere below.</p>
 <span>  control      <span class="op">=</span> <span class="fu"><a href="../reference/pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"per_pv"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Synthetic stacked draw cloud + equal (placeholder) PSIS weights and small</span></span>
-<span><span class="co"># Pareto-k. Again injected for illustration; nothing is importance-sampled live.</span></span>
+<span><span class="co"># Synthetic stacked draw cloud + equal placeholder weights and arbitrary</span></span>
+<span><span class="co"># Pareto-k. Nothing is importance-sampled live, so producer/version are omitted</span></span>
+<span><span class="co"># and the fit must fail closed as provenance_incomplete.</span></span>
 <span><span class="va">sd_mat</span> <span class="op">&lt;-</span> <span class="fu">mk</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">458</span>, <span class="fl">47</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_psis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis</a></span><span class="op">(</span></span>
 <span>  stacked_draws <span class="op">=</span> <span class="va">sd_mat</span>,</span>
@@ -255,7 +258,8 @@ runs anywhere below.</p>
 <span>  pareto_k      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  control       <span class="op">=</span> <span class="fu"><a href="../reference/pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"stack_psis"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>With three fits in hand, the comparison is one call:</p>
+<p>With two reportable fits and one intentionally blocked fit in hand,
+the comparison is one call:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pv_compare_methods.html">pv_compare_methods</a></span><span class="op">(</span></span>
 <span>  stack_direct <span class="op">=</span> <span class="va">fit_direct</span>,</span>
@@ -268,6 +272,7 @@ runs anywhere below.</p>
 <span><span class="co">#&gt;   reference: per_pv</span></span>
 <span><span class="co">#&gt;   methods: stack_direct=stack_direct, per_pv=per_pv, stack_psis=stack_psis</span></span>
 <span><span class="co">#&gt;   fixed effects: 3</span></span>
+<span><span class="co">#&gt;   blocked: stack_psis</span></span>
 <span><span class="co">#&gt;   provenance note: Agreement bands are descriptive; shared target, pooling, or source metadata should not be read as independent corroboration.</span></span>
 <span><span class="co">#&gt;   interval note: intervals are descriptive rather than coverage-claimable.</span></span></code></pre></div>
 <p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> box names the <strong>reference
@@ -285,10 +290,11 @@ is <em>descriptive rather than coverage-claimable</em> (Sections 3,
 5–7).</li>
 </ul>
 <p>Comparison aligns methods on their <strong>shared</strong>
-fixed-effect terms: every method here reports <code>b_Intercept</code>,
-<code>b_x</code>, and <code>b_female</code>, so all three line up
-cleanly. A method missing a term would still get a row, with its numeric
-fields left <code>NA</code> rather than silently dropped.</p>
+fixed-effect terms. The two reportable methods supply
+<code>b_Intercept</code>, <code>b_x</code>, and <code>b_female</code>;
+the blocked <code>stack_psis</code> fit still gets one row for each
+term, with numeric fields left <code>NA</code> rather than silently
+disappearing.</p>
 </div>
 <div class="section level2">
 <h2 id="the-three-methods-side-by-side">3. The three methods side by side<a class="anchor" aria-label="anchor" href="#the-three-methods-side-by-side"></a>
@@ -311,9 +317,9 @@ interval and the interval’s licensing metadata:</p>
 <span><span class="co">#&gt; 4       per_pv b_Intercept 457.980857 1.9931772 454.074152 461.887563</span></span>
 <span><span class="co">#&gt; 5       per_pv         b_x  47.038417 2.0556785  43.009330  51.067504</span></span>
 <span><span class="co">#&gt; 6       per_pv    b_female   1.869331 2.1659676  -2.375888   6.114549</span></span>
-<span><span class="co">#&gt; 7   stack_psis b_Intercept 457.942194 8.8237873 440.647888 475.236499</span></span>
-<span><span class="co">#&gt; 8   stack_psis         b_x  47.090474 8.5246693  30.382429  63.798519</span></span>
-<span><span class="co">#&gt; 9   stack_psis    b_female   1.964945 8.0714822 -13.854869  17.784760</span></span>
+<span><span class="co">#&gt; 7   stack_psis b_Intercept         NA        NA         NA         NA</span></span>
+<span><span class="co">#&gt; 8   stack_psis         b_x         NA        NA         NA         NA</span></span>
+<span><span class="co">#&gt; 9   stack_psis    b_female         NA        NA         NA         NA</span></span>
 <span><span class="co">#&gt;               interval_role coverage_claim_allowed</span></span>
 <span><span class="co">#&gt; 1 descriptive_classic_rubin                  FALSE</span></span>
 <span><span class="co">#&gt; 2 descriptive_classic_rubin                  FALSE</span></span>
@@ -321,18 +327,18 @@ interval and the interval’s licensing metadata:</p>
 <span><span class="co">#&gt; 4   reference_classic_rubin                  FALSE</span></span>
 <span><span class="co">#&gt; 5   reference_classic_rubin                  FALSE</span></span>
 <span><span class="co">#&gt; 6   reference_classic_rubin                  FALSE</span></span>
-<span><span class="co">#&gt; 7        psis_classic_rubin                  FALSE</span></span>
-<span><span class="co">#&gt; 8        psis_classic_rubin                  FALSE</span></span>
-<span><span class="co">#&gt; 9        psis_classic_rubin                  FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt; 7                      &lt;NA&gt;                     NA</span></span>
+<span><span class="co">#&gt; 8                      &lt;NA&gt;                     NA</span></span>
+<span><span class="co">#&gt; 9                      &lt;NA&gt;                     NA</span></span></code></pre></div>
 <p>Read this table on two axes.</p>
-<p><strong>The points do not match here — and that is the synthetic
-setup, not a finding.</strong> The three methods’ estimates differ by
-more than they should because the <code>per_pv</code> and
-<code>stack_psis</code> rows were built from <em>independent random
-noise</em>, not from the same data as <code>stack_direct</code>. In a
-<strong>real</strong> comparison, <code>stack_direct</code> and
-<code>per_pv</code> points agree closely: this is the
-<strong>stacked-MLE point identity</strong> — one stacked, <span class="math inline">\(1/M\)</span>-weighted fit recovers the
+<p><strong>The available points do not match here — and that is the
+synthetic setup, not a finding.</strong> The <code>per_pv</code> rows
+were built from independent random noise, not from the same data as
+<code>stack_direct</code>; the blocked <code>stack_psis</code> rows
+correctly contain no estimates. In a <strong>real</strong> comparison,
+<code>stack_direct</code> and <code>per_pv</code> points agree closely:
+this is the <strong>stacked-MLE point identity</strong> — one stacked,
+<span class="math inline">\(1/M\)</span>-weighted fit recovers the
 Rubin-pooled per-PV point estimate. That identity is <em>exact</em> only
 under its regularity conditions (flat prior, linear-Gaussian, common
 design, a common plug-in covariance) and holds <strong>approximately,
@@ -345,17 +351,19 @@ collapse:</p>
 <ul>
 <li>
 <strong><code>interval_role</code></strong> records the
-<em>kind</em> of interval — <code>descriptive_classic_rubin</code> for
-<code>stack_direct</code> (this classic-df fixture),
-<code>reference_classic_rubin</code> for <code>per_pv</code>, and
-<code>psis_classic_rubin</code> for <code>stack_psis</code>.</li>
+<em>kind</em> of available interval —
+<code>descriptive_classic_rubin</code> for <code>stack_direct</code>
+(this classic-df fixture) and <code>reference_classic_rubin</code> for
+<code>per_pv</code>. It is <code>NA</code> for the blocked PSIS rows; a
+valid reportable PSIS path would use <code>psis_classic_rubin</code>
+here.</li>
 <li>
 <strong><code>coverage_claim_allowed</code></strong> is
-<code>FALSE</code> for <strong>every</strong> row here: the fixture’s
-<code>stack_direct</code> target uses <em>classic</em> Rubin df (so it
-is descriptive by design, as in A2/A3), and <code>per_pv</code> /
-<code>stack_psis</code> are <em>always</em> descriptive regardless of
-their df.</li>
+<code>FALSE</code> for the two available methods and <code>NA</code> for
+the blocked one. The fixture’s <code>stack_direct</code> target uses
+<em>classic</em> Rubin df (so it is descriptive by design, as in A2/A3),
+and <code>per_pv</code> / <code>stack_psis</code> intervals are always
+descriptive regardless of their df.</li>
 </ul>
 <p>Interval <strong>width</strong> also differs sharply, and width is
 where the methods genuinely diverge. Look at the slope on
@@ -365,26 +373,26 @@ where the methods genuinely diverge. Look at the slope on
 <span>          <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method_label"</span>, <span class="st">"se"</span>, <span class="st">"conf_low"</span>, <span class="st">"conf_high"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="va">bx</span><span class="op">$</span><span class="va">width</span> <span class="op">&lt;-</span> <span class="va">bx</span><span class="op">$</span><span class="va">conf_high</span> <span class="op">-</span> <span class="va">bx</span><span class="op">$</span><span class="va">conf_low</span></span>
 <span><span class="va">bx</span></span>
-<span><span class="co">#&gt;   method_label        se conf_low conf_high     width</span></span>
-<span><span class="co">#&gt; 2 stack_direct 0.3717929 44.41457  49.35215  4.937582</span></span>
-<span><span class="co">#&gt; 5       per_pv 2.0556785 43.00933  51.06750  8.058174</span></span>
-<span><span class="co">#&gt; 8   stack_psis 8.5246693 30.38243  63.79852 33.416090</span></span></code></pre></div>
-<p>The three widths are not interchangeable — and in this synthetic run
-the model-based methods happen to produce <em>wider</em> intervals than
-the calibrated <code>stack_direct</code> fit. Do not read that ordering
-as a general result: it is an artifact of the injected draw clouds (the
-<code>per_pv</code> and <code>stack_psis</code> clouds carry their own
-noisy spread). The durable lesson is that <strong>width and the coverage
-flag are method-specific</strong> — comparing intervals across methods
-means comparing <em>different kinds of object</em>, which is exactly
-what <code>interval_role</code> is there to flag.</p>
+<span><span class="co">#&gt;   method_label        se conf_low conf_high    width</span></span>
+<span><span class="co">#&gt; 2 stack_direct 0.3717929 44.41457  49.35215 4.937582</span></span>
+<span><span class="co">#&gt; 5       per_pv 2.0556785 43.00933  51.06750 8.058174</span></span>
+<span><span class="co">#&gt; 8   stack_psis        NA       NA        NA       NA</span></span></code></pre></div>
+<p>The two available widths are not interchangeable; the blocked PSIS
+row has no width at all. Do not read the available ordering as a general
+result: it is an artifact of the injected <code>per_pv</code> draw
+clouds. The durable lesson is that <strong>width, availability, and the
+coverage flag are method-specific</strong> — exactly what
+<code>interval_role</code>, <code>status</code>, and
+<code>coverage_claim_allowed</code> are there to flag.</p>
 <p>A figure makes the per-term overlay easy to read. We plot the two
 slope coefficients (dropping the intercept, whose ~458 scale would
-flatten the axis) and overlay all three methods, each offset slightly so
-the intervals do not collide:</p>
+flatten the axis) and overlay the two available methods. The blocked
+PSIS method remains in the table but is correctly absent from the
+interval geometry:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">slopes</span>  <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="va">est</span><span class="op">$</span><span class="va">term</span> <span class="op">!=</span> <span class="st">"b_Intercept"</span>,</span>
 <span>               <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method_label"</span>, <span class="st">"term"</span>, <span class="st">"estimate"</span>, <span class="st">"conf_low"</span>, <span class="st">"conf_high"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">slopes</span>  <span class="op">&lt;-</span> <span class="va">slopes</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/is.finite.html" class="external-link">is.finite</a></span><span class="op">(</span><span class="va">slopes</span><span class="op">$</span><span class="va">estimate</span><span class="op">)</span>, , drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span></span>
 <span><span class="va">methods</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">slopes</span><span class="op">$</span><span class="va">method_label</span><span class="op">)</span></span>
 <span><span class="va">terms</span>   <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sort.html" class="external-link">sort</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unique.html" class="external-link">unique</a></span><span class="op">(</span><span class="va">slopes</span><span class="op">$</span><span class="va">term</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -410,22 +418,22 @@ the intervals do not collide:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topright"</span>, legend <span class="op">=</span> <span class="va">methods</span>, col <span class="op">=</span> <span class="va">cols</span>, pch <span class="op">=</span> <span class="fl">19</span>, lwd <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>       bty <span class="op">=</span> <span class="st">"n"</span>, cex <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
-<img src="a4-comparing-methods_files/figure-html/overlay-figure-1.png" class="r-plt" alt="A horizontal dot-and-interval plot with two rows, one for the coefficient on x near 47 and one for the coefficient on female near 2. Within each row the three methods stack_direct, per_pv, and stack_psis are drawn at slightly offset heights in different colours, each with its own 95 percent interval. A dashed vertical reference line is drawn at zero." width="85%"><p class="caption">
-The two slope coefficients (b_x, b_female) under all three methods, with
-their 95% intervals overlaid. The dashed line marks zero. Because the
-per_pv and stack_psis rows are built from synthetic injected draws,
-their points and widths are illustrative only — the figure shows the
-comparison structure and the per-method interval semantics, not a
-substantive agreement result.
+<img src="a4-comparing-methods_files/figure-html/overlay-figure-1.png" class="r-plt" alt="A horizontal dot-and-interval plot with two rows, one for the coefficient on x and one for the coefficient on female. Within each row the reportable stack_direct and per_pv methods are drawn at slightly offset heights with 95 percent intervals. The blocked stack_psis method has no plotted point or interval. A dashed vertical reference line is drawn at zero." width="85%"><p class="caption">
+The two slope coefficients (b_x, b_female) under the two reportable
+methods, with their 95% intervals overlaid. The blocked stack_psis rows
+remain in the comparison table but have no interval to draw. The dashed
+line marks zero; the synthetic per_pv points and widths are illustrative
+only.
 </p>
 </div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">op</span><span class="op">)</span></span></code></pre></div>
-<p>The intervals all comfortably span zero for <code>b_female</code> and
-all sit clear of zero for <code>b_x</code> — but their <em>widths</em>
-differ by method, and only the <code>stack_direct</code> row could ever
-(with a Barnard–Rubin target) carry a coverage claim. That last point is
-the bridge to the cautions.</p>
+<p>The available intervals comfortably span zero for
+<code>b_female</code> and sit clear of zero for <code>b_x</code> — but
+their <em>widths</em> differ by method, and only the
+<code>stack_direct</code> row could ever (with a Barnard–Rubin target)
+carry a coverage claim. The absent PSIS interval is itself part of the
+honesty contract. That is the bridge to the cautions.</p>
 </div>
 <div class="section level2">
 <h2 id="agreement-diagnostics">4. Agreement diagnostics<a class="anchor" aria-label="anchor" href="#agreement-diagnostics"></a>
@@ -447,24 +455,22 @@ largest standardised point gap from the reference, across terms) and
 — i.e. how differently the method spreads its intervals):</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dg</span><span class="op">$</span><span class="va">agreement</span></span>
-<span><span class="co">#&gt;         method method_label status max_abs_z_diff max_abs_log_se_ratio n_terms</span></span>
-<span><span class="co">#&gt; 1 stack_direct stack_direct     ok     0.07422425             1.710024       3</span></span>
-<span><span class="co">#&gt; 2       per_pv       per_pv     ok     0.00000000             0.000000       3</span></span>
-<span><span class="co">#&gt; 3   stack_psis   stack_psis     ok     0.01144116             1.487721       3</span></span>
+<span><span class="co">#&gt;         method method_label  status max_abs_z_diff max_abs_log_se_ratio n_terms</span></span>
+<span><span class="co">#&gt; 1 stack_direct stack_direct      ok     0.07422425             1.710024       3</span></span>
+<span><span class="co">#&gt; 2       per_pv       per_pv      ok     0.00000000             0.000000       3</span></span>
+<span><span class="co">#&gt; 3   stack_psis   stack_psis blocked             NA                   NA       3</span></span>
 <span><span class="co">#&gt;   n_available</span></span>
 <span><span class="co">#&gt; 1           3</span></span>
 <span><span class="co">#&gt; 2           3</span></span>
-<span><span class="co">#&gt; 3           3</span></span></code></pre></div>
+<span><span class="co">#&gt; 3           0</span></span></code></pre></div>
 <p>The reference compares to itself, so its <code>max_abs_z_diff</code>
-and <code>max_abs_log_se_ratio</code> are exactly zero. For
-<code>stack_direct</code> and <code>stack_psis</code> the <em>point</em>
-gaps are large here only because the injected draws are synthetic; in a
+and <code>max_abs_log_se_ratio</code> are exactly zero. The
+<code>stack_direct</code> point gap is large here only because the
+injected <code>per_pv</code> draws are synthetic. The blocked
+<code>stack_psis</code> row has no available comparison statistics. In a
 real comparison the informative pattern is <strong>agree on points,
 disagree on variance</strong> — methods that share a target tend to
-match on the point (nearly an algebraic identity) while differing on the
-variance, which comes from genuinely different machinery. The SE-ratio
-column is the one that correctly reflects three different covariance
-bases.</p>
+match on the point while differing on variance.</p>
 <p><strong><code>target_overlap</code></strong> is the honesty gate on
 reading agreement as corroboration. It flags whether the compared
 methods share provenance — an external target, a target hash, a pooling
@@ -481,16 +487,15 @@ hash, or a target-source family:</p>
 <span><span class="co">#&gt;  $ independence_caveat_required: logi FALSE</span></span>
 <span><span class="co">#&gt;  $ independence_caveat         : chr "Agreement bands are descriptive; shared target, pooling, or source metadata should not be read as independent corroboration."</span></span></code></pre></div>
 <p>In this synthetic run <code>independence_caveat_required</code> is
-<code>FALSE</code>, because the three injected fits happen to carry
-<strong>distinct</strong> hashes and only <code>stack_direct</code>
-holds the <code>external_brr_fay_rubin</code> source. But the field
-exists precisely for the common case where it flips to
-<code>TRUE</code>: when two methods are calibrated to the <em>same</em>
-external target (or pool the same draws), close agreement is
-<strong>mechanically guaranteed</strong> and tells you nothing about
-correctness. The <code>independence_caveat</code> string spells this
-out, and it is the same message the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> box
-surfaces.</p>
+<code>FALSE</code>, because the available fits carry distinct hashes and
+only <code>stack_direct</code> holds the
+<code>external_brr_fay_rubin</code> source. But the field exists
+precisely for the common case where it flips to <code>TRUE</code>: when
+two methods are calibrated to the <em>same</em> external target (or pool
+the same draws), close agreement is <strong>mechanically
+guaranteed</strong> and tells you nothing about correctness. The
+<code>independence_caveat</code> string spells this out, and it is the
+same message the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> box surfaces.</p>
 <p>The per-method diagnostic table carries the rest, including the PSIS
 row’s Pareto-<span class="math inline">\(\hat k\)</span>:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -500,25 +505,23 @@ row’s Pareto-<span class="math inline">\(\hat k\)</span>:</p>
 <span><span class="co">#&gt;              method_label             interval_role coverage_claim_allowed</span></span>
 <span><span class="co">#&gt; stack_direct stack_direct descriptive_classic_rubin                  FALSE</span></span>
 <span><span class="co">#&gt; per_pv             per_pv   reference_classic_rubin                  FALSE</span></span>
-<span><span class="co">#&gt; stack_psis     stack_psis        psis_classic_rubin                  FALSE</span></span>
-<span><span class="co">#&gt;                         target_source psis_status pareto_k_max n_fits</span></span>
-<span><span class="co">#&gt; stack_direct   external_brr_fay_rubin        &lt;NA&gt;           NA      1</span></span>
-<span><span class="co">#&gt; per_pv             per_pv_rubin_draws        &lt;NA&gt;           NA      2</span></span>
-<span><span class="co">#&gt; stack_psis   stack_psis_rubin_pooling          ok          0.2      1</span></span></code></pre></div>
+<span><span class="co">#&gt; stack_psis     stack_psis                      &lt;NA&gt;                     NA</span></span>
+<span><span class="co">#&gt;                       target_source           psis_status pareto_k_max n_fits</span></span>
+<span><span class="co">#&gt; stack_direct external_brr_fay_rubin                  &lt;NA&gt;           NA      1</span></span>
+<span><span class="co">#&gt; per_pv           per_pv_rubin_draws                  &lt;NA&gt;           NA      2</span></span>
+<span><span class="co">#&gt; stack_psis                     &lt;NA&gt; provenance_incomplete          0.2      1</span></span></code></pre></div>
 <p>A few reads from this table. <code>target_source</code> is
-<strong>provenance vocabulary, not a formal target object</strong>: the
-<code>stack_psis</code> row reads <code>stack_psis_rubin_pooling</code>,
-but <code><a href="../reference/get_target.html">get_target()</a></code> returns <code>NULL</code> for a
-<code>stack_psis</code> fit — the label records how the covariance was
-built, not that a target object exists. The <code>n_fits</code> column
-is the topology count from Section 1 (<code>stack_direct</code> = 1,
+<strong>provenance vocabulary, not a formal target object</strong>. It
+is withheld for the blocked PSIS row; a reportable PSIS fit would use
+<code>stack_psis_rubin_pooling</code>, while <code><a href="../reference/get_target.html">get_target()</a></code>
+would still return <code>NULL</code>. The <code>n_fits</code> column is
+the topology count from Section 1 (<code>stack_direct</code> = 1,
 <code>per_pv</code> = <span class="math inline">\(M\)</span> = 2,
-<code>stack_psis</code> = 1). And for <code>stack_psis</code>,
-<code>psis_status</code> and <code>pareto_k_max</code> carry the PSIS
-diagnostics: here <code>status == "ok"</code> with
-<code>pareto_k_max = 0.2</code>, comfortably inside the <strong>Vehtari
-et al. thresholds</strong> <span class="citation">(Vehtari et al.
-2024)</span> —</p>
+<code>stack_psis</code> = 1). For <code>stack_psis</code>,
+<code>psis_status = "provenance_incomplete"</code>: the arbitrary
+<code>pareto_k_max = 0.2</code> is retained as a bounded diagnostic, but
+it cannot establish that smoothing ran. For a genuine PSIS run, the
+<strong>Vehtari et al. thresholds</strong> <span class="citation">(Vehtari et al. 2024)</span> are —</p>
 <ul>
 <li>
 <span class="math inline">\(\hat k &lt; 0.5\)</span>:
@@ -612,9 +615,8 @@ trustworthy interval; the correlated-imputation narrowing and the
 specification dependence of <span class="math inline">\(\hat k\)</span>
 are described qualitatively in the <strong>companion methods paper (in
 preparation)</strong>. The package hard-codes <strong>no</strong> <span class="math inline">\(\hat k\)</span> values as facts — the
-<code>pareto_k = 0.2</code> used above is an injected illustration,
-nothing more <span class="citation">(Vehtari et al. 2017,
-2024)</span>.</p>
+<code>pareto_k = 0.2</code> used above is an arbitrary injected
+diagnostic and remains blocked, nothing more <span class="citation">(Vehtari et al. 2017, 2024)</span>.</p>
 </div>
 </div>
 <div class="section level2">
@@ -642,9 +644,9 @@ estimate; its intervals stay descriptive.</li>
 this article:</p>
 <ol style="list-style-type: decimal">
 <li>
-<strong>Fixed effects only.</strong> v0.1 calibrates and reports
-<span class="math inline">\(\beta_{\text{FE}}\)</span>; variance
-components are out of scope.</li>
+<strong>Fixed effects only.</strong> The current package calibrates
+and reports <span class="math inline">\(\beta_{\text{FE}}\)</span>;
+variance components are out of scope.</li>
 <li>
 <strong>Coverage on one path only.</strong>
 <code>coverage_claim_allowed = TRUE</code> requires
@@ -653,8 +655,8 @@ BRR–Fay target; <code>per_pv</code> and <code>stack_psis</code> are
 always descriptive.</li>
 <li>
 <strong>No speed claims.</strong> “One fit” is <em>topology</em> —
-an architecture statement, not a benchmarked runtime. v0.1 makes no
-efficiency claim.</li>
+an architecture statement, not a benchmarked runtime. The current
+package makes no efficiency claim.</li>
 </ol>
 </div>
 <div class="section level2">
@@ -689,7 +691,7 @@ stacked-MLE point identity (and where it stops). Start the track at
 </h3>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
 <span><span class="co">#&gt; Running under: Ubuntu 24.04.4 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -710,16 +712,16 @@ stacked-MLE point identity (and where it stops). Start the track at
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    </span></span>
-<span><span class="co">#&gt;  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
+<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
 <span><span class="co">#&gt;  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
-<span><span class="co">#&gt; [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
-<span><span class="co">#&gt; [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     </span></span>
+<span><span class="co">#&gt; [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
+<span><span class="co">#&gt; [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
 <span><span class="co">#&gt; [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
-<span><span class="co">#&gt; [25] rlang_1.2.0       fs_2.1.0</span></span></code></pre></div>
+<span><span class="co">#&gt; [25] rlang_1.3.0       fs_2.1.0</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2 unnumbered">
@@ -759,7 +761,7 @@ Gabry. 2024. <span>“Pareto Smoothed Importance Sampling.”</span>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

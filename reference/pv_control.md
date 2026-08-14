@@ -70,8 +70,10 @@ print(x, ...)
 - backend:
 
   Backend policy. Character scalar; one of `"none"`, `"injected"`,
-  `"brms"`, or `"cmdstanr"`. Default `"none"`. In this package stage the
-  backend fit is injected or precomputed.
+  `"brms"`, or `"cmdstanr"`. Default `"none"`. In this package stage
+  `"brms"` selects the bundled brms adapter (with deterministic
+  cmdstanr/rstan resolution), while other live engines use an injected
+  `fit_function` adapter or precomputed draws.
 
 - conf_level:
 
@@ -80,9 +82,10 @@ print(x, ...)
 
 - psis_k_threshold:
 
-  Pareto-k warning threshold for `stack_psis`. Numeric scalar in
-  `(0, 1]`. Default `0.7`, matching the Vehtari et al. unreliable-k
-  cutoff.
+  Pareto-k reportability threshold for `stack_psis`. Numeric scalar in
+  `(0, 0.7]`. Default `0.7`; values below `0.7` may impose a stricter
+  gate, but the package-level ceiling cannot be relaxed. Every plausible
+  value must have a finite Pareto-k strictly below this threshold.
 
 - center:
 
@@ -101,9 +104,12 @@ print(x, ...)
 
 - return_draws:
 
-  Logical scalar. Whether fitted objects retain reportable fixed-effect
-  draws (read via
-  [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)).
+  Logical scalar. Whether fitted objects retain their method-specific
+  fixed-effect draw representation. For `stack_direct`, read the
+  calibrated matrix via
+  [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md).
+  Per-PV matrices and the PSIS proposal/weight pair remain in
+  [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
   Default `TRUE`.
 
 - keep_data:
@@ -113,8 +119,10 @@ print(x, ...)
 
 - keep_backend_fit:
 
-  Logical scalar. Whether fitted objects may retain the heavy backend
-  fit object. Default `FALSE` (fits stay light).
+  Logical scalar. Whether fitted objects may retain the heavy, opaque
+  backend fit object. This requires `keep_data = TRUE` on public
+  composite fits because a backend object may contain analysis data.
+  Default `FALSE` (fits stay light).
 
 - keep_log_lik:
 
@@ -163,14 +171,30 @@ CCC check, never a deliverable.
 
 The retention flags govern how much a fitted `pvstackr_fit` carries, and
 the defaults keep fits light. `return_draws` (default `TRUE`) retains
-the reportable fixed-effect draws used downstream by
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md);
-the remaining flags default to `FALSE`. `keep_data` retains the user
-data frame, `keep_backend_fit` retains the heavy backend fit object, and
-`keep_log_lik` retains log-likelihood draws. Enable the
-`FALSE`-by-default flags only when you need the extra payload (for
-example, re-extraction or model checking), as each materially increases
-the size of the saved object.
+only the method-specific fixed-effect draw representation: calibrated
+top-level draws for `stack_direct`, fixed-effect-only per-PV matrices in
+diagnostics for `per_pv`, and a fixed-effect proposal matrix paired with
+normalized PV weights in diagnostics for `stack_psis`.
+[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
+exposes only the synthesized top-level `stack_direct` matrix; use
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+for the other two representations. Package-owned raw full stacked draws,
+nuisance draws, and duplicate calibrated matrices are never retained in
+a final composite fit. This does not inspect or override explicitly
+authorized opaque backend objects (`keep_backend_fit`) or log-likelihood
+matrices (`keep_log_lik`), which have separate retention authorities.
+Blocked fits fail closed and record effective `return_draws`,
+`keep_data`, `keep_backend_fit`, and `keep_log_lik` values of `FALSE`,
+irrespective of the original retention request. `keep_data` retains the
+user data frame in the top-level design; otherwise the fit stores a
+metadata/hash-only design snapshot with a base-environment formula.
+Package-owned stacked-data copies are not retained inside composite
+fits. `keep_backend_fit` retains an opaque backend object and therefore
+requires `keep_data = TRUE`, because the package cannot prove that an
+arbitrary backend object is data-free. `keep_log_lik` retains
+log-likelihood draws. Enable the `FALSE`-by-default flags only when you
+need the extra payload (for example, re-extraction or model checking),
+as each materially increases the size of the saved object.
 
 ## See also
 

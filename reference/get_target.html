@@ -17,7 +17,7 @@ imply that every method has a formal target object."><meta property="og:image" c
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ imply that every method has a formal target object."><meta property="og:image" c
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Access pvstackr Targets</h1>
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a>, <a href="https://github.com/joonho112/pvstackr/blob/main/R/legacy-psis.R" class="external-link"><code>R/legacy-psis.R</code></a></small>
       <div class="d-none name"><code>get_target.Rd</code></div>
     </div>
 
@@ -75,6 +75,9 @@ imply that every method has a formal target object.</p>
 <span><span class="fu">get_target</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'pvstackr_brr_target'</span></span>
+<span><span class="fu">get_target</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'pvstackr_legacy_psis_inspection'</span></span>
 <span><span class="fu">get_target</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -95,7 +98,8 @@ imply that every method has a formal target object.</p>
     <p>The target object used by a fit, or <code>NULL</code> when the method has no
 target component. Estimate-row <code>target_source</code> labels are provenance
 metadata and may be present even when a method, such as <code>stack_psis</code>, does
-not carry a formal target object.</p>
+not carry a formal target object. A legacy PSIS inspection object also
+returns <code>NULL</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -133,7 +137,7 @@ not carry a formal target object.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

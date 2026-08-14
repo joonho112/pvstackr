@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +81,7 @@
       <img src="../logo.svg" class="logo" alt=""><h1>A3: Reading results — estimates, intervals, and what to report</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee</h4>
             
-            <h4 data-toc-skip class="date">2026-06-09</h4>
+            <h4 data-toc-skip class="date">2026-08-14</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/vignettes/a3-reading-results.Rmd" class="external-link"><code>vignettes/a3-reading-results.Rmd</code></a></small>
       <div class="d-none name"><code>a3-reading-results.Rmd</code></div>
@@ -190,9 +190,9 @@ value.</p>
 <p><strong>The three terms.</strong> Rows are <code>b_Intercept</code>,
 <code>b_x</code>, and <code>b_female</code> — the fixed-effect block,
 with the <code>b_</code> prefix marking each as a fixed-effect
-coefficient. There are no variance-component rows: v0.1 calibrates and
-reports <span class="math inline">\(\beta_{\text{FE}}\)</span> only, a
-scope reminder carried over from A1/A2 and confirmed by the
+coefficient. There are no variance-component rows: the package
+calibrates and reports <span class="math inline">\(\beta_{\text{FE}}\)</span> only, a scope reminder
+carried over from A1/A2 and confirmed by the
 <code>parameter_scope</code> column below.</p>
 <p><strong>Dual snake_case / broom naming.</strong> Several columns
 appear twice under two spellings: the package-native snake_case
@@ -221,10 +221,14 @@ between-imputation information to spend.</p>
 Three columns record where each row came from:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">est</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"term"</span>, <span class="st">"parameter_scope"</span>, <span class="st">"target_source"</span>, <span class="st">"target_hash"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;          term parameter_scope          target_source target_hash</span></span>
-<span><span class="co">#&gt; 1 b_Intercept    fixed_effect external_brr_fay_rubin    4a4d40f8</span></span>
-<span><span class="co">#&gt; 2         b_x    fixed_effect external_brr_fay_rubin    4a4d40f8</span></span>
-<span><span class="co">#&gt; 3    b_female    fixed_effect external_brr_fay_rubin    4a4d40f8</span></span></code></pre></div>
+<span><span class="co">#&gt;          term parameter_scope          target_source</span></span>
+<span><span class="co">#&gt; 1 b_Intercept    fixed_effect external_brr_fay_rubin</span></span>
+<span><span class="co">#&gt; 2         b_x    fixed_effect external_brr_fay_rubin</span></span>
+<span><span class="co">#&gt; 3    b_female    fixed_effect external_brr_fay_rubin</span></span>
+<span><span class="co">#&gt;                                                               target_hash</span></span>
+<span><span class="co">#&gt; 1 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span></span>
+<span><span class="co">#&gt; 2 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span></span>
+<span><span class="co">#&gt; 3 sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa</span></span></code></pre></div>
 <ul>
 <li>
 <code>parameter_scope == "fixed_effect"</code> confirms every row is
@@ -398,7 +402,7 @@ three fields you reach for most:</p>
 <span><span class="co">#&gt; b_Intercept         b_x    b_female </span></span>
 <span><span class="co">#&gt;       1.021       1.402       1.014</span></span>
 <span><span class="va">tg</span><span class="op">$</span><span class="va">target_hash</span>       <span class="co"># content fingerprint (matches the estimate table)</span></span>
-<span><span class="co">#&gt; [1] "4a4d40f8"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"</span></span></code></pre></div>
 <p>This is the <em>source</em> of the reportable SE: the standard errors
 in <code><a href="../reference/get_estimates.html">get_estimates()</a></code> are <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>,
 and the point estimates are the pooled <code>beta_bar</code>. We can
@@ -438,8 +442,8 @@ the fixed-effect report, which is fully specified by the target.</p>
 <code class="sourceCode R"><span><span class="va">dg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_diagnostics.html">get_diagnostics</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dg</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "preflight"          "stack_fit"          "stack_fit_warnings"</span></span>
-<span><span class="co">#&gt; [4] "ccc"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "preflight"          "sampler"            "sampler_gate"      </span></span>
+<span><span class="co">#&gt; [4] "stack_fit"          "stack_fit_warnings" "ccc"</span></span></code></pre></div>
 <p>The list holds <code>preflight</code> (the resolved formula, term
 names, and target fingerprint checked before fitting),
 <code>stack_fit</code> and <code>stack_fit_warnings</code> (the
@@ -553,7 +557,7 @@ notation</strong>.</p>
 </h3>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
+<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
 <span><span class="co">#&gt; Running under: Ubuntu 24.04.4 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -574,16 +578,16 @@ notation</strong>.</p>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] pvstackr_0.1.0</span></span>
+<span><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    </span></span>
-<span><span class="co">#&gt;  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
+<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
 <span><span class="co">#&gt;  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
-<span><span class="co">#&gt; [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
-<span><span class="co">#&gt; [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     </span></span>
+<span><span class="co">#&gt; [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
+<span><span class="co">#&gt; [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
 <span><span class="co">#&gt; [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
-<span><span class="co">#&gt; [25] rlang_1.2.0       fs_2.1.0</span></span></code></pre></div>
+<span><span class="co">#&gt; [25] rlang_1.3.0       fs_2.1.0</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2 unnumbered">
@@ -617,7 +621,7 @@ Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

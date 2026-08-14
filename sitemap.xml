@@ -23,6 +23,7 @@
 <url><loc>https://joonho112.github.io/pvstackr/reference/get_estimates.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/get_target.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/index.html</loc></url>
+<url><loc>https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_brr_target.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_compare_methods.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_control.html</loc></url>
@@ -31,6 +32,8 @@
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_fit_direct.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_fit_reference.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.html</loc></url>
+<url><loc>https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.html</loc></url>
+<url><loc>https://joonho112.github.io/pvstackr/reference/pv_revalidate_brr_target.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pvstackr-package.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pvstackr_fit_summary.html</loc></url>
 <url><loc>https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.html</loc></url>

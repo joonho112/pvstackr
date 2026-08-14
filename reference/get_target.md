@@ -17,6 +17,9 @@ get_target(x, ...)
 
 # S3 method for class 'pvstackr_brr_target'
 get_target(x, ...)
+
+# S3 method for class 'pvstackr_legacy_psis_inspection'
+get_target(x, ...)
 ```
 
 ## Arguments
@@ -34,7 +37,8 @@ get_target(x, ...)
 The target object used by a fit, or `NULL` when the method has no target
 component. Estimate-row `target_source` labels are provenance metadata
 and may be present even when a method, such as `stack_psis`, does not
-carry a formal target object.
+carry a formal target object. A legacy PSIS inspection object also
+returns `NULL`.
 
 ## See also
 

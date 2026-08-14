@@ -17,7 +17,7 @@ return_draws = FALSE, return NULL."><meta property="og:image" content="https://j
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,7 +54,7 @@ return_draws = FALSE, return NULL."><meta property="og:image" content="https://j
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.svg" class="logo" alt=""><h1>Access pvstackr Draws</h1>
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/R/accessors-print.R" class="external-link"><code>R/accessors-print.R</code></a>, <a href="https://github.com/joonho112/pvstackr/blob/main/R/legacy-psis.R" class="external-link"><code>R/legacy-psis.R</code></a></small>
       <div class="d-none name"><code>get_draws.Rd</code></div>
     </div>
 
@@ -72,6 +72,9 @@ synthesize a single reportable draw matrix, or fits created with
 <span><span class="fu">get_draws</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'pvstackr_fit'</span></span>
+<span><span class="fu">get_draws</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'pvstackr_legacy_psis_inspection'</span></span>
 <span><span class="fu">get_draws</span><span class="op">(</span><span class="va">x</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -91,15 +94,18 @@ synthesize a single reportable draw matrix, or fits created with
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>The retained reportable draw matrix, or <code>NULL</code> when draws were not
 retained or the method does not synthesize top-level reportable draws.
-Per-PV reference draws and PSIS weights, when retained, remain available in
-diagnostics rather than through this top-level reportable-draw accessor.</p>
+Per-PV reference draws and the PSIS proposal/weight pair, when retained,
+remain available in diagnostics rather than through this top-level
+reportable-draw accessor. An inspection-only legacy PSIS object fails
+explicitly instead of returning historical draws.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>This accessor returns only the synthesized top-level reportable draw matrix.
-Per-PV reference draws (<code>per_pv</code>) and PSIS importance weights (<code>stack_psis</code>),
-when retained, are not surfaced here; they live in the fit's diagnostics
-(see <code><a href="get_diagnostics.html">get_diagnostics()</a></code>), not in this top-level reportable-draw accessor.</p>
+Per-PV reference draws (<code>per_pv</code>) and the PSIS fixed-effect proposal/weight
+pair (<code>stack_psis</code>), when retained, are not surfaced here; they live in the
+fit's diagnostics (see <code><a href="get_diagnostics.html">get_diagnostics()</a></code>), not in this top-level
+reportable-draw accessor.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -129,7 +135,7 @@ when retained, are not surfaced here; they live in the fit's diagnostics
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

@@ -222,19 +222,18 @@ unambiguous wherever the track cites it.
 needs \\L\_{\text{raw}}^{-1}\\, which exists only if
 \\\Sigma\_{\text{raw}}\\ is positive definite, and \\L\_{\text{tgt}}\\
 likewise requires a positive-definite
-\\\Sigma\_{\text{tgt}}=T\_{\text{MI}}\\. In v0.1.0, CCC factors both
-covariances **as given** and applies **no** automatic Tikhonov or
-near-PD repair to either. When the raw draw cloud is **ill-conditioned**
-— near-collinear fixed effects, or too few effective draws relative to
-the dimension — that condition surfaces in one of two ways rather than
-being silently patched: a matrix that is *not* positive definite is
-rejected outright on the Cholesky path (the factorization aborts with a
-“must be positive definite for CCC calibration” error), while a matrix
-that is positive definite but poorly conditioned clears the Cholesky and
-is instead flagged by the \\\kappa_A\\ conditioning diagnostic below.
-The remedy is upstream — increase effective draws, reduce collinearity,
-or simplify the fixed-effect block before reporting — never an internal
-ridge.
+\\\Sigma\_{\text{tgt}}=T\_{\text{MI}}\\. CCC factors both covariances
+**as given** and applies **no** automatic Tikhonov or near-PD repair to
+either. When the raw draw cloud is **ill-conditioned** — near-collinear
+fixed effects, or too few effective draws relative to the dimension —
+that condition surfaces in one of two ways rather than being silently
+patched: a matrix that is *not* positive definite is rejected outright
+on the Cholesky path (the factorization aborts with a “must be positive
+definite for CCC calibration” error), while a matrix that is positive
+definite but poorly conditioned clears the Cholesky and is instead
+flagged by the \\\kappa_A\\ conditioning diagnostic below. The remedy is
+upstream — increase effective draws, reduce collinearity, or simplify
+the fixed-effect block before reporting — never an internal ridge.
 
 **The conditioning diagnostic \\\kappa_A\\.** Because the map’s
 stability hinges on \\L\_{\text{raw}}^{-1}\\, the package records a
@@ -372,8 +371,8 @@ This is read-only:
 dg <- get_diagnostics(fit)
 
 names(dg)                                                    # preflight, stack_fit, stack_fit_warnings, ccc
-#> [1] "preflight"          "stack_fit"          "stack_fit_warnings"
-#> [4] "ccc"
+#> [1] "preflight"          "sampler"            "sampler_gate"      
+#> [4] "stack_fit"          "stack_fit_warnings" "ccc"
 dg$ccc[c("center_status", "delta_c_rel", "delta_c_max")]
 #> $center_status
 #> [1] "ok"
@@ -454,7 +453,7 @@ Bug reports and feature requests:
 ``` r
 
 sessionInfo()
-#> R version 4.6.0 (2026-04-24)
+#> R version 4.6.1 (2026-06-24)
 #> Platform: x86_64-pc-linux-gnu
 #> Running under: Ubuntu 24.04.4 LTS
 #> 
@@ -475,16 +474,16 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] pvstackr_0.1.0
+#> [1] pvstackr_0.2.0
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.58         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
+#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
 #>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.0     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.0    tools_4.6.0       ragg_1.5.2        bslib_0.11.0     
+#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
+#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
 #> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.2.0       fs_2.1.0
+#> [25] rlang_1.3.0       fs_2.1.0
 ```
 
 ## References
