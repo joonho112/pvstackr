@@ -2,6 +2,19 @@
 
 ## pvstackr 0.2.0
 
+- Revalidating a legacy target no longer requires its estimates to match
+  bit-for-bit.
+  [`pv_revalidate_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_revalidate_brr_target.md)
+  rebuilds the target from the raw inputs and compared every primitive
+  with [`identical()`](https://rdrr.io/r/base/identical.html), including
+  the weighted least-squares estimates and a hash of them. Those last
+  bits differ between BLAS implementations, so a target built on one
+  machine could not be revalidated on another. Structure, declared
+  inputs, and the input-derived design hash are still compared exactly;
+  the estimates now go through the package’s existing numeric policy
+  (absolute 1e-12, relative 1e-10). A difference large enough to matter
+  still fails closed.
+
 - Content hashes and validation stamps no longer depend on the R version
   that wrote them. Both hashed the whole serialization stream, whose
   fourteen-byte header records the writing R version. The eight-hex
