@@ -227,3 +227,104 @@ test_that("coverage metadata fails closed to descriptive under classic Rubin df"
     "intervals are descriptive rather than coverage-claimable."
   )
 })
+
+# The article's Appendix F shows a blocked fit as a verbatim console capture.
+# Freeze that display so the published block cannot silently drift, and build it
+# the way the article does: an explicit population-level prior plus a center
+# separation past the blocking threshold.
+article_blocked_fit <- function(prior = NULL) {
+  source <- pisa_tiny_parity_load()
+  design <- pv_design(
+    data = source$data,
+    formula = OUTCOME ~ x + female,
+    pv_suffix = "READ",
+    expected_M = 2L,
+    expected_R = 4L,
+    id_cols = "CNTSTUID"
+  )
+  target <- pv_brr_target(
+    data = source$data,
+    formula = design$formula,
+    pv_cols = design$pv_cols,
+    weight_col = design$weight_col,
+    rep_weight_cols = design$rep_weight_cols,
+    fay_k = design$fay_k,
+    id_cols = design$id_cols,
+    df_method = "barnard_rubin",
+    df_complete = 80
+  )
+  base_draws <- pisa_tiny_parity_fit_function(target)(
+    formula = design$formula, data = source$data, family = stats::gaussian(),
+    prior = NULL, chains = 2L, iter = 12L, warmup = 6L, cores = 1L,
+    seed = 20260713L, backend = "injected", file = tempfile("article-blocked-"),
+    file_refit = "never"
+  )$draws
+  shifted <- sweep(base_draws, 2L, colMeans(base_draws), FUN = "-")
+  fe <- intersect(colnames(shifted), names(target$beta))
+  for (nm in fe) {
+    shifted[, nm] <- shifted[, nm] + target$beta[[nm]] + 0.5 * target$se[[nm]]
+  }
+
+  pv_fit_direct(
+    data = source$data,
+    formula = design$formula,
+    target = target,
+    control = pv_control(
+      method = "stack_direct", backend = "injected", chains = 2L, iter = 12L,
+      warmup = 6L, cores = 1L, seed = 20260713L, return_draws = TRUE,
+      keep_data = FALSE, keep_backend_fit = FALSE
+    ),
+    family = stats::gaussian(),
+    prior = prior,
+    fit_function = function(...) list(draws = shifted),
+    draws_function = function(fit, ...) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(chains = 2L, post_warmup = 6L),
+    cache_dir = tempdir(),
+    cache_stem = "article-blocked"
+  )
+}
+
+test_that("blocked fit console output is frozen for the article capture", {
+  global_b <- data.frame(
+    prior = "normal(0, 25)", class = "b", coef = "",
+    stringsAsFactors = FALSE
+  )
+  fit <- article_blocked_fit(prior = global_b)
+
+  expect_identical(fit$status, "blocked")
+  expect_identical(
+    fit$reason_codes,
+    c("explicit_prior_warning", "center_separation_red")
+  )
+
+  output <- capture.output(returned <- print(fit))
+  expect_identical(returned, fit)
+  expect_identical(output, c(
+    "pvstackr fit",
+    "  method: stack_direct",
+    "  status: blocked",
+    "  fixed effects: 0",
+    "  target: external_brr_fay_rubin",
+    "  draws: not retained",
+    "  diagnostics: preflight, sampler, sampler_gate, ccc, redaction",
+    "  reason codes: explicit_prior_warning, center_separation_red",
+    "  warnings: 2"
+  ))
+
+  # The redaction firewall is what removes the reportable payload; the console
+  # line above is only the visible half of it.
+  expect_null(fit$draws)
+  expect_null(fit$ccc$draws_calibrated)
+  expect_identical(nrow(fit$estimates), 0L)
+})
+
+test_that("a blocked fit without an explicit prior drops the prior reason code", {
+  fit <- article_blocked_fit(prior = NULL)
+
+  expect_identical(fit$status, "blocked")
+  expect_identical(fit$reason_codes, "center_separation_red")
+
+  output <- capture.output(print(fit))
+  expect_identical(output[[8L]], "  reason codes: center_separation_red")
+  expect_identical(output[[9L]], "  warnings: 1")
+})

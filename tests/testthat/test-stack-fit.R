@@ -607,10 +607,15 @@ test_that("materialized prior policy permits only provably invariant tables", {
     pvstackr:::pv_stack_materialized_prior(global_b, no_intercept),
     global_b
   )
-  expect_error(
-    pvstackr:::pv_stack_materialized_prior(global_b, with_intercept),
-    "cannot be preserved exactly"
-  )
+  # A population-level prior is expanded onto the non-intercept columns rather
+  # than refused: `0 + ...` on the materialized matrix would otherwise let it
+  # reach the intercept column, which the original formula excludes.
+  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, with_intercept)
+  expect_identical(expanded$class, "b")
+  expect_identical(expanded$coef, "pvstackrMM002")
+  expect_identical(expanded$prior, "normal(0, 1)")
+  expect_false("pvstackrMM001" %in% expanded$coef)
+
   expect_error(
     pvstackr:::pv_stack_materialized_prior(coefficient_b, with_intercept),
     "cannot be preserved exactly"
@@ -622,6 +627,52 @@ test_that("materialized prior policy permits only provably invariant tables", {
   expect_error(
     pvstackr:::pv_stack_materialized_prior("opaque-prior", with_intercept),
     "opaque"
+  )
+})
+
+test_that("population-level prior expansion preserves the original prior scope", {
+  design <- stats::setNames(
+    c("b_Intercept", "b_escs", "b_female"),
+    c("b_pvstackrMM001", "b_pvstackrMM002", "b_pvstackrMM003")
+  )
+  global_b <- data.frame(
+    prior = "normal(0, 25)", class = "b", coef = "",
+    stringsAsFactors = FALSE
+  )
+
+  expanded <- pvstackr:::pv_stack_materialized_prior(global_b, design)
+
+  # One row per slope, none for the intercept column, same distribution.
+  expect_identical(nrow(expanded), 2L)
+  expect_setequal(expanded$coef, c("pvstackrMM002", "pvstackrMM003"))
+  expect_true(all(expanded$prior == "normal(0, 25)"))
+  expect_true(all(expanded$class == "b"))
+
+  # Other classes ride along untouched.
+  mixed <- rbind(
+    global_b,
+    data.frame(prior = "student_t(3, 0, 10)", class = "sigma", coef = "",
+               stringsAsFactors = FALSE)
+  )
+  out <- pvstackr:::pv_stack_materialized_prior(mixed, design)
+  expect_identical(nrow(out), 3L)
+  expect_identical(out$prior[out$class == "sigma"], "student_t(3, 0, 10)")
+  expect_setequal(out$coef[out$class == "b"], c("pvstackrMM002", "pvstackrMM003"))
+
+  # A scoped prior is still refused: expansion cannot preserve group scope.
+  scoped <- cbind(global_b, group = "school", stringsAsFactors = FALSE)
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior(scoped, design),
+    "cannot be preserved exactly"
+  )
+
+  # An intercept-only design has nothing to carry a population-level prior.
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior(
+      global_b,
+      stats::setNames("b_Intercept", "b_pvstackrMM001")
+    ),
+    "no non-intercept coefficient"
   )
 })
 

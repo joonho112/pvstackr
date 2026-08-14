@@ -512,11 +512,8 @@ pv_stack_materialized_prior <- function(prior, draw_name_map) {
     prior$class == "Intercept" |
     nzchar(prior$coef) |
     scoped
-  has_intercept <- "b_Intercept" %in% unname(draw_name_map)
-  global_b_changes_scope <- prior$class == "b" & !nzchar(prior$coef) &
-    has_intercept
   allowed_class <- prior$class %in% c("b", "sigma")
-  if (any(coefficient_specific | global_b_changes_scope | !allowed_class)) {
+  if (any(coefficient_specific | !allowed_class)) {
     pv_abort(
       paste0(
         "Coefficient-, intercept-, scoped-, or unrecognized priors cannot be ",
@@ -524,7 +521,37 @@ pv_stack_materialized_prior <- function(prior, draw_name_map) {
       )
     )
   }
-  prior
+
+  # Materialization turns the intercept into an ordinary model-matrix column and
+  # fits `0 + ...`, so a population-level prior written for the original formula
+  # would widen to cover the intercept as well. Expanding it to one row per
+  # non-intercept column restores the original scope exactly rather than
+  # approximating it; anything that cannot be expanded this way is refused above.
+  has_intercept <- "b_Intercept" %in% unname(draw_name_map)
+  global_b <- prior$class == "b" & !nzchar(prior$coef)
+  if (!has_intercept || !any(global_b)) {
+    return(prior)
+  }
+
+  slope_coefs <- sub(
+    "^b_", "",
+    names(draw_name_map)[unname(draw_name_map) != "b_Intercept"]
+  )
+  if (length(slope_coefs) == 0L) {
+    pv_abort(
+      paste0(
+        "A population-level prior was supplied for a materialized stack_direct ",
+        "design with no non-intercept coefficient to carry it."
+      )
+    )
+  }
+
+  expanded <- prior[rep(which(global_b), each = length(slope_coefs)), , drop = FALSE]
+  expanded$coef <- rep(slope_coefs, times = sum(global_b))
+  out <- rbind(prior[!global_b, , drop = FALSE], expanded)
+  rownames(out) <- NULL
+  class(out) <- class(prior)
+  out
 }
 
 pv_stack_direct_fe_names <- function(data, formula) {

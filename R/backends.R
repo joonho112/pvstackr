@@ -171,17 +171,44 @@ pv_backend_injected_engine_spec <- function(requested_backend) {
   )
 }
 
-#' Bundled brms fit function for the stacked fit
+#' Bundled brms adapter for the stacked fit
 #'
-#' Internal adapter used when `pv_control(backend = "brms")` is selected and no
-#' `fit_function` is injected. Arguments mirror the fit-argument contract of
-#' `pv_stack_build_fit_args()`. Backend resolution happens before this function:
+#' The three functions that `pv_control(backend = "brms")` installs when no
+#' adapter is injected: `pv_backend_brms_fit_function()` fits the prepared
+#' stacked model, `pv_backend_brms_draws_function()` extracts its draws, and
+#' `pv_backend_brms_sampler_diagnostics()` reports its sampler diagnostics.
+#'
+#' They are exported so that the bundled backend and the injected route are the
+#' same code path rather than two implementations that have to be kept in step.
+#' Passing all three to [pv_fit()] as `fit_function`, `draws_function`, and
+#' `diagnose_function` reproduces `backend = "brms"` exactly, and each one can
+#' be replaced individually to attach a different engine.
+#'
+#' A reportable fit needs all three. An adapter that supplies only a fit and a
+#' draws function leaves the sampler evidence incomplete, and the fit is then
+#' blocked rather than reported.
+#'
+#' @section Backend resolution:
+#' Resolution happens before `pv_backend_brms_fit_function()` is called:
 #' cmdstanr is used only when both its namespace and a configured CmdStan are
-#' available; otherwise rstan is selected only when cmdstanr is absent. There is
-#' no retry with a different backend after a fit failure.
+#' available, and rstan is selected only when cmdstanr is absent. A fit failure
+#' is not retried against the other backend.
 #'
-#' @keywords internal
-#' @noRd
+#' @param formula Prepared stacked model formula, with the stacked outcome and
+#'   weight columns already bound.
+#' @param data Prepared stacked data frame.
+#' @param family Response family, or `NULL` for `stats::gaussian()`.
+#' @param prior Prior specification passed through to `brms::brm()`, or `NULL`.
+#' @param chains,iter,warmup,cores,seed Sampler settings from [pv_control()].
+#' @param backend Resolved Stan backend, `"cmdstanr"` or `"rstan"`.
+#' @param file,file_refit Cache location and refit policy for `brms::brm()`.
+#' @param ... Further arguments passed to `brms::brm()`.
+#'
+#' @returns A `brmsfit`.
+#'
+#' @seealso [pv_fit()] and [pv_control()] for how an adapter is selected.
+#' @family backend adapters
+#' @export
 pv_backend_brms_fit_function <- function(formula, data, family, prior, chains,
                                          iter, warmup, cores, seed, backend,
                                          file, file_refit, ...) {
@@ -209,14 +236,18 @@ pv_backend_brms_fit_function <- function(formula, data, family, prior, chains,
   )
 }
 
-#' Bundled brms draws function for the stacked fit
+#' @rdname pv_backend_brms_fit_function
 #'
-#' Returns the fixed-effect (`b_*`) and residual-scale (`sigma`) draws of a
-#' brmsfit as a plain base matrix, the draw format the calibration layer
-#' expects.
+#' @param fit The object returned by the fit function.
 #'
-#' @keywords internal
-#' @noRd
+#' @details
+#' `pv_backend_brms_draws_function()` returns the fixed-effect (`b_*`) and
+#' residual-scale (`sigma`) draws as a plain base matrix, the draw format the
+#' calibration layer expects. A `posterior::draws_matrix` is converted rather
+#' than passed through, because the calibration validator compares draw blocks
+#' by value and a classed matrix would fail that comparison on class alone.
+#'
+#' @export
 pv_backend_brms_draws_function <- function(fit, ...) {
   if (!requireNamespace("posterior", quietly = TRUE)) {
     pv_abort("The bundled brms backend requires the posterior package to extract draws.")
@@ -227,6 +258,22 @@ pv_backend_brms_draws_function <- function(fit, ...) {
          dimnames = list(NULL, colnames(dm)))
 }
 
+#' @rdname pv_backend_brms_fit_function
+#'
+#' @param draws_array_function,summary_function,nuts_function Optional
+#'   replacements for `posterior::as_draws_array()`, the
+#'   `posterior::summarise_draws()` call that produces R-hat and ESS, and
+#'   `brms::nuts_params()`. Supplying these lets an engine report diagnostics
+#'   without depending on those packages.
+#'
+#' @details
+#' `pv_backend_brms_sampler_diagnostics()` reports maximum R-hat, minimum bulk
+#' and tail ESS, divergence count, chains, and post-warmup draws per chain. When
+#' a required namespace is missing or the extraction fails, it returns an
+#' explicit incomplete record instead of silently omitting the evidence, and the
+#' fit is blocked downstream.
+#'
+#' @export
 pv_backend_brms_sampler_diagnostics <- function(
   fit,
   draws_array_function = NULL,

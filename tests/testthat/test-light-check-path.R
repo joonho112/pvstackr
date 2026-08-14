@@ -71,9 +71,29 @@ test_that("NAMESPACE has no runtime imports or heavy backend bindings", {
   heavy <- c("brms", "cmdstanr", "posterior", "loo", "EdSurvey", "lme4", "rstan", "StanHeaders")
 
   expect_false(any(grepl("^import(From)?\\(", namespace)))
+
+  # Exported adapter names may mention a backend (`pv_backend_brms_*`); what
+  # must never appear is a directive that binds the package to one at load time.
+  directives <- namespace[!grepl("^export\\(", namespace)]
   for (pkg in heavy) {
-    expect_false(any(grepl(pkg, namespace, fixed = TRUE)), info = pkg)
+    expect_false(any(grepl(pkg, directives, fixed = TRUE)), info = pkg)
   }
+
+  # The backend adapters are exported, and nothing beyond them may carry a
+  # heavy package name into the exported surface.
+  exported_heavy <- grep(
+    paste(heavy, collapse = "|"),
+    grep("^export\\(", namespace, value = TRUE),
+    value = TRUE
+  )
+  expect_setequal(
+    exported_heavy,
+    c(
+      "export(pv_backend_brms_draws_function)",
+      "export(pv_backend_brms_fit_function)",
+      "export(pv_backend_brms_sampler_diagnostics)"
+    )
+  )
 })
 
 test_that("runtime R code does not require optional backend packages", {

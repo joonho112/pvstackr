@@ -159,13 +159,10 @@ test_that("prior safeguards distinguish warning and pre-backend rejection", {
   expect_invisible(pvstackr:::validate_pvstackr_fit(warning_fit))
 
   bundle <- safeguard_direct_bundle()
+  # A population-level `b` prior is not listed here: it is expanded onto the
+  # slope columns instead of refused (see the prior-scope test below). What
+  # stays invalid is anything whose scope expansion would not be exact.
   invalid_priors <- list(
-    global_b = data.frame(
-      prior = "normal(0, 25)",
-      class = "b",
-      coef = "",
-      stringsAsFactors = FALSE
-    ),
     coefficient_b = data.frame(
       prior = "normal(0, 1)",
       class = "b",
@@ -449,4 +446,49 @@ test_that("PSIS boundary and unevaluated diagnostics are immutable blocks", {
   expect_identical(nrow(not_evaluated$estimates), 0L)
   expect_setequal(names(not_evaluated$diagnostics), c("psis", "redaction"))
   expect_invisible(pvstackr:::validate_pvstackr_fit(not_evaluated))
+})
+
+test_that("a population-level prior reaches the backend scoped to the slopes", {
+  bundle <- safeguard_direct_bundle()
+  seen <- new.env(parent = emptyenv())
+  global_b <- data.frame(
+    prior = "normal(0, 25)", class = "b", coef = "",
+    stringsAsFactors = FALSE
+  )
+
+  fit <- pv_fit(
+    data = bundle$data,
+    formula = bundle$design$formula,
+    target = bundle$target,
+    method = "stack_direct",
+    control = pv_control(
+      method = "stack_direct", backend = "injected", chains = 2L,
+      iter = 12L, warmup = 6L, cores = 1L, seed = 20260713L,
+      return_draws = TRUE
+    ),
+    prior = global_b,
+    fit_function = function(formula, data, family, prior, ...) {
+      seen$prior <- prior
+      seen$formula <- paste(deparse(formula), collapse = " ")
+      list(draws = safeguard_direct_draws(bundle$target, center_shift_se = 0))
+    },
+    draws_function = function(fit, ...) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(chains = 2L, post_warmup = 6L),
+    cache_dir = tempdir(),
+    cache_stem = "safeguard-prior-scope"
+  )
+
+  # The materialized design fits `0 + ...`, so the intercept is an ordinary
+  # column. The prior must arrive attached to the slope columns only, which is
+  # what the original formula's population-level prior meant.
+  intercept_column <- "pvstackrMM001"
+  expect_match(seen$formula, paste0("0 \\+ ", intercept_column))
+  expect_true(all(seen$prior$class == "b"))
+  expect_false(intercept_column %in% seen$prior$coef)
+  expect_setequal(seen$prior$coef, c("pvstackrMM002", "pvstackrMM003"))
+  expect_true(all(seen$prior$prior == "normal(0, 25)"))
+
+  # The prior policy still flags the fit rather than passing it silently.
+  expect_identical(fit$status, "warning")
+  expect_identical(fit$reason_codes, "explicit_prior_warning")
 })

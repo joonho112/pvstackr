@@ -1,5 +1,25 @@
 # pvstackr 0.2.0
 
+* The bundled brms adapter is now public: `pv_backend_brms_fit_function()`,
+  `pv_backend_brms_draws_function()`, and
+  `pv_backend_brms_sampler_diagnostics()`. Passing all three to `pv_fit()` as
+  `fit_function`, `draws_function`, and `diagnose_function` reproduces
+  `pv_control(backend = "brms")` exactly, so the bundled route and the injected
+  route are one code path rather than two that have to be kept in step, and any
+  one of the three can be replaced to attach a different engine. A reportable
+  fit still needs all three: an adapter that supplies only a fit and a draws
+  function leaves the sampler evidence incomplete and the fit is blocked.
+
+* A population-level prior (`class = "b"` with no `coef`) is now expanded onto
+  the individual slope coefficients instead of being refused. `stack_direct`
+  materializes the model matrix and fits `0 + ...`, which turns the intercept
+  into an ordinary column, so passing such a prior through unchanged would have
+  silently widened it to cover the intercept. Expanding it restores the scope
+  the prior had against the original formula. Priors whose scope cannot be
+  reproduced exactly -- intercept-class, coefficient-specific, grouped, or
+  opaque -- are still refused before the backend runs, and supplying any
+  explicit prior still raises the `explicit_prior_warning` reason code.
+
 * `stack_psis` now separates the weight input route, Pareto-k source, and
   smoothing provenance. Supplied or injected weights can enter the reportable
   caller-declared external-PSIS route only when the caller records both an
