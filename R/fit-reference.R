@@ -472,6 +472,7 @@ pv_fit_reference <- function(
   if (!identical(control$method, "per_pv")) {
     pv_abort("`control$method` must be `per_pv` for `pv_fit_reference()`.")
   }
+  pv_validate_fit_data_retention_control(control)
   source <- pv_reference_draw_source(per_pv_draws, fit_function, draws_function)
 
   fits <- NULL
@@ -535,6 +536,10 @@ pv_fit_reference <- function(
         target_hash = target$target_hash
       )
     )
+    design <- pv_design_canonicalize_formula(design)
+    if (!isTRUE(control$keep_data)) {
+      design <- pv_design_data_free_snapshot(design)
+    }
   }
 
   new_pvstackr_fit(

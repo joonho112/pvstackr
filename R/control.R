@@ -21,10 +21,25 @@
 #'
 #' ## Object retention
 #' The retention flags govern how much a fitted `pvstackr_fit` carries, and the
-#' defaults keep fits light. `return_draws` (default `TRUE`) retains the
-#' reportable fixed-effect draws used downstream by [get_draws()]; the remaining
-#' flags default to `FALSE`. `keep_data` retains the user data frame,
-#' `keep_backend_fit` retains the heavy backend fit object, and `keep_log_lik`
+#' defaults keep fits light. `return_draws` (default `TRUE`) retains only the
+#' method-specific fixed-effect draw representation: calibrated top-level draws
+#' for `stack_direct`, fixed-effect-only per-PV matrices in diagnostics for
+#' `per_pv`, and a fixed-effect proposal matrix paired with normalized PV
+#' weights in diagnostics for `stack_psis`. [get_draws()] exposes only the
+#' synthesized top-level `stack_direct` matrix; use [get_diagnostics()] for the
+#' other two representations. Package-owned raw full stacked draws, nuisance
+#' draws, and duplicate calibrated matrices are never retained in a final
+#' composite fit. This does not inspect or override explicitly authorized
+#' opaque backend objects (`keep_backend_fit`) or log-likelihood matrices
+#' (`keep_log_lik`), which have separate retention authorities.
+#' Blocked fits fail closed and record effective `return_draws`, `keep_data`,
+#' `keep_backend_fit`, and `keep_log_lik` values of `FALSE`, irrespective of
+#' the original retention request. `keep_data` retains the user data frame in the
+#' top-level design; otherwise the fit stores a metadata/hash-only design
+#' snapshot with a base-environment formula. Package-owned stacked-data copies
+#' are not retained inside composite fits. `keep_backend_fit` retains an opaque
+#' backend object and therefore requires `keep_data = TRUE`, because the package
+#' cannot prove that an arbitrary backend object is data-free. `keep_log_lik`
 #' retains log-likelihood draws. Enable the `FALSE`-by-default flags only when
 #' you need the extra payload (for example, re-extraction or model checking), as
 #' each materially increases the size of the saved object.
@@ -44,12 +59,15 @@
 #'   no fixed seed.
 #' @param backend Backend policy. Character scalar; one of `"none"`,
 #'   `"injected"`, `"brms"`, or `"cmdstanr"`. Default `"none"`. In this package
-#'   stage the backend fit is injected or precomputed.
+#'   stage `"brms"` selects the bundled brms adapter (with deterministic
+#'   cmdstanr/rstan resolution), while other live engines use an injected
+#'   `fit_function` adapter or precomputed draws.
 #' @param conf_level Confidence or credible-interval level for report tables.
 #'   Numeric scalar in `(0, 1)`. Default `0.95`.
-#' @param psis_k_threshold Pareto-k warning threshold for `stack_psis`. Numeric
-#'   scalar in `(0, 1]`. Default `0.7`, matching the Vehtari et al. unreliable-k
-#'   cutoff.
+#' @param psis_k_threshold Pareto-k reportability threshold for `stack_psis`.
+#'   Numeric scalar in `(0, 0.7]`. Default `0.7`; values below `0.7` may impose
+#'   a stricter gate, but the package-level ceiling cannot be relaxed. Every
+#'   plausible value must have a finite Pareto-k strictly below this threshold.
 #' @param center Calibration centering convention, `"target"` or `"posterior"`.
 #'   Reportable `stack_direct` output requires `"target"`. `"posterior"` is
 #'   reserved for CCC diagnostic/exploratory checks: it leaves fixed-effect draws
@@ -58,12 +76,16 @@
 #' @param allow_target_nearpd Reserved for future target-covariance repair.
 #'   Logical scalar; must be `FALSE`. Automatic target repair is not currently
 #'   supported. Default `FALSE`.
-#' @param return_draws Logical scalar. Whether fitted objects retain reportable
-#'   fixed-effect draws (read via [get_draws()]). Default `TRUE`.
+#' @param return_draws Logical scalar. Whether fitted objects retain their
+#'   method-specific fixed-effect draw representation. For `stack_direct`, read
+#'   the calibrated matrix via [get_draws()]. Per-PV matrices and the PSIS
+#'   proposal/weight pair remain in [get_diagnostics()]. Default `TRUE`.
 #' @param keep_data Logical scalar. Whether fitted objects may retain the user
 #'   data frame. Default `FALSE` (fits stay light).
 #' @param keep_backend_fit Logical scalar. Whether fitted objects may retain the
-#'   heavy backend fit object. Default `FALSE` (fits stay light).
+#'   heavy, opaque backend fit object. This requires `keep_data = TRUE` on
+#'   public composite fits because a backend object may contain analysis data.
+#'   Default `FALSE` (fits stay light).
 #' @param keep_log_lik Logical scalar. Whether fitted objects may retain
 #'   log-likelihood draws. Default `FALSE` (fits stay light).
 #' @param verbose Logical scalar. Whether functions emit progress messages.
@@ -123,14 +145,7 @@ pv_control <- function(
   seed <- pv_assert_scalar_number(seed, "seed", integer = TRUE, lower = 0, allow_null = TRUE)
   backend <- pv_validate_backend(backend)
   conf_level <- pv_assert_probability(conf_level, "conf_level")
-  psis_k_threshold <- pv_assert_scalar_number(
-    psis_k_threshold,
-    "psis_k_threshold",
-    lower = 0,
-    upper = 1,
-    inclusive_lower = FALSE,
-    inclusive_upper = TRUE
-  )
+  psis_k_threshold <- pv_validate_psis_k_threshold(psis_k_threshold)
   center <- pv_validate_center(center)
   allow_target_nearpd <- pv_validate_target_repair_control(allow_target_nearpd)
   return_draws <- pv_assert_scalar_logical(return_draws, "return_draws")
@@ -159,6 +174,15 @@ pv_control <- function(
   )
   class(control) <- c("pvstackr_control", "list")
   pv_validate_control(control)
+}
+
+pv_fit_blocked_control <- function(control) {
+  out <- pv_validate_control(control)
+  out$return_draws <- FALSE
+  out$keep_data <- FALSE
+  out$keep_backend_fit <- FALSE
+  out$keep_log_lik <- FALSE
+  pv_validate_control(out)
 }
 
 #' @rdname pv_control

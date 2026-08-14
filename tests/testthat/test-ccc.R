@@ -29,6 +29,40 @@ ccc_draw_fixture <- function(include_vc = TRUE) {
   cbind(fe, sigma = c(1.1, 1.2, 1.3, 1.4))
 }
 
+ccc_bound_fixture <- function() {
+  data <- data.frame(
+    id = seq_len(10),
+    x = c(-2, -1.5, -0.5, 0, 0.5, 1, 1.5, 2, 2.5, 3),
+    PV1 = c(2.1, 2.4, 3.0, 3.2, 3.6, 4.0, 4.2, 4.8, 5.1, 5.5),
+    PV2 = c(2.0, 2.5, 2.9, 3.4, 3.5, 4.1, 4.4, 4.7, 5.0, 5.8),
+    W = c(1.0, 1.1, 0.9, 1.2, 1.0, 1.3, 0.8, 1.4, 1.1, 0.95),
+    RW1 = c(0.8, 1.3, 1.0, 1.1, 0.9, 1.5, 0.9, 1.2, 1.2, 1.0),
+    RW2 = c(1.2, 0.9, 0.8, 1.4, 1.1, 1.0, 0.7, 1.6, 1.0, 0.9),
+    RW3 = c(1.1, 1.0, 1.1, 1.0, 1.3, 1.2, 0.8, 1.3, 1.4, 1.1),
+    RW4 = c(0.9, 1.2, 0.95, 1.3, 1.0, 1.4, 1.1, 1.1, 0.9, 1.2)
+  )
+  target <- pv_brr_target(
+    data = data,
+    formula = OUTCOME ~ x,
+    pv_cols = c("PV1", "PV2"),
+    weight_col = "W",
+    rep_weight_cols = paste0("RW", 1:4),
+    fay_k = 0.5,
+    id_cols = "id"
+  )
+  preflight <- pvstackr:::pv_stack_direct_preflight(
+    data = data,
+    formula = OUTCOME ~ x,
+    target = target
+  )
+  list(
+    data = data,
+    target = target,
+    preflight = preflight,
+    draws = ccc_draw_fixture()
+  )
+}
+
 test_that("CCC calibration matches target mean and covariance exactly for fixed effects", {
   draws <- ccc_draw_fixture()
   target <- ccc_target_fixture()
@@ -36,6 +70,9 @@ test_that("CCC calibration matches target mean and covariance exactly for fixed 
 
   expect_s3_class(out, "pvstackr_ccc")
   expect_identical(out$ccc_status, "ok")
+  expect_identical(out$schema_version, "0.1.0")
+  expect_false("binding_proof" %in% names(out))
+  expect_invisible(pvstackr:::validate_pvstackr_ccc(out))
   expect_equal(out$psi_hat, target$beta, tolerance = 1e-14)
   expect_equal(colMeans(out$draws_fe_cal), target$beta, tolerance = 1e-14)
   expect_equal(unname(out$Sigma_raw), diag(c(4, 9)), tolerance = 1e-14)
@@ -66,6 +103,82 @@ test_that("CCC calibration matches target mean and covariance exactly for fixed 
   expect_identical(out$diagnostics$center_separation$band, "red")
   expect_identical(out$diagnostics$center_separation$reason_code, "center_separation_red")
   expect_null(out$diagnostics$delta_c_rel_old)
+})
+
+test_that("proof-bearing CCC is schema 0.2 and preserves the exact verified proof", {
+  fixture <- ccc_bound_fixture()
+  out <- pvstackr:::ccc_calibrate(
+    fixture$draws,
+    fixture$target,
+    binding_proof = fixture$preflight$binding_proof
+  )
+
+  expect_identical(out$schema_version, "0.2.0")
+  expect_identical(names(out), pvstackr:::pv_ccc_schema02_fields())
+  expect_identical(out$binding_proof, fixture$preflight$binding_proof)
+  expect_identical(out$target_hash, fixture$target$target_content$target_content_hash)
+  expect_invisible(pvstackr:::validate_pvstackr_ccc(out))
+})
+
+test_that("CCC validates a supplied proof before inspecting calibration payload", {
+  fixture <- ccc_bound_fixture()
+  stale <- fixture$preflight$binding_proof
+  stale$current_manifest_hash <- paste0("sha256:", strrep("0", 64))
+
+  error <- tryCatch(
+    pvstackr:::ccc_calibrate(
+      draws = "not-a-draw-payload",
+      target = fixture$target,
+      binding_proof = stale
+    ),
+    pvstackr_binding_error = identity
+  )
+  expect_s3_class(error, "pvstackr_binding_error")
+  expect_identical(error$code, "PV_BIND_E005")
+
+  legacy_error <- tryCatch(
+    pvstackr:::ccc_calibrate(
+      draws = "not-a-draw-payload",
+      target = ccc_target_fixture(),
+      binding_proof = fixture$preflight$binding_proof
+    ),
+    pvstackr_binding_error = identity
+  )
+  expect_s3_class(legacy_error, "pvstackr_binding_error")
+  expect_identical(legacy_error$code, "PV_BIND_E080")
+
+  stale_target <- fixture$target
+  stale_target$target_hash <- paste0("sha256:", strrep("1", 64))
+  target_error <- tryCatch(
+    pvstackr:::ccc_calibrate(
+      draws = "not-a-draw-payload",
+      target = stale_target,
+      binding_proof = fixture$preflight$binding_proof
+    ),
+    pvstackr_binding_error = identity
+  )
+  expect_s3_class(target_error, "pvstackr_binding_error")
+  expect_identical(target_error$code, "PV_BIND_E090")
+
+  secret <- "PRIVATE_ATOMIC_TARGET_CONTENT_MUST_NOT_LEAK"
+  atomic_target <- fixture$target
+  atomic_target$target_content <- secret
+  atomic_error <- tryCatch(
+    pvstackr:::ccc_calibrate(
+      draws = "not-a-draw-payload",
+      target = atomic_target,
+      binding_proof = fixture$preflight$binding_proof
+    ),
+    pvstackr_binding_error = identity
+  )
+  expect_s3_class(atomic_error, "pvstackr_binding_error")
+  expect_identical(atomic_error$code, "PV_BIND_E090")
+  expect_false(grepl(secret, conditionMessage(atomic_error), fixed = TRUE))
+  expect_false(grepl(
+    secret,
+    rawToChar(serialize(atomic_error, NULL, ascii = TRUE)),
+    fixed = TRUE
+  ))
 })
 
 test_that("CCC computes the expected diagonal calibration matrix", {

@@ -255,15 +255,23 @@ pv_formula_for_pv <- function(formula, pv_col) {
   )
 }
 
-pv_wls_beta <- function(data, formula, weights) {
-  frame <- tryCatch(
-    stats::model.frame(formula, data = data, na.action = stats::na.fail),
-    error = function(e) pv_abort(sprintf("Model frame contains missing or invalid values: %s", conditionMessage(e)))
+pv_wls_beta_from_bundle <- function(model_bundle, outcome, weights) {
+  x <- model_bundle$model_matrix
+  offset <- model_bundle$offset
+  if (!is.matrix(x) || !is.numeric(x) || any(!is.finite(x)) ||
+      !is.numeric(outcome) || length(outcome) != nrow(x) ||
+      any(!is.finite(outcome)) ||
+      !(is.null(offset) ||
+        (is.numeric(offset) && length(offset) == nrow(x) && all(is.finite(offset))))) {
+    pv_abort("Resolved BRR-Fay WLS inputs must contain one finite outcome per model-matrix row and an aligned finite offset.")
+  }
+  weights <- pv_validate_weight_vector(weights, "weights", nrow(x))
+  fit <- stats::lm.wfit(
+    x = x,
+    y = unname(as.double(outcome)),
+    w = weights,
+    offset = offset
   )
-  y <- stats::model.response(frame)
-  x <- stats::model.matrix(stats::terms(formula), data = frame)
-  weights <- pv_validate_weight_vector(weights, "weights", nrow(frame))
-  fit <- stats::lm.wfit(x = x, y = y, w = weights)
   beta <- stats::coef(fit)
   if (any(!is.finite(beta))) {
     pv_abort("Weighted least-squares fit produced non-finite fixed-effect estimates.")
@@ -278,7 +286,14 @@ pv_normalize_fe_names <- function(names) {
   out
 }
 
-pv_brr_fay_one_pv <- function(data, formula, pv_col, weight_col, rep_weight_cols, fay_k) {
+pv_brr_fay_one_pv <- function(
+  data,
+  model_bundle,
+  pv_col,
+  weight_col,
+  rep_weight_cols,
+  fay_k
+) {
   n <- nrow(data)
   pv_validate_columns(data, c(pv_col, weight_col, rep_weight_cols), "BRR-Fay input columns")
   if (!is.numeric(data[[pv_col]]) || any(!is.finite(data[[pv_col]]))) {
@@ -288,14 +303,13 @@ pv_brr_fay_one_pv <- function(data, formula, pv_col, weight_col, rep_weight_cols
   rep_w <- lapply(rep_weight_cols, function(col) {
     pv_validate_weight_vector(data[[col]], col, n)
   })
-  formula_pv <- pv_formula_for_pv(formula, pv_col)
-  beta0 <- pv_wls_beta(data, formula_pv, base_w)
+  beta0 <- pv_wls_beta_from_bundle(model_bundle, data[[pv_col]], base_w)
 
   p <- length(beta0)
   R <- length(rep_weight_cols)
   diff <- matrix(NA_real_, nrow = p, ncol = R)
   for (r in seq_len(R)) {
-    beta_r <- pv_wls_beta(data, formula_pv, rep_w[[r]])
+    beta_r <- pv_wls_beta_from_bundle(model_bundle, data[[pv_col]], rep_w[[r]])
     if (!identical(names(beta_r), names(beta0))) {
       pv_abort("Fixed-effect names differ across replicate fits.")
     }
@@ -415,7 +429,28 @@ pv_df_policy <- function(df_method) {
   }
 }
 
-pv_validate_brr_target <- function(target) {
+pv_brr_target_estimand_metadata <- function(model_bundle, df_policy) {
+  fe_names <- pv_normalize_fe_names(colnames(model_bundle$model_matrix))
+  metadata <- list(
+    estimand_id = "brr_fay_fixed_effects",
+    target_source = "external_brr_fay_rubin",
+    target_engine_id = "lm_wls_brr_fay_v1",
+    parameter_scope = "fixed_effect",
+    fe_names = fe_names,
+    interval_role = df_policy$interval_role,
+    coverage_claim_allowed = df_policy$coverage_claim_allowed
+  )
+  expected_fields <- c(
+    "estimand_id", "target_source", "target_engine_id", "parameter_scope",
+    "fe_names", "interval_role", "coverage_claim_allowed"
+  )
+  if (!identical(names(metadata), expected_fields)) {
+    pv_abort("Internal BRR-Fay estimand metadata did not use its exact schema.")
+  }
+  metadata
+}
+
+pv_validate_brr_target_v01 <- function(target) {
   pv_assert_named_list(target, "target")
   required <- c(
     "beta", "U_bar", "B", "T_MI", "df", "df_classic", "df_method",
@@ -502,12 +537,282 @@ pv_validate_brr_target <- function(target) {
   if (!identical(target$policy$df_method, target$df_method) ||
       !identical(target$policy$interval_role, target$interval_role) ||
       !identical(target$policy$coverage_claim_allowed, target$coverage_claim_allowed)) {
-    pv_abort("BRR-Fay target policy df metadata must match top-level target fields.")
+    pv_abort("BRR-Fay target policy df metadata (df_method, interval_role, coverage_claim_allowed) must match top-level target fields.")
   }
   pv_validate_schema_version(target$schema_version)
   pv_validate_named_list_field(target$provenance, "provenance")
   pv_validate_character_field(target$warnings, "warnings")
   invisible(target)
+}
+
+pv_brr_target_v02_fields <- function() {
+  c(
+    "beta", "beta_bar", "U_bar", "B", "T_MI", "total_var", "se",
+    "df", "df_classic", "df_method", "df_complete", "conf_level",
+    "interval_role", "coverage_claim_allowed", "lambda", "fmi", "riv",
+    "fe_names", "per_pv", "formula", "formula_string", "rhs_string",
+    "M", "R", "fay_k", "fay_variance_multiplier", "pv_cols",
+    "weight_col", "rep_weight_cols", "id_cols", "design_hash",
+    "target_source", "target_hash", "engine", "policy", "schema_version",
+    "provenance", "binding_manifest", "target_content", "warnings"
+  )
+}
+
+pv_brr_target_v02_per_pv_fields <- function() {
+  c(
+    "beta", "U", "fe_names", "pv_col", "R", "fay_k",
+    "fay_variance_multiplier", "replicate_beta", "replicate_diff"
+  )
+}
+
+pv_brr_target_v02_provenance_fields <- function() {
+  c("function_name", "assembled_at", "package", "schema_version")
+}
+
+pv_brr_target_assert_exact_list <- function(x, fields, label) {
+  if (!is.list(x) || !identical(names(x), fields) ||
+      !identical(attributes(x), list(names = fields))) {
+    pv_abort(sprintf("BRR-Fay target `%s` must use the exact ordered schema-0.2 fields.", label))
+  }
+  invisible(x)
+}
+
+pv_brr_target_require_identical <- function(expected, observed, label) {
+  if (!identical(expected, observed)) {
+    pv_abort(sprintf("BRR-Fay target `%s` must exactly match its canonical schema-0.2 cross-link.", label))
+  }
+  invisible(TRUE)
+}
+
+pv_brr_target_is_exact_matrix <- function(x, dimensions, dimnames_expected) {
+  is.matrix(x) && is.numeric(x) && all(is.finite(x)) &&
+    identical(dim(x), dimensions) && identical(dimnames(x), dimnames_expected) &&
+    identical(
+      attributes(x),
+      list(dim = dimensions, dimnames = dimnames_expected)
+    )
+}
+
+pv_validate_brr_target_v02 <- function(target) {
+  fields <- pv_brr_target_v02_fields()
+  root_attributes <- attributes(target)
+  if (!is.list(target) || !identical(names(target), fields) ||
+      !identical(names(root_attributes), c("names", "class")) ||
+      !identical(root_attributes$names, fields) ||
+      !identical(root_attributes$class, c("pvstackr_brr_target", "list"))) {
+    pv_abort("BRR-Fay target is missing required field(s), has extras, or does not use exact schema-0.2 root order and class.")
+  }
+  if (!identical(target$schema_version, "0.2.0")) {
+    pv_abort("BRR-Fay target schema version must be 0.2.0.")
+  }
+  canonical_formula <- tryCatch(
+    stats::as.formula(target$formula_string, env = baseenv()),
+    error = function(error) NULL
+  )
+  if (!inherits(target$formula, "formula") || is.null(canonical_formula) ||
+      !identical(target$formula, canonical_formula)) {
+    pv_abort("BRR-Fay target `formula` must be the exact base-environment projection of `formula_string`.")
+  }
+  if (!is.character(target$formula_string) || length(target$formula_string) != 1L ||
+      is.na(target$formula_string) || !is.null(attributes(target$formula_string))) {
+    pv_abort("BRR-Fay target `formula_string` must be an attribute-free scalar string.")
+  }
+  if (!identical(target$formula_string, pv_formula_string(target$formula))) {
+    pv_abort("BRR-Fay target `formula_string` must be the canonical deparse of `formula`.")
+  }
+  rhs <- pv_brr_target_formula_rhs(target$formula)
+  if (!identical(target$rhs_string, pv_deparse_expr(rhs))) {
+    pv_abort("BRR-Fay target `rhs_string` must match the formula RHS.")
+  }
+  target$conf_level <- pv_assert_probability(target$conf_level, "conf_level")
+  target$M <- pv_assert_scalar_number(target$M, "M", integer = TRUE, lower = 1)
+  target$R <- pv_assert_scalar_number(target$R, "R", integer = TRUE, lower = 2)
+  pv_validate_fay_k(target$fay_k)
+  if (!identical(target$engine, "lm") ||
+      !identical(target$target_source, "external_brr_fay_rubin")) {
+    pv_abort("BRR-Fay target must use the canonical lm external_brr_fay_rubin engine.")
+  }
+  fe_names <- pv_validate_unique_character(target$fe_names, "fe_names")
+  pv_brr_target_assert_exact_list(
+    target$policy,
+    pv_binding_target_policy_fields(),
+    "policy"
+  )
+  if (!identical(target$policy$target_repair, "forbidden")) {
+    pv_abort("BRR-Fay target policy must mark target repair as forbidden.")
+  }
+  if (!identical(target$policy$replicate_weight_role, "external_design_variance_only") ||
+      !identical(target$policy$fixed_effects_only, TRUE)) {
+    pv_abort("BRR-Fay target policy must preserve external replicate weights and fixed effects only.")
+  }
+  if (!identical(target$policy$df_method, target$df_method) ||
+      !identical(target$policy$interval_role, target$interval_role) ||
+      !identical(target$policy$coverage_claim_allowed, target$coverage_claim_allowed)) {
+    pv_abort("BRR-Fay target policy df metadata (df_method, interval_role, coverage_claim_allowed) must match top-level target fields.")
+  }
+  if (identical(target$df_method, "classic") && !is.null(target$df_complete)) {
+    pv_abort("BRR-Fay target classic df_method requires df_complete = NULL in schema 0.2.0.")
+  }
+  pv_brr_target_require_identical(
+    target$policy,
+    target$target_content$target_policy,
+    "policy"
+  )
+  pv_brr_target_assert_exact_list(
+    target$provenance,
+    pv_brr_target_v02_provenance_fields(),
+    "provenance"
+  )
+  if (!identical(target$provenance$function_name, "pv_brr_target") ||
+      !identical(target$provenance$package, "pvstackr") ||
+      !identical(target$provenance$schema_version, target$schema_version)) {
+    pv_abort("BRR-Fay target provenance must use the canonical pv_brr_target schema identity.")
+  }
+  tryCatch(
+    pv_binding_validate_optional_created_at(target$provenance$assembled_at),
+    error = function(error) pv_abort("BRR-Fay target provenance timestamp must be canonical UTC ISO-8601.")
+  )
+  if (!identical(target$warnings, character())) {
+    pv_abort("BRR-Fay target schema-0.2 warnings must be the exact empty registry subset.")
+  }
+
+  pv_binding_manifest_validate(target$binding_manifest)
+  if (!"model_bundle_hash" %in% names(target$binding_manifest)) {
+    pv_abort("BRR-Fay target schema-0.2 manifest must authenticate its resolved model bundle hash.")
+  }
+  pv_binding_target_manifest_validate(target$target_content, target$binding_manifest)
+  if (!grepl("^sha256:[0-9a-f]{64}$", target$design_hash) ||
+      !grepl("^sha256:[0-9a-f]{64}$", target$target_hash)) {
+    pv_abort("BRR-Fay target schema-0.2 hashes must be SHA-256 cross-links; 8-character hashes are legacy-only.")
+  }
+  pv_brr_target_require_identical(
+    target$binding_manifest$manifest_hash,
+    target$design_hash,
+    "design_hash"
+  )
+  pv_brr_target_require_identical(
+    target$target_content$target_content_hash,
+    target$target_hash,
+    "target_hash"
+  )
+
+  components <- target$binding_manifest$components
+  pv_brr_target_require_identical(components$pv$names, target$pv_cols, "pv_cols")
+  pv_brr_target_require_identical(components$weight$base_name, target$weight_col, "weight_col")
+  pv_brr_target_require_identical(
+    components$weight$replicate_names,
+    target$rep_weight_cols,
+    "rep_weight_cols"
+  )
+  pv_brr_target_require_identical(components$row$id_cols, target$id_cols, "id_cols")
+  pv_brr_target_require_identical(components$estimand$fe_names, fe_names, "fe_names")
+  expected_rhs_hash <- pv_binding_hash_payload(
+    pv_binding_formula_ast(target$formula)$rhs,
+    "formula"
+  )
+  pv_brr_target_require_identical(
+    components$formula$rhs_ast_hash,
+    expected_rhs_hash,
+    "formula RHS AST"
+  )
+
+  if (!is.list(target$per_pv) || length(target$per_pv) != target$M ||
+      !is.null(attributes(target$per_pv))) {
+    pv_abort("BRR-Fay target `per_pv` must be an unnamed exact list aligned with M.")
+  }
+  multiplier <- 1 / (target$R * (1 - target$fay_k)^2)
+  pv_brr_target_require_identical(multiplier, target$fay_variance_multiplier, "fay_variance_multiplier")
+  for (index in seq_along(target$per_pv)) {
+    item <- target$per_pv[[index]]
+    pv_brr_target_assert_exact_list(
+      item,
+      pv_brr_target_v02_per_pv_fields(),
+      sprintf("per_pv[[%d]]", index)
+    )
+    if (!identical(item$fe_names, fe_names) ||
+        !identical(item$pv_col, target$pv_cols[[index]]) ||
+        !identical(item$R, target$R) ||
+        !identical(item$fay_k, target$fay_k) ||
+        !identical(item$fay_variance_multiplier, multiplier)) {
+      pv_abort("BRR-Fay target per-PV identity fields must align exactly with top-level primitives.")
+    }
+    pv_validate_named_numeric(item$beta, sprintf("per_pv[[%d]]$beta", index), fe_names)
+    pv_validate_aligned_symmetric_matrix(item$U, sprintf("per_pv[[%d]]$U", index), fe_names)
+    replicate_dimensions <- c(length(fe_names), target$R)
+    replicate_dimnames <- list(fe_names, target$rep_weight_cols)
+    if (!pv_brr_target_is_exact_matrix(
+      item$replicate_diff,
+      replicate_dimensions,
+      replicate_dimnames
+    ) || !pv_brr_target_is_exact_matrix(
+      item$replicate_beta,
+      replicate_dimensions,
+      replicate_dimnames
+    )) {
+      pv_abort("BRR-Fay target per-PV replicate differences must align with fixed effects and replicate weights.")
+    }
+    expected_U <- pv_symmetrize(multiplier * tcrossprod(item$replicate_diff))
+    dimnames(expected_U) <- list(fe_names, fe_names)
+    expected_replicate_beta <- sweep(item$replicate_diff, 1L, item$beta, FUN = "+")
+    if (!isTRUE(all.equal(expected_U, item$U, tolerance = 1e-12)) ||
+        !isTRUE(all.equal(expected_replicate_beta, item$replicate_beta, tolerance = 1e-12))) {
+      pv_abort("BRR-Fay target per-PV replicate topology is not canonical.")
+    }
+    content_item <- target$target_content$per_pv[[index]]
+    pv_brr_target_require_identical(as.integer(index), content_item$pv_index, "target_content pv_index")
+    pv_brr_target_require_identical(item$pv_col, content_item$pv_col, "target_content pv_col")
+    pv_brr_target_require_identical(item$beta, content_item$beta, "target_content beta")
+    pv_brr_target_require_identical(item$U, content_item$U, "target_content U")
+  }
+
+  content <- target$target_content
+  primitive_links <- list(
+    M = content$M,
+    R = content$R,
+    fay_k = content$fay_k,
+    fe_names = content$fe_names,
+    df_method = content$interval_policy$df_method,
+    df_complete = content$interval_policy$df_complete,
+    conf_level = content$interval_policy$conf_level,
+    interval_role = content$interval_policy$interval_role,
+    coverage_claim_allowed = content$interval_policy$coverage_claim_allowed,
+    target_source = content$target_source
+  )
+  for (field in names(primitive_links)) {
+    pv_brr_target_require_identical(primitive_links[[field]], target[[field]], field)
+  }
+  for (field in pv_binding_target_derived_fields()) {
+    pv_brr_target_require_identical(content$derived[[field]], target[[field]], field)
+  }
+  pv_brr_target_require_identical(target$beta, target$beta_bar, "beta_bar")
+
+  beta_rows <- do.call(rbind, lapply(target$per_pv, `[[`, "beta"))
+  colnames(beta_rows) <- fe_names
+  pooled <- rubin_pool_matrix(
+    beta = beta_rows,
+    U = lapply(target$per_pv, `[[`, "U"),
+    orientation = "rows_pv",
+    conf_level = target$conf_level,
+    allow_m1 = target$M == 1L,
+    df_method = target$df_method,
+    df_complete = target$df_complete
+  )
+  for (field in c("total_var", "lambda", "fmi", "riv")) {
+    pv_brr_target_require_identical(pooled[[field]], target[[field]], field)
+  }
+  invisible(target)
+}
+
+pv_validate_brr_target <- function(target) {
+  pv_assert_named_list(target, "target")
+  schema_version <- target$schema_version
+  if (identical(schema_version, "0.2.0")) {
+    return(pv_validate_brr_target_v02(target))
+  }
+  if (identical(schema_version, "0.1.0")) {
+    return(pv_validate_brr_target_v01(target))
+  }
+  pv_abort("BRR-Fay target `schema_version` must be 0.1.0 or 0.2.0.")
 }
 
 #' Assemble a Rubin/BRR-Fay Fixed-Effect Target
@@ -769,13 +1074,21 @@ pv_brr_target <- function(
   }
   pv_validate_columns(data, weight_col, "weight_col")
   id_cols <- pv_validate_id_columns(data, id_cols)
+  model_bundle <- pv_binding_resolve_model_bundle(data, formula)
 
   per_pv <- vector("list", length(pv_cols))
   for (m in seq_along(pv_cols)) {
     if (verbose) {
       message(sprintf("pvstackr: BRR-Fay target PV %d/%d (%s)", m, length(pv_cols), pv_cols[[m]]))
     }
-    per_pv[[m]] <- pv_brr_fay_one_pv(data, formula, pv_cols[[m]], weight_col, rep_weight_cols, fay_k)
+    per_pv[[m]] <- pv_brr_fay_one_pv(
+      data = data,
+      model_bundle = model_bundle,
+      pv_col = pv_cols[[m]],
+      weight_col = weight_col,
+      rep_weight_cols = rep_weight_cols,
+      fay_k = fay_k
+    )
   }
 
   fe_names <- per_pv[[1L]]$fe_names
@@ -821,26 +1134,89 @@ pv_brr_target <- function(
     design_hash = pv_hash_payload(design_manifest)
   )
 
-  target <- list(
+  legacy_design_hash <- pv_hash_payload(design_manifest)
+  legacy_target_hash <- pv_hash_payload(target_hash_payload)
+  estimand_metadata <- pv_brr_target_estimand_metadata(model_bundle, df_policy)
+  binding_manifest <- pv_binding_manifest_build(
+    data = data,
+    formula = formula,
+    pv_cols = pv_cols,
+    weight_col = weight_col,
+    rep_weight_cols = rep_weight_cols,
+    fay_k = fay_k,
+    id_cols = id_cols,
+    family_link = pv_binding_family_link_projection("gaussian", "identity"),
+    estimand_contrast = NULL,
+    estimand_metadata = estimand_metadata,
+    model_bundle = model_bundle
+  )
+  binding_manifest <- c(
+    binding_manifest,
+    list(
+      legacy_hashes = list(
+        algorithm_id = pv_binding_legacy_hash_algorithm_id(),
+        design_hash = legacy_design_hash,
+        target_hash = legacy_target_hash
+      ),
+      model_bundle_hash = model_bundle$bundle_hash
+    )
+  )
+  binding_manifest$manifest_hash <- pv_binding_hash_payload(
+    pv_binding_manifest_hash_payload(binding_manifest),
+    "manifest"
+  )
+  pv_binding_manifest_validate(binding_manifest)
+  target_policy <- pv_binding_target_policy_projection(
+    df_method = pooled$df_method,
+    interval_role = df_policy$interval_role,
+    coverage_claim_allowed = df_policy$coverage_claim_allowed
+  )
+  stored_derived <- list(
     beta = pooled$beta,
-    beta_bar = pooled$beta_bar,
     U_bar = pooled$U_bar,
     B = pooled$B,
     T_MI = pooled$T_MI,
-    total_var = pooled$total_var,
     se = pooled$se,
     df = pooled$df,
-    df_classic = pooled$df_classic,
+    df_classic = pooled$df_classic
+  )
+  target_content <- pv_binding_target_content_build(
+    per_pv = per_pv,
+    M = pooled$M,
+    R = length(rep_weight_cols),
+    fay_k = fay_k,
     df_method = pooled$df_method,
-    df_complete = pooled$df_complete,
-    interval_role = df_policy$interval_role,
-    coverage_claim_allowed = df_policy$coverage_claim_allowed,
+    df_complete = if (identical(pooled$df_method, "classic")) NULL else pooled$df_complete,
+    conf_level = conf_level,
+    target_source = "external_brr_fay_rubin",
+    target_engine_id = "lm_wls_brr_fay_v1",
+    target_policy = target_policy,
+    manifest_hash = binding_manifest$manifest_hash,
+    stored_derived = stored_derived
+  )
+  pv_binding_target_manifest_validate(target_content, binding_manifest)
+
+  target <- list(
+    beta = target_content$derived$beta,
+    beta_bar = target_content$derived$beta,
+    U_bar = target_content$derived$U_bar,
+    B = target_content$derived$B,
+    T_MI = target_content$derived$T_MI,
+    total_var = pooled$total_var,
+    se = target_content$derived$se,
+    df = target_content$derived$df,
+    df_classic = target_content$derived$df_classic,
+    df_method = target_content$interval_policy$df_method,
+    df_complete = target_content$interval_policy$df_complete,
+    conf_level = target_content$interval_policy$conf_level,
+    interval_role = target_content$interval_policy$interval_role,
+    coverage_claim_allowed = target_content$interval_policy$coverage_claim_allowed,
     lambda = pooled$lambda,
     fmi = pooled$fmi,
     riv = pooled$riv,
     fe_names = fe_names,
     per_pv = per_pv,
-    formula = formula,
+    formula = stats::as.formula(formula_string, env = baseenv()),
     formula_string = formula_string,
     rhs_string = rhs_string,
     M = pooled$M,
@@ -851,24 +1227,20 @@ pv_brr_target <- function(
     weight_col = weight_col,
     rep_weight_cols = rep_weight_cols,
     id_cols = id_cols,
-    design_hash = pv_hash_payload(design_manifest),
+    design_hash = binding_manifest$manifest_hash,
     target_source = "external_brr_fay_rubin",
-    target_hash = pv_hash_payload(target_hash_payload),
+    target_hash = target_content$target_content_hash,
     engine = engine,
-    policy = list(
-      replicate_weight_role = "external_design_variance_only",
-      target_repair = "forbidden",
-      fixed_effects_only = TRUE,
-      df_method = pooled$df_method,
-      interval_role = df_policy$interval_role,
-      coverage_claim_allowed = df_policy$coverage_claim_allowed
-    ),
-    schema_version = "0.1.0",
+    policy = target_content$target_policy,
+    schema_version = "0.2.0",
     provenance = list(
       function_name = "pv_brr_target",
-      assembled_at = as.character(Sys.time()),
-      package = "pvstackr"
+      assembled_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+      package = "pvstackr",
+      schema_version = "0.2.0"
     ),
+    binding_manifest = binding_manifest,
+    target_content = target_content,
     warnings = character()
   )
   class(target) <- c("pvstackr_brr_target", "list")

@@ -377,13 +377,75 @@ ccc_block_matrix <- function(A, all_names, fe_idx) {
   A_full
 }
 
+pv_ccc_schema01_fields <- function() {
+  c(
+    "draws_calibrated", "draws_fe_cal", "A", "A_full", "psi_hat",
+    "psi_raw", "psi_target", "Sigma_raw", "Sigma_target", "Sigma_cal_emp",
+    "Sigma_cal_emp_raw", "diagnostics", "flags", "param_map", "control",
+    "target_source", "target_hash", "center", "policy", "ccc_status",
+    "schema_version", "provenance", "warnings"
+  )
+}
+
+pv_ccc_schema02_fields <- function() {
+  fields <- pv_ccc_schema01_fields()
+  append(fields, "binding_proof", after = match("target_hash", fields))
+}
+
+ccc_validate_binding_proof_before_calibration <- function(target, binding_proof) {
+  if (is.null(binding_proof)) {
+    return(invisible(NULL))
+  }
+  if (!is.list(target) || !identical(target$schema_version, "0.2.0") ||
+      !all(c("binding_manifest", "target_content") %in% names(target))) {
+    pv_binding_abort(
+      "PV_BIND_E080",
+      "Proof-bearing CCC calibration requires a schema-0.2 bound target.",
+      "binding_proof"
+    )
+  }
+  target_content <- target$target_content
+  if (!is.list(target_content) ||
+      !is.character(target_content$target_content_hash) ||
+      length(target_content$target_content_hash) != 1L ||
+      is.na(target_content$target_content_hash) ||
+      !grepl("^sha256:[0-9a-f]{64}$", target_content$target_content_hash)) {
+    pv_binding_abort(
+      "PV_BIND_E090",
+      "Proof-bearing CCC target content is malformed or missing its canonical hash.",
+      "target_content"
+    )
+  }
+  if (!identical(target$target_hash, target_content$target_content_hash)) {
+    pv_binding_abort(
+      "PV_BIND_E090",
+      "Proof-bearing CCC target hash is not linked to canonical target content.",
+      "target_content",
+      expected_hash = target_content$target_content_hash,
+      observed_hash = target$target_hash
+    )
+  }
+  validate_pvstackr_brr_target(target)
+  pv_binding_target_manifest_validate(
+    target$target_content,
+    target$binding_manifest
+  )
+  pv_binding_proof_validate(
+    binding_proof,
+    target_manifest = target$binding_manifest
+  )
+  invisible(binding_proof)
+}
+
 ccc_calibrate <- function(
   draws,
   target,
   fe_names = NULL,
   param_map = NULL,
-  center = c("target", "posterior")
+  center = c("target", "posterior"),
+  binding_proof = NULL
 ) {
+  ccc_validate_binding_proof_before_calibration(target, binding_proof)
   draws <- ccc_as_draw_matrix(draws)
   center <- match.arg(center)
   map <- ccc_resolve_param_map(draws, target, fe_names = fe_names, param_map = param_map)
@@ -445,7 +507,12 @@ ccc_calibrate <- function(
       allow_target_nearpd = FALSE
     ),
     target_source = resolved_target$target_source,
-    target_hash = resolved_target$target_hash,
+    target_hash = resolved_target$target_hash
+  )
+  if (!is.null(binding_proof)) {
+    out$binding_proof <- binding_proof
+  }
+  out <- c(out, list(
     center = center,
     policy = list(
       fixed_effects_only = TRUE,
@@ -453,14 +520,16 @@ ccc_calibrate <- function(
       vc_passthrough = length(map$vc_idx) > 0L
     ),
     ccc_status = "ok",
-    schema_version = "0.1.0",
+    schema_version = if (is.null(binding_proof)) "0.1.0" else "0.2.0",
     provenance = list(
       function_name = "ccc_calibrate",
-      package = "pvstackr"
+      package = "pvstackr",
+      draws_retained = TRUE
     ),
     warnings = warnings
-  )
+  ))
   class(out) <- c("pvstackr_ccc", "list")
+  validate_pvstackr_ccc(out)
   out
 }
 

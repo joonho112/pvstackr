@@ -74,6 +74,48 @@ test_that("stack preparation uses constant fractional weights without base weigh
   expect_false(grepl("OUTCOME", out$formula_string, fixed = TRUE))
 })
 
+test_that("materialized stack data evaluates factor interactions and offsets without user closures", {
+  data <- stack_fixture_data()
+  data$g <- factor(rep(c("a", "b"), length.out = nrow(data)))
+  formula <- OUTCOME ~ x * g + offset(z)
+  bundle <- pvstackr:::pv_binding_resolve_model_bundle(data, formula)
+  prepared <- pvstackr:::pv_prepare_stack_data(
+    data = data,
+    formula = formula,
+    pv_cols = c("PV1", "PV2", "PV3"),
+    weight_col = "W",
+    model_bundle = bundle
+  )
+
+  terms <- stats::delete.response(stats::terms(prepared$formula))
+  frame <- stats::model.frame(
+    terms,
+    data = prepared$data,
+    na.action = stats::na.fail
+  )
+  backend_matrix <- stats::model.matrix(terms, data = frame)
+  backend_offset <- stats::model.offset(frame)
+  row_index <- rep(seq_len(nrow(data)), times = 3L)
+
+  expect_identical(environment(prepared$formula), asNamespace("stats"))
+  expected_matrix <- unname(bundle$model_matrix[row_index, , drop = FALSE])
+  expect_identical(dim(backend_matrix), dim(expected_matrix))
+  expect_equal(
+    as.vector(backend_matrix),
+    as.vector(expected_matrix),
+    tolerance = 0
+  )
+  expect_identical(
+    unname(backend_offset),
+    unname(bundle$offset[row_index])
+  )
+  expect_identical(prepared$weight_summary$model_matrix_materialized, TRUE)
+  expect_identical(
+    prepared$weight_summary$model_matrix_bundle_hash,
+    bundle$bundle_hash
+  )
+})
+
 test_that("stack preparation normalizes base weights before fractional scaling", {
   data1 <- stack_fixture_data()
   data2 <- data1
@@ -150,10 +192,29 @@ test_that("stack parameter map reports dropped automatic draw columns", {
   expect_equal(colnames(map$draws_selected), c("b_Intercept", "b_x", "sigma", "sd_school__Intercept"))
   expect_equal(map$fe_names, c("b_Intercept", "b_x"))
   expect_equal(map$vc_names, c("sigma", "sd_school__Intercept"))
-  expect_equal(map$dropped_names, c("cor_school__Intercept__x", "r_school[A,Intercept]", "lp__"))
+  expect_equal(
+    map$dropped_names,
+    c(
+      "cor_school__Intercept__x",
+      "<redacted_draw_column_002>",
+      "lp__"
+    )
+  )
   expect_identical(map$map_source, "auto_regex")
   expect_match(map$warnings, "automatic regex")
   expect_match(map$warnings, "lp__")
+  expect_false(grepl("r_school[", map$warnings, fixed = TRUE))
+
+  privacy_draws <- cbind(draws, seq_len(nrow(draws)))
+  colnames(privacy_draws)[ncol(privacy_draws)] <-
+    "EXTERNAL_RAW_DATA_SENTINEL"
+  privacy_map <- pvstackr:::pv_stack_param_map(privacy_draws)
+  expect_true("<redacted_draw_column_004>" %in% privacy_map$dropped_names)
+  expect_false(any(grepl(
+    "EXTERNAL_RAW_DATA_SENTINEL",
+    c(privacy_map$dropped_names, privacy_map$warnings),
+    fixed = TRUE
+  )))
 })
 
 test_that("stack parameter map supports explicit custom draw names", {
@@ -217,6 +278,75 @@ test_that("stack parameter map rejects malformed explicit maps", {
     pvstackr:::pv_stack_param_map(draws, param_map = list(fe_idx = 1L, fe_names = "theta_Intercept")),
     "must not supply both"
   )
+  level_draws <- cbind(draws, `r_school[CONFIDENTIAL_ID,Intercept]` = 1:5)
+  expect_error(
+    pvstackr:::pv_stack_param_map(
+      level_draws,
+      param_map = list(
+        fe_names = c("theta_Intercept", "theta_x"),
+        vc_names = "r_school[CONFIDENTIAL_ID,Intercept]"
+      )
+    ),
+    "level-specific `r_` draws"
+  )
+})
+
+test_that("stack cache specification supports managed cache and explicit opt-out", {
+  disabled <- pvstackr:::pv_stack_cache_spec(cache_dir = NULL, package_managed = TRUE)
+  expect_false(disabled$enabled)
+  expect_null(disabled$file)
+  expect_identical(disabled$file_refit, "never")
+  expect_identical(
+    pvstackr:::pv_stack_cache_provenance(disabled)$policy,
+    "disabled"
+  )
+
+  parent <- tempfile("pvstackr-cache-parent-")
+  managed_dir <- file.path(parent, "nested", "cache")
+  on.exit(unlink(parent, recursive = TRUE, force = TRUE), add = TRUE)
+  managed <- pvstackr:::pv_stack_cache_spec(
+    cache_dir = managed_dir,
+    cache_stem = "managed-fit",
+    package_managed = TRUE
+  )
+  expect_true(dir.exists(managed_dir))
+  expect_true(managed$directory_created)
+  expect_true(managed$writable)
+  expect_identical(managed$file_refit, "on_change")
+  expect_match(managed$file, "managed-fit$")
+  expect_length(list.files(managed_dir, all.files = TRUE, no.. = TRUE), 0L)
+  expect_identical(
+    pvstackr:::pv_stack_cache_provenance(managed)$policy,
+    "bundled_brms_managed"
+  )
+})
+
+test_that("managed stack cache rejects unsafe stems and file paths", {
+  expect_error(
+    pvstackr:::pv_stack_cache_spec(tempdir(), "../escape", package_managed = TRUE),
+    "safe file stem"
+  )
+
+  not_a_dir <- tempfile("pvstackr-cache-file-")
+  on.exit(unlink(not_a_dir, force = TRUE), add = TRUE)
+  expect_true(file.create(not_a_dir))
+  expect_error(
+    pvstackr:::pv_stack_cache_spec(not_a_dir, package_managed = TRUE),
+    "not a directory"
+  )
+
+  collision_dir <- tempfile("pvstackr-cache-collision-")
+  on.exit(unlink(collision_dir, recursive = TRUE, force = TRUE), add = TRUE)
+  expect_true(dir.create(collision_dir))
+  expect_true(dir.create(file.path(collision_dir, "collision.rds")))
+  expect_error(
+    pvstackr:::pv_stack_cache_spec(
+      collision_dir,
+      cache_stem = "collision",
+      package_managed = TRUE
+    ),
+    "collides with an existing directory"
+  )
 })
 
 test_that("stack fit performs exactly one injected fit and extracts selected draws", {
@@ -269,8 +399,24 @@ test_that("stack fit performs exactly one injected fit and extracts selected dra
   expect_equal(out$param_map$dropped_names, "lp__")
   expect_identical(out$param_map$map_source, "auto_regex")
   expect_equal(dim(out$log_lik), c(8L, 15L))
-  expect_equal(out$diagnostics$n_long, 15L)
+  expect_false("n_long" %in% names(out$diagnostics))
+  expect_false(out$diagnostics$sampler$diagnostic_complete)
+  expect_identical(
+    out$diagnostics$sampler$diagnostic_source,
+    "injected_diagnose_function"
+  )
+  expect_true(any(grepl(
+    "diagnostic_missing_rhat_max",
+    out$diagnostics$sampler$diagnostic_reason_codes,
+    fixed = TRUE
+  )))
   expect_equal(out$meta$n_fits, 1L)
+  expect_identical(out$meta$engine_id, "injected_fit_function")
+  expect_identical(out$meta$fit_engine, "injected_fit_function")
+  expect_identical(out$meta$adapter_source, "injected")
+  expect_identical(out$meta$resolved_backend, "injected")
+  expect_identical(out$meta$cache$policy, "injected_adapter_managed")
+  expect_identical(out$meta$cache$file_refit, "on_change")
   expect_true(out$meta$log_lik_extracted)
   expect_true(out$meta$log_lik_retained)
   expect_false(out$meta$vc_confirmatory_reporting_allowed)
@@ -288,8 +434,69 @@ test_that("stack fit performs exactly one injected fit and extracts selected dra
   expect_equal(out$provenance$pv_cols, c("PV1", "PV2", "PV3"))
   expect_equal(out$provenance$weight_col, "W")
   expect_match(out$provenance$long_data_hash, "^[0-9a-f]{8}$")
+  expect_identical(out$provenance$engine$requested_backend, "injected")
+  expect_identical(out$provenance$engine$resolved_backend, "injected")
+  expect_identical(out$provenance$cache, out$meta$cache)
   expect_true(is.list(out$fit))
   expect_true(is.data.frame(out$prepared_data))
+})
+
+test_that("low-level stack fit honors return_draws without losing summaries", {
+  record <- new.env(parent = emptyenv())
+  record$n <- 0L
+  out <- pvstackr:::pv_stack_fit(
+    data = stack_fixture_data(),
+    formula = OUTCOME ~ x,
+    pv_cols = c("PV1", "PV2", "PV3"),
+    weight_col = "W",
+    control = pv_control(
+      backend = "injected",
+      return_draws = FALSE
+    ),
+    fit_function = fake_stack_fit(record),
+    draws_function = function(fit) fit$draws
+  )
+
+  expect_equal(record$n, 1L)
+  expect_null(out$stacked_draws)
+  expect_false(out$control$return_draws)
+  expect_equal(names(out$psi_hat_fe), c("b_Intercept", "b_x"))
+  expect_invisible(pvstackr:::validate_pvstackr_stack_fit(out))
+
+  injected <- out
+  injected$stacked_draws <- matrix(
+    0,
+    nrow = 2L,
+    ncol = 3L,
+    dimnames = list(NULL, c("b_Intercept", "b_x", "sigma"))
+  )
+  expect_error(
+    pvstackr:::validate_pvstackr_stack_fit(injected),
+    "draw retention"
+  )
+})
+
+test_that("injected stack fit preserves backend label and cache opt-out", {
+  record <- new.env(parent = emptyenv())
+  record$n <- 0L
+  out <- pvstackr:::pv_stack_fit(
+    data = stack_fixture_data(),
+    formula = OUTCOME ~ x,
+    pv_cols = c("PV1", "PV2"),
+    control = pv_control(backend = "cmdstanr"),
+    fit_function = fake_stack_fit(record),
+    draws_function = function(fit) fit$draws,
+    cache_dir = NULL
+  )
+
+  expect_identical(record$args$backend, "cmdstanr")
+  expect_null(record$args$file)
+  expect_identical(record$args$file_refit, "never")
+  expect_identical(out$provenance$engine$adapter_source, "injected")
+  expect_identical(out$provenance$engine$requested_backend, "cmdstanr")
+  expect_identical(out$provenance$engine$resolved_backend, "injected")
+  expect_false(out$provenance$cache$enabled)
+  expect_identical(out$provenance$cache$policy, "disabled")
 })
 
 test_that("stack fit accepts explicit param_map for custom fixed-effect names", {
@@ -321,6 +528,103 @@ test_that("stack fit accepts explicit param_map for custom fixed-effect names", 
   expect_invisible(pvstackr:::validate_pvstackr_stack_fit(out))
 })
 
+test_that("materialized stack fit maps explicit custom backend names to bound names", {
+  data <- stack_fixture_data()
+  formula <- OUTCOME ~ x
+  bundle <- pvstackr:::pv_binding_resolve_model_bundle(data, formula)
+  record <- new.env(parent = emptyenv())
+  record$n <- 0L
+  out <- pvstackr:::pv_stack_fit(
+    data = data,
+    formula = formula,
+    pv_cols = c("PV1", "PV2", "PV3"),
+    control = pv_control(backend = "injected"),
+    fit_function = fake_custom_stack_fit(record),
+    draws_function = function(fit) fit$draws,
+    param_map = list(
+      fe_names = c("theta_Intercept", "theta_x"),
+      vc_names = "tau"
+    ),
+    resolved_model_bundle = bundle
+  )
+
+  expect_identical(
+    colnames(out$stacked_draws),
+    c("b_Intercept", "b_x", "tau")
+  )
+  expect_identical(out$param_map$fe_names, c("b_Intercept", "b_x"))
+  expect_identical(out$param_map$vc_names, "tau")
+  expect_identical(out$param_map$map_source, "explicit")
+  expect_identical(out$param_map$original_fe_idx, c(1L, 2L))
+  expect_identical(out$meta$model_matrix_bundle_hash, bundle$bundle_hash)
+  expect_invisible(pvstackr:::validate_pvstackr_stack_fit(out))
+
+  bad_record <- new.env(parent = emptyenv())
+  bad_record$n <- 0L
+  expect_error(
+    pvstackr:::pv_stack_fit(
+      data = data,
+      formula = formula,
+      pv_cols = c("PV1", "PV2", "PV3"),
+      control = pv_control(backend = "injected"),
+      fit_function = fake_custom_stack_fit(bad_record),
+      draws_function = function(fit) fit$draws,
+      param_map = list(fe_names = "theta_Intercept", vc_names = "tau"),
+      resolved_model_bundle = bundle
+    ),
+    "complete bound design width"
+  )
+})
+
+test_that("materialized prior policy permits only provably invariant tables", {
+  with_intercept <- stats::setNames(
+    c("b_Intercept", "b_x"),
+    c("b_pvstackrMM001", "b_pvstackrMM002")
+  )
+  no_intercept <- stats::setNames("b_x", "b_pvstackrMM001")
+  sigma_prior <- data.frame(
+    prior = "normal(0, 1)", class = "sigma", coef = "",
+    stringsAsFactors = FALSE
+  )
+  global_b <- data.frame(
+    prior = "normal(0, 1)", class = "b", coef = "",
+    stringsAsFactors = FALSE
+  )
+  coefficient_b <- data.frame(
+    prior = "normal(0, 1)", class = "b", coef = "x",
+    stringsAsFactors = FALSE
+  )
+  intercept_prior <- data.frame(
+    prior = "normal(0, 1)", class = "Intercept", coef = "",
+    stringsAsFactors = FALSE
+  )
+
+  expect_identical(
+    pvstackr:::pv_stack_materialized_prior(sigma_prior, with_intercept),
+    sigma_prior
+  )
+  expect_identical(
+    pvstackr:::pv_stack_materialized_prior(global_b, no_intercept),
+    global_b
+  )
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior(global_b, with_intercept),
+    "cannot be preserved exactly"
+  )
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior(coefficient_b, with_intercept),
+    "cannot be preserved exactly"
+  )
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior(intercept_prior, with_intercept),
+    "cannot be preserved exactly"
+  )
+  expect_error(
+    pvstackr:::pv_stack_materialized_prior("opaque-prior", with_intercept),
+    "opaque"
+  )
+})
+
 test_that("stack fit keeps heavy fields light by default", {
   out <- pvstackr:::pv_stack_fit(
     data = stack_fixture_data(),
@@ -345,6 +649,11 @@ test_that("stack fit keeps heavy fields light by default", {
   expect_true(any(grepl("lp__", out$warnings)))
   expect_false(out$provenance$backend_fit_retained)
   expect_false(out$provenance$log_lik_retained)
+  expect_false(out$diagnostics$sampler$diagnostic_complete)
+  expect_identical(
+    out$diagnostics$sampler$diagnostic_reason_codes,
+    "diagnostic_extractor_not_supplied"
+  )
 })
 
 test_that("stack fit validates injected hooks and protected arguments", {

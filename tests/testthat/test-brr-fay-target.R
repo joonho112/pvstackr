@@ -40,7 +40,12 @@ survey_oracle_fe_names <- function(x) {
   out
 }
 
-survey_brr_fay_oracle_one_pv <- function(data, pv_col, fay_k = 0.5) {
+survey_brr_fay_oracle_one_pv <- function(
+  data,
+  pv_col,
+  fay_k = 0.5,
+  mse = TRUE
+) {
   rep_cols <- paste0("W_FSTURWT", 1:4)
   design <- survey::svrepdesign(
     weights = stats::as.formula("~ W_FSTUWT"),
@@ -49,7 +54,7 @@ survey_brr_fay_oracle_one_pv <- function(data, pv_col, fay_k = 0.5) {
     type = "Fay",
     rho = fay_k,
     combined.weights = TRUE,
-    mse = TRUE
+    mse = mse
   )
   fit <- survey::svyglm(
     stats::as.formula(paste(pv_col, "~ x")),
@@ -65,18 +70,56 @@ survey_brr_fay_oracle_one_pv <- function(data, pv_col, fay_k = 0.5) {
   list(beta = beta, U = U)
 }
 
-survey_oracle_rubin_target <- function(pieces) {
+survey_oracle_rubin_target <- function(
+  pieces,
+  df_method = c("classic", "barnard_rubin"),
+  df_complete = NULL
+) {
+  df_method <- match.arg(df_method)
   beta_rows <- do.call(rbind, lapply(pieces, `[[`, "beta"))
   fe_names <- names(pieces[[1L]]$beta)
   colnames(beta_rows) <- fe_names
+  M <- length(pieces)
   beta <- colMeans(beta_rows)
   names(beta) <- fe_names
-  U_bar <- Reduce(`+`, lapply(pieces, `[[`, "U")) / length(pieces)
+  U_bar <- Reduce(`+`, lapply(pieces, `[[`, "U")) / M
   centered <- sweep(t(beta_rows), 1L, beta, FUN = "-")
-  B <- centered %*% t(centered) / (length(pieces) - 1L)
-  T_MI <- U_bar + (1 + 1 / length(pieces)) * B
+  B <- centered %*% t(centered) / (M - 1L)
+  T_MI <- U_bar + (1 + 1 / M) * B
   dimnames(U_bar) <- dimnames(B) <- dimnames(T_MI) <- list(fe_names, fe_names)
-  list(beta = beta, U_bar = U_bar, B = B, T_MI = T_MI)
+  se <- sqrt(diag(T_MI))
+  names(se) <- fe_names
+  lambda <- diag((1 + 1 / M) * B) /
+    pmax(diag(T_MI), .Machine$double.eps)
+  names(lambda) <- fe_names
+  df_classic <- (M - 1) / pmax(lambda^2, .Machine$double.eps)
+  names(df_classic) <- fe_names
+  df <- df_classic
+  if (identical(df_method, "barnard_rubin")) {
+    if (is.null(df_complete)) {
+      stop("The independent oracle requires df_complete for Barnard-Rubin.")
+    }
+    if (length(df_complete) == 1L) {
+      df_complete <- rep(df_complete, length(fe_names))
+      names(df_complete) <- fe_names
+    } else {
+      df_complete <- df_complete[fe_names]
+    }
+    nu_obs <- ((df_complete + 1) / (df_complete + 3)) *
+      df_complete * pmax(1 - lambda, 0)
+    df <- 1 / (1 / df_classic + 1 / pmax(nu_obs, .Machine$double.eps))
+    names(df) <- fe_names
+  }
+  list(
+    beta = beta,
+    U_bar = U_bar,
+    B = B,
+    T_MI = T_MI,
+    se = se,
+    lambda = lambda,
+    df_classic = df_classic,
+    df = df
+  )
 }
 
 skip_survey_oracle_tests <- function() {
@@ -85,16 +128,21 @@ skip_survey_oracle_tests <- function() {
     "survey oracle checks are dev-only; set PVSTACKR_RUN_ORACLE_TESTS=true"
   )
   desc <- suppressWarnings(utils::packageDescription("survey"))
-  skip_if(
-    length(desc) == 1L && is.na(desc),
-    "survey oracle checks require survey"
-  )
-  skip_if(
-    identical(desc$Title, "Sentinel Optional Package") ||
-      identical(desc$Version, "0.0.0"),
-    "survey oracle checks require the real survey package, not the light-path sentinel"
-  )
-  skip_if_not_installed("survey")
+  if (length(desc) == 1L && is.na(desc)) {
+    stop("Explicitly enabled survey oracle checks require the survey package.")
+  }
+  if (identical(desc$Title, "Sentinel Optional Package") ||
+      identical(desc$Version, "0.0.0")) {
+    stop(
+      paste(
+        "Explicitly enabled survey oracle checks require the real survey",
+        "package, not the light-path sentinel."
+      )
+    )
+  }
+  if (!requireNamespace("survey", quietly = TRUE)) {
+    stop("Explicitly enabled survey oracle checks could not load survey.")
+  }
 }
 
 test_that("PISA-style column detection uses natural numeric order", {
@@ -183,15 +231,25 @@ test_that("pv_brr_target assembles a Rubin/BRR-Fay target from WLS pieces", {
   expect_identical(target$R, 4L)
   expect_equal(target$fay_k, 0.5)
   expect_equal(target$fay_variance_multiplier, 1)
-  expect_match(target$design_hash, "^[0-9a-f]{8}$")
-  expect_match(target$target_hash, "^[0-9a-f]{8}$")
+  expect_identical(target$schema_version, "0.2.0")
+  expect_match(target$design_hash, "^sha256:[0-9a-f]{64}$")
+  expect_match(target$target_hash, "^sha256:[0-9a-f]{64}$")
+  expect_identical(target$design_hash, target$binding_manifest$manifest_hash)
+  expect_identical(target$target_hash, target$target_content$target_content_hash)
+  expect_identical(target$target_content$manifest_hash, target$design_hash)
+  expect_identical(
+    target$binding_manifest$legacy_hashes$algorithm_id,
+    pvstackr:::pv_binding_legacy_hash_algorithm_id()
+  )
+  expect_match(target$binding_manifest$legacy_hashes$design_hash, "^[0-9a-f]{8}$")
+  expect_match(target$binding_manifest$legacy_hashes$target_hash, "^[0-9a-f]{8}$")
   expect_true(target$policy$fixed_effects_only)
   expect_identical(target$policy$replicate_weight_role, "external_design_variance_only")
   expect_identical(target$policy$target_repair, "forbidden")
   expect_identical(target$df_method, "classic")
   expect_equal(target$df, target$df_classic, tolerance = 1e-12)
-  expect_true(all(is.na(target$df_complete)))
-  expect_identical(names(target$df_complete), target$fe_names)
+  expect_null(target$df_complete)
+  expect_identical(target$conf_level, 0.95)
   expect_identical(target$interval_role, "descriptive_classic_rubin")
   expect_false(target$coverage_claim_allowed)
   expect_identical(target$policy$df_method, target$df_method)
@@ -214,24 +272,31 @@ test_that("pv_brr_target agrees with an external survey Fay replicate-weight ora
   skip_survey_oracle_tests()
 
   data <- brr_fixture_data()
+  oracle_pv_cols <- c("PV1READ", "PV2READ")
+  oracle_rep_cols <- paste0("W_FSTURWT", 1:4)
+  oracle_fay_k <- 0.3
   target <- pv_brr_target(
     data = data,
     formula = OUTCOME ~ x,
-    pv_cols = c("PV1READ", "PV2READ"),
+    pv_cols = oracle_pv_cols,
     weight_col = "W_FSTUWT",
-    rep_weight_cols = paste0("W_FSTURWT", 1:4),
-    fay_k = 0.5,
+    rep_weight_cols = oracle_rep_cols,
+    fay_k = oracle_fay_k,
     id_cols = "id",
     conf_level = 0.95
   )
   expect_equal(
     target$fay_variance_multiplier,
-    1 / (target$R * (1 - target$fay_k)^2),
+    1 / (length(oracle_rep_cols) * (1 - oracle_fay_k)^2),
     tolerance = 0
   )
+  expect_identical(target$pv_cols, oracle_pv_cols)
+  expect_identical(target$rep_weight_cols, oracle_rep_cols)
+  expect_identical(target$R, as.integer(length(oracle_rep_cols)))
+  expect_identical(target$fay_k, oracle_fay_k)
 
-  pieces <- lapply(target$pv_cols, function(pv_col) {
-    survey_brr_fay_oracle_one_pv(data, pv_col, fay_k = target$fay_k)
+  pieces <- lapply(oracle_pv_cols, function(pv_col) {
+    survey_brr_fay_oracle_one_pv(data, pv_col, fay_k = oracle_fay_k)
   })
   oracle <- survey_oracle_rubin_target(pieces)
   oracle_tol <- 1e-10
@@ -244,7 +309,68 @@ test_that("pv_brr_target agrees with an external survey Fay replicate-weight ora
   expect_equal(target$U_bar, oracle$U_bar, tolerance = oracle_tol)
   expect_equal(target$B, oracle$B, tolerance = oracle_tol)
   expect_equal(target$T_MI, oracle$T_MI, tolerance = oracle_tol)
+  expect_equal(target$se, oracle$se, tolerance = oracle_tol)
+  expect_equal(target$lambda, oracle$lambda, tolerance = oracle_tol)
+  expect_equal(target$df_classic, oracle$df_classic, tolerance = oracle_tol)
+  expect_equal(target$df, oracle$df, tolerance = oracle_tol)
   expect_lt(sqrt(sum((target$T_MI - oracle$T_MI)^2)), oracle_tol)
+
+  wrong_scale_pieces <- lapply(oracle_pv_cols, function(pv_col) {
+    survey_brr_fay_oracle_one_pv(data, pv_col, fay_k = 0.5)
+  })
+  wrong_scale <- survey_oracle_rubin_target(wrong_scale_pieces)
+  expect_gt(
+    sqrt(sum((target$U_bar - wrong_scale$U_bar)^2)),
+    100 * oracle_tol
+  )
+  wrong_rubin_total <- oracle$U_bar + oracle$B
+  expect_gt(
+    sqrt(sum((target$T_MI - wrong_rubin_total)^2)),
+    100 * oracle_tol
+  )
+  wrong_mse_pieces <- lapply(oracle_pv_cols, function(pv_col) {
+    survey_brr_fay_oracle_one_pv(
+      data,
+      pv_col,
+      fay_k = oracle_fay_k,
+      mse = FALSE
+    )
+  })
+  wrong_mse <- survey_oracle_rubin_target(wrong_mse_pieces)
+  expect_gt(
+    sqrt(sum((target$U_bar - wrong_mse$U_bar)^2)),
+    100 * oracle_tol
+  )
+
+  complete_df <- c(b_Intercept = 24, b_x = 35)
+  target_barnard <- pv_brr_target(
+    data = data,
+    formula = OUTCOME ~ x,
+    pv_cols = oracle_pv_cols,
+    weight_col = "W_FSTUWT",
+    rep_weight_cols = oracle_rep_cols,
+    fay_k = oracle_fay_k,
+    id_cols = "id",
+    conf_level = 0.95,
+    df_method = "barnard_rubin",
+    df_complete = complete_df
+  )
+  oracle_barnard <- survey_oracle_rubin_target(
+    pieces,
+    df_method = "barnard_rubin",
+    df_complete = complete_df
+  )
+  expect_equal(target_barnard$beta, oracle_barnard$beta, tolerance = oracle_tol)
+  expect_equal(target_barnard$T_MI, oracle_barnard$T_MI, tolerance = oracle_tol)
+  expect_equal(target_barnard$se, oracle_barnard$se, tolerance = oracle_tol)
+  expect_equal(
+    target_barnard$df_classic,
+    oracle_barnard$df_classic,
+    tolerance = oracle_tol
+  )
+  expect_equal(target_barnard$df, oracle_barnard$df, tolerance = oracle_tol)
+  expect_identical(target_barnard$interval_role, "coverage_barnard_rubin")
+  expect_true(target_barnard$coverage_claim_allowed)
 })
 
 test_that("pv_brr_target per-PV payloads reconstruct replicate and pooled variance pieces", {
@@ -400,7 +526,7 @@ test_that("pv_brr_target is equivariant to common plausible-value outcome shifts
   expect_equal(shifted_target$B, target$B, tolerance = 1e-8)
   expect_equal(shifted_target$T_MI, target$T_MI, tolerance = 1e-8)
   expect_equal(shifted_target$df, target$df, tolerance = 1e-8)
-  expect_identical(shifted_target$design_hash, target$design_hash)
+  expect_false(identical(shifted_target$design_hash, target$design_hash))
   expect_false(identical(shifted_target$target_hash, target$target_hash))
 })
 
@@ -454,6 +580,142 @@ test_that("pv_brr_target hashes are deterministic for identical target inputs", 
   expect_equal(second$T_MI, first$T_MI, tolerance = 0)
   expect_equal(fay0$beta, first$beta, tolerance = 1e-12)
   expect_false(identical(fay0$target_hash, first$target_hash))
+})
+
+test_that("pv_brr_target resolves stateful transforms once and reuses exact X and offset", {
+  data <- brr_fixture_data()
+  data$z <- seq(0.1, 1, length.out = nrow(data))
+  evaluation <- new.env(parent = asNamespace("stats"))
+  evaluation$count <- 0L
+  evaluation$private_marker <- "stateful_formula_environment_marker"
+  evaluation$transform_x <- function(x) {
+    evaluation$count <- evaluation$count + 1L
+    x^2
+  }
+  formula <- stats::as.formula(
+    "OUTCOME ~ transform_x(x) + offset(z)",
+    env = evaluation
+  )
+  target <- pv_brr_target(
+    data = data,
+    formula = formula,
+    pv_cols = c("PV1READ", "PV2READ"),
+    weight_col = "W_FSTUWT",
+    rep_weight_cols = paste0("W_FSTURWT", 1:4),
+    fay_k = 0.5,
+    id_cols = "id"
+  )
+
+  expect_identical(evaluation$count, 1L)
+  expect_identical(environment(target$formula), baseenv())
+  expect_false(grepl(
+    evaluation$private_marker,
+    rawToChar(serialize(target, NULL, ascii = TRUE)),
+    fixed = TRUE
+  ))
+
+  X <- stats::model.matrix(~ I(x^2) + offset(z), data = data)
+  offset <- data$z
+  weight_sets <- c(
+    list(data$W_FSTUWT),
+    lapply(paste0("W_FSTURWT", 1:4), function(name) data[[name]])
+  )
+  expected_beta <- lapply(c("PV1READ", "PV2READ"), function(pv_col) {
+    lapply(weight_sets, function(weights) {
+      unname(stats::coef(stats::lm.wfit(
+        x = X,
+        y = data[[pv_col]],
+        w = weights,
+        offset = offset
+      )))
+    })
+  })
+  for (index in seq_along(target$per_pv)) {
+    item <- target$per_pv[[index]]
+    expect_equal(unname(item$beta), expected_beta[[index]][[1L]], tolerance = 1e-12)
+    expect_equal(
+      unname(item$replicate_beta),
+      do.call(cbind, expected_beta[[index]][-1L]),
+      tolerance = 1e-12
+    )
+  }
+})
+
+test_that("schema-0.2 target enforces exact manifest, content, and top-level links", {
+  data <- brr_fixture_data()
+  target <- pv_brr_target(
+    data = data,
+    formula = OUTCOME ~ x,
+    pv_cols = c("PV1READ", "PV2READ"),
+    weight_col = "W_FSTUWT",
+    rep_weight_cols = paste0("W_FSTURWT", 1:4),
+    fay_k = 0.5,
+    id_cols = "id"
+  )
+  expect_invisible(pvstackr:::validate_pvstackr_brr_target(target))
+
+  mutations <- list(
+    root_extra = function(x) { x$raw_payload <- "forbidden"; x },
+    per_pv_extra = function(x) { x$per_pv[[1L]]$raw_payload <- "forbidden"; x },
+    policy_extra = function(x) { x$policy$raw_payload <- "forbidden"; x },
+    provenance_extra = function(x) { x$provenance$raw_payload <- "forbidden"; x },
+    top_beta = function(x) { x$beta[[1L]] <- x$beta[[1L]] + 1; x },
+    top_design_hash = function(x) { x$design_hash <- paste0("sha256:", strrep("0", 64L)); x },
+    top_target_hash = function(x) { x$target_hash <- paste0("sha256:", strrep("1", 64L)); x },
+    manifest = function(x) { x$binding_manifest$components$pv$M <- 3L; x },
+    content = function(x) { x$target_content$derived$beta[[1L]] <- x$target_content$derived$beta[[1L]] + 1; x },
+    replicate_diff_attribute = function(x) {
+      attr(x$per_pv[[1L]]$replicate_diff, "raw_payload") <- "forbidden"
+      x
+    },
+    replicate_beta_attribute = function(x) {
+      attr(x$per_pv[[1L]]$replicate_beta, "raw_payload") <- "forbidden"
+      x
+    },
+    formula_attribute = function(x) { attr(x$formula, "raw_payload") <- "forbidden"; x },
+    formula_string_comment = function(x) {
+      x$formula_string <- paste0(x$formula_string, " # forbidden")
+      x
+    }
+  )
+  for (name in names(mutations)) {
+    expect_error(
+      pvstackr:::validate_pvstackr_brr_target(mutations[[name]](target)),
+      info = name
+    )
+  }
+})
+
+test_that("schema-0.1 golden target structure remains valid", {
+  target <- pv_brr_target(
+    data = brr_fixture_data(),
+    formula = OUTCOME ~ x,
+    pv_cols = c("PV1READ", "PV2READ"),
+    weight_col = "W_FSTUWT",
+    rep_weight_cols = paste0("W_FSTURWT", 1:4),
+    fay_k = 0.5,
+    id_cols = "id"
+  )
+  legacy_fields <- setdiff(
+    pvstackr:::pv_brr_target_v02_fields(),
+    c("conf_level", "binding_manifest", "target_content")
+  )
+  legacy <- target[legacy_fields]
+  legacy$df_complete <- stats::setNames(
+    rep(NA_real_, length(legacy$fe_names)),
+    legacy$fe_names
+  )
+  legacy$design_hash <- target$binding_manifest$legacy_hashes$design_hash
+  legacy$target_hash <- target$binding_manifest$legacy_hashes$target_hash
+  legacy$schema_version <- "0.1.0"
+  legacy$provenance <- list(
+    function_name = "pv_brr_target",
+    assembled_at = "2026-07-12 12:00:00",
+    package = "pvstackr"
+  )
+  class(legacy) <- c("pvstackr_brr_target", "list")
+
+  expect_invisible(pvstackr:::validate_pvstackr_brr_target(legacy))
 })
 
 test_that("pv_brr_target validates malformed weights, columns, IDs, formula, and engine", {

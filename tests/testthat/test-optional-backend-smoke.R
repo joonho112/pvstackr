@@ -63,6 +63,10 @@ backend_smoke_direct_fit <- function(backend = "injected", family = NULL, prior 
     prior = prior,
     fit_function = backend_smoke_fit_function(bundle$cached$target, record, draws = draws),
     draws_function = function(fit) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(
+      chains = 2L,
+      post_warmup = 10L
+    ),
     cache_dir = tempdir(),
     cache_stem = paste0("optional-backend-", backend),
     additional_args = list(...)
@@ -94,9 +98,14 @@ test_that("brms backend smoke uses injected adapter boundary without sampling", 
   expect_s3_class(out$fit, "pvstackr_fit")
   expect_equal(out$fit$status, "ok")
   expect_equal(out$record$backend, "brms")
-  expect_true("brmsfamily" %in% out$record$family_class)
+  # Phase 2 family/estimand hardening canonicalizes compatible caller families
+  # to the portable stats::family contract before crossing an injected adapter.
+  expect_identical(out$record$family_class, "family")
   expect_equal(out$record$extra$sample_prior, "no")
   expect_equal(out$fit$stack_fit$meta$fit_engine, "injected_fit_function")
+  expect_identical(out$fit$stack_fit$meta$adapter_source, "injected")
+  expect_identical(out$fit$stack_fit$provenance$engine$requested_backend, "brms")
+  expect_identical(out$fit$stack_fit$provenance$engine$resolved_backend, "injected")
 })
 
 test_that("cmdstanr backend smoke uses injected adapter boundary without CmdStan", {
@@ -111,6 +120,24 @@ test_that("cmdstanr backend smoke uses injected adapter boundary without CmdStan
   expect_equal(out$record$backend, "cmdstanr")
   expect_equal(out$record$extra$cmdstan_model, "not-used")
   expect_equal(out$fit$stack_fit$meta$fit_engine, "injected_fit_function")
+})
+
+test_that("configured CmdStan state records versions without sampling", {
+  skip_if_backend_smoke_disabled()
+  skip_if_not_installed("cmdstanr")
+
+  state <- pvstackr:::pv_backend_cmdstan_state()
+  expect_true(state$namespace_available)
+  expect_false(state$toolchain_checked)
+  expect_identical(state$package_version, as.character(utils::packageVersion("cmdstanr")))
+  if (state$cmdstan_configured) {
+    expect_match(state$cmdstan_version, "^[0-9]+\\.[0-9]+")
+    expect_true(nzchar(state$cmdstan_path_basename))
+    expect_false(grepl("[/\\\\]", state$cmdstan_path_basename))
+  } else {
+    expect_true(is.na(state$cmdstan_version))
+    expect_true(is.na(state$cmdstan_path_basename))
+  }
 })
 
 test_that("posterior draws_matrix output is accepted by the injected draw extractor", {
@@ -186,8 +213,10 @@ test_that("posterior draws_matrix output survives the full stack_direct CCC path
   expect_s3_class(posterior_run$fit, "pvstackr_fit")
   expect_equal(posterior_run$fit$status, "ok")
   expect_invisible(pvstackr:::validate_pvstackr_fit(posterior_run$fit))
-  expect_identical(class(posterior_run$fit$ccc$draws_calibrated), c("matrix", "array"))
-  expect_identical(class(posterior_run$fit$ccc$draws_fe_cal), c("matrix", "array"))
-  expect_equal(posterior_run$fit$ccc$draws_calibrated, plain$fit$ccc$draws_calibrated, tolerance = 0)
+  expect_null(posterior_run$fit$draws)
+  expect_null(posterior_run$fit$stack_fit$stacked_draws)
+  expect_null(posterior_run$fit$ccc$draws_calibrated)
+  expect_null(posterior_run$fit$ccc$draws_fe_cal)
+  expect_null(plain$fit$ccc$draws_calibrated)
   expect_equal(posterior_run$fit$estimates, plain$fit$estimates, tolerance = 0)
 })

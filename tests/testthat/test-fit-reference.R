@@ -85,7 +85,174 @@ test_that("pv_fit_reference pools precomputed per-PV draws with Rubin rules", {
   expect_equal(fit$estimates$pooling_source, rep("per_pv_rubin_draws", 2L))
   expect_equal(fit$estimates$pooling_hash, rep(fit$target$target_hash, 2L))
   expect_equal(names(fit$diagnostics$reference$per_pv_draws), names(draws))
+  expect_true(all(vapply(
+    fit$diagnostics$reference$per_pv_draws,
+    function(x) identical(colnames(x), c("b_Intercept", "b_x")),
+    logical(1)
+  )))
   expect_invisible(pvstackr:::validate_pvstackr_fit(fit))
+
+  redacted <- pv_fit_reference(
+    per_pv_draws = draws,
+    control = reference_control(return_draws = FALSE)
+  )
+  expect_null(redacted$diagnostics$reference$per_pv_draws)
+  expect_invisible(pvstackr:::validate_pvstackr_fit(redacted))
+
+  injected <- redacted
+  injected$diagnostics$reference$per_pv_draws <-
+    fit$diagnostics$reference$per_pv_draws
+  expect_error(pvstackr:::validate_pvstackr_fit(injected), "return_draws")
+
+  removed <- fit
+  removed$diagnostics$reference["per_pv_draws"] <- list(NULL)
+  expect_error(pvstackr:::validate_pvstackr_fit(removed), "return_draws")
+
+  changed <- fit
+  changed$diagnostics$reference$per_pv_draws$PV1[1L, 1L] <-
+    changed$diagnostics$reference$per_pv_draws$PV1[1L, 1L] + 1
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(changed),
+    "reproduce their pooled mean/covariance"
+  )
+
+  reordered <- fit
+  reordered$diagnostics$reference$per_pv_draws <- lapply(
+    reordered$diagnostics$reference$per_pv_draws,
+    function(x) {
+      out <- x[nrow(x):1L, , drop = FALSE]
+      rownames(out) <- NULL
+      out
+    }
+  )
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(reordered),
+    "validation stamp"
+  )
+
+  injected_summary <- redacted
+  injected_summary$diagnostics$pooling$U_bar <- matrix(1, 2L, 2L)
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(injected_summary),
+    "exactly mirror"
+  )
+
+  injected_summary <- redacted
+  injected_summary$diagnostics$reference$map_sources <- matrix(1, 2L, 2L)
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(injected_summary),
+    "exactly mirror"
+  )
+})
+
+test_that("per_pv reportable payload cannot be relabeled as a blocked fit", {
+  fit <- pv_fit_reference(
+    per_pv_draws = reference_draws_fixture(),
+    control = reference_control(return_draws = TRUE)
+  )
+  relabeled <- fit
+  relabeled$status <- "blocked"
+  relabeled$reason_codes <- "backend_failed"
+  relabeled <- pvstackr:::pv_fit_issue_validation_stamp(relabeled)
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(relabeled),
+    "canonical empty estimates"
+  )
+
+  expect_error(
+    pvstackr:::new_pvstackr_fit(
+      method = "per_pv",
+      status = "blocked",
+      reason_codes = "backend_failed",
+      control = pvstackr:::pv_fit_blocked_control(reference_control())
+    ),
+    "no typed blocked-object path"
+  )
+})
+
+test_that("per_pv keep_data uses a data-free snapshot and canonical formula", {
+  data <- reference_fixture_data()
+  data$UNUSED_REFERENCE_PRIVATE_COLUMN <- rep(
+    "REFERENCE_RAW_VALUE_SENTINEL",
+    nrow(data)
+  )
+  formula_env <- new.env(parent = baseenv())
+  formula_env$private_state <- "REFERENCE_FORMULA_ENV_SENTINEL"
+  formula <- OUTCOME ~ x
+  environment(formula) <- formula_env
+  draws <- reference_draws_fixture()
+
+  redacted <- pv_fit_reference(
+    data = data,
+    formula = formula,
+    pv_cols = names(draws),
+    per_pv_draws = draws,
+    control = reference_control(keep_data = FALSE),
+    weight_col = "W",
+    id_cols = "id"
+  )
+  retained <- pv_fit_reference(
+    data = data,
+    formula = formula,
+    pv_cols = names(draws),
+    per_pv_draws = draws,
+    control = reference_control(keep_data = TRUE),
+    weight_col = "W",
+    id_cols = "id"
+  )
+  expect_null(redacted$design$data)
+  expect_identical(environment(redacted$design$formula), baseenv())
+  expect_identical(retained$design$data, data)
+  expect_identical(environment(retained$design$formula), baseenv())
+  serialized <- rawToChar(serialize(redacted, NULL, ascii = TRUE))
+  for (marker in c(
+    "UNUSED_REFERENCE_PRIVATE_COLUMN", "REFERENCE_RAW_VALUE_SENTINEL",
+    "REFERENCE_FORMULA_ENV_SENTINEL"
+  )) {
+    expect_false(grepl(marker, serialized, fixed = TRUE), info = marker)
+  }
+  expect_lt(
+    length(serialize(redacted, NULL, xdr = TRUE)),
+    length(serialize(retained, NULL, xdr = TRUE))
+  )
+  expect_invisible(pvstackr:::validate_pvstackr_fit(redacted))
+
+  self_rehashed <- redacted
+  self_rehashed$design$data_manifest$column_classes[["x"]] <- "integer"
+  self_rehashed$design$design_hash <- pvstackr:::pv_hash_payload(c(
+    self_rehashed$design$data_manifest,
+    list(
+      row_support_hash = self_rehashed$design$row_support_hash,
+      pv_value_hash = self_rehashed$design$pv_value_hash,
+      weight_design_hash = self_rehashed$design$weight_design_hash
+    )
+  ))
+  expect_invisible(pvstackr:::validate_pvstackr_design(self_rehashed$design))
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(self_rehashed),
+    "validation stamp"
+  )
+
+  formula_environment_injection <- redacted
+  private_environment <- new.env(parent = baseenv())
+  private_environment$private_payload <- "PRIVATE_FORMULA_ENVIRONMENT_PAYLOAD"
+  environment(formula_environment_injection$design$formula) <- private_environment
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(
+      formula_environment_injection,
+      tier = "cheap"
+    ),
+    "formula environment"
+  )
+
+  control_flip <- redacted
+  control_flip$control$keep_data <- TRUE
+  expect_error(pvstackr:::validate_pvstackr_fit(control_flip))
+  backend_injection <- redacted
+  backend_injection$diagnostics$reference["backend_fits"] <- list(
+    list(list(data = data))
+  )
+  expect_error(pvstackr:::validate_pvstackr_fit(backend_injection))
 })
 
 test_that("pv_fit_reference does not expose an inert allow_m1 API", {
@@ -262,7 +429,7 @@ test_that("pv_fit_reference runs one injected fit per plausible value in PV orde
     data = data,
     formula = OUTCOME ~ x + (1 | school),
     pv_cols = c("PV1", "PV2", "PV3"),
-    control = reference_control(keep_backend_fit = TRUE),
+    control = reference_control(keep_backend_fit = TRUE, keep_data = TRUE),
     fit_function = fake_fit,
     draws_function = function(fit) fit$draws,
     weight_col = "W",
@@ -287,7 +454,17 @@ test_that("pv_fit_reference runs one injected fit per plausible value in PV orde
       !"weights" %in% x
   }, logical(1))))
   expect_equal(names(fit$diagnostics$reference$backend_fits), c("PV1", "PV2", "PV3"))
+  expect_false(fit$validation$fast_path_eligible)
   expect_invisible(pvstackr:::validate_pvstackr_fit(fit))
+  expect_invisible(pvstackr:::validate_pvstackr_fit(fit, tier = "cheap"))
+  opaque_tamper <- fit
+  opaque_tamper$estimates$estimate[[1L]] <-
+    opaque_tamper$estimates$estimate[[1L]] + 1
+  opaque_tamper <- pvstackr:::pv_fit_issue_validation_stamp(opaque_tamper)
+  expect_error(
+    pvstackr:::validate_pvstackr_fit(opaque_tamper, tier = "cheap"),
+    "must match Rubin pooled centers"
+  )
 })
 
 test_that("pv_fit dispatches per_pv through pv_fit_reference", {

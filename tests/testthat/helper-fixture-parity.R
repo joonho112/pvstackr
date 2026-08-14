@@ -93,6 +93,10 @@ pisa_tiny_parity_live_fit <- function() {
     ),
     fit_function = pisa_tiny_parity_fit_function(target),
     draws_function = function(fit) fit$draws,
+    diagnose_function = test_sampler_diagnose_function(
+      chains = 2L,
+      post_warmup = 10L
+    ),
     cache_dir = tempdir(),
     cache_stem = "pisa-tiny-stack-direct"
   )

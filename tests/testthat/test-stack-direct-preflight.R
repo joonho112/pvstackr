@@ -41,6 +41,20 @@ test_that("stack_direct preflight accepts compatible fixed-effect target", {
   expect_identical(out$fe_names, target$fe_names)
   expect_identical(out$target_hash, target$target_hash)
   expect_identical(out$policy$fixed_effects_only, TRUE)
+  expect_identical(names(out$binding_proof), pvstackr:::pv_binding_proof_fields())
+  expect_identical(
+    out$binding_proof$target_manifest_hash,
+    target$binding_manifest$manifest_hash
+  )
+  expect_identical(
+    out$binding_proof$current_manifest_hash,
+    target$binding_manifest$manifest_hash
+  )
+  expect_invisible(pvstackr:::pv_binding_proof_validate(
+    out$binding_proof,
+    target_manifest = target$binding_manifest
+  ))
+  expect_false("current_manifest" %in% names(out))
 })
 
 test_that("stack_direct preflight rejects target formula mismatch before fitting", {
@@ -53,22 +67,25 @@ test_that("stack_direct preflight rejects target formula mismatch before fitting
     list()
   }
 
-  expect_error(
+  first_error <- tryCatch(
     pvstackr:::pv_stack_direct_preflight(
       data = data,
       formula = OUTCOME ~ x + z,
       target = target
     ),
-    "same order"
+    pvstackr_binding_error = identity
   )
-  expect_error(
+  expect_identical(first_error$code, "PV_BIND_E030")
+  expect_true("PV_BIND_E040" %in% first_error$all_codes)
+  second_error <- tryCatch(
     pvstackr:::pv_stack_direct_preflight(
       data = data,
       formula = OUTCOME ~ z + x,
       target = stack_direct_target(OUTCOME ~ x + z, data = data)
     ),
-    "Fit RHS: `z \\+ x`; target RHS: `x \\+ z`"
+    pvstackr_binding_error = identity
   )
+  expect_identical(second_error$code, "PV_BIND_E040")
   expect_identical(record$n, 0L)
   expect_true(is.function(fit_function))
 })
@@ -131,12 +148,75 @@ test_that("stack_direct preflight rejects fixed-effect name mismatches", {
   target <- stack_direct_target(OUTCOME ~ x + g, data = data)
   data$g <- factor(rep("A", nrow(data)), levels = "A")
 
-  expect_error(
+  error <- tryCatch(
     pvstackr:::pv_stack_direct_preflight(
       data = data,
       formula = OUTCOME ~ x + g,
       target = target
     ),
-    "factor levels"
+    pvstackr_binding_error = identity
   )
+  expect_identical(error$code, "PV_BIND_E081")
+})
+
+test_that("stack_direct preflight resolves a stable stateful RHS once and returns its exact bundle", {
+  data <- stack_direct_fixture_data()
+  state <- new.env(parent = baseenv())
+  state$count <- 0L
+  state$scale <- 1
+  state$transform_x <- function(x) {
+    state$count <- state$count + 1L
+    state$scale * x
+  }
+  formula <- stats::as.formula("OUTCOME ~ transform_x(x)", env = state)
+  target <- stack_direct_target(formula, data = data)
+
+  state$count <- 0L
+  expected_bundle <- pvstackr:::pv_binding_resolve_model_bundle(data, formula)
+  expect_identical(state$count, 1L)
+
+  state$count <- 0L
+  resolved <- pvstackr:::pv_stack_direct_preflight(
+    data,
+    formula,
+    target,
+    return_model_bundle = TRUE
+  )
+  expect_identical(names(resolved), c("preflight", "model_bundle"))
+  expect_s3_class(resolved$preflight, "pvstackr_stack_direct_preflight")
+  expect_identical(resolved$model_bundle, expected_bundle)
+  expect_identical(state$count, 1L)
+
+  state$count <- 0L
+  state$scale <- 2
+  drift <- tryCatch(
+    pvstackr:::pv_stack_direct_preflight(data, formula, target),
+    pvstackr_binding_error = identity
+  )
+  expect_identical(drift$code, "PV_BIND_E042")
+  expect_identical(state$count, 1L)
+})
+
+test_that("stack_direct preflight normalizes Gaussian family and rejects incompatible family", {
+  data <- stack_direct_fixture_data()
+  target <- stack_direct_target(OUTCOME ~ x, data = data)
+  expect_s3_class(
+    pvstackr:::pv_stack_direct_preflight(
+      data,
+      OUTCOME ~ x,
+      target,
+      family = stats::gaussian(link = "identity")
+    ),
+    "pvstackr_stack_direct_preflight"
+  )
+  error <- tryCatch(
+    pvstackr:::pv_stack_direct_preflight(
+      data,
+      OUTCOME ~ x,
+      target,
+      family = stats::binomial()
+    ),
+    pvstackr_binding_error = identity
+  )
+  expect_identical(error$code, "PV_BIND_E060")
 })

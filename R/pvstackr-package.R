@@ -5,7 +5,7 @@
 #' external Rubin/BRR-Fay target. It also implements the `per_pv` reference
 #' path: one backend fit or posterior-draw source per plausible value plus
 #' model-based Rubin pooling, and the `stack_psis` diagnostic/reference path:
-#' one stacked draw source plus supplied or injected PSIS weights, model-based
+#' one stacked draw source plus caller-declared external PSIS weights, model-based
 #' Rubin pooling, and Pareto-k gating.
 #'
 #' @details
