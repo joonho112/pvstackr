@@ -2,7 +2,7 @@
 #'
 #' This page records the package-level object contracts used by the current
 #' public API. These contracts are intentionally conservative while `pvstackr`
-#' is in its v0.1 method stage.
+#' is in its fixed-effect method stage.
 #'
 #' @section Current Method Boundary:
 #' `pv_fit()` recognizes three public method IDs: `"stack_direct"`,
@@ -15,11 +15,11 @@
 #' diagnostic/reference Rubin pooling of PSIS-weighted stacked draw summaries
 #' using model-based weighted covariance.
 #'
-#' @section `stack_direct` v0.1 Boundary:
+#' @section `stack_direct` Boundary:
 #' `stack_direct` requires an external `pvstackr_brr_target` from
 #' [pv_brr_target()]. The wrapper checks formula RHS equality, fixed-effect name
 #' alignment, target provenance, and target policy before fitting. Group terms
-#' such as `(1 | school)` and `(1 || school)` are not accepted for the v0.1
+#' such as `(1 | school)` and `(1 || school)` are not accepted for the
 #' BRR-Fay target path because the current target engine is fixed-effect-only.
 #'
 #' @section `pvstackr_ccc` Contract:
@@ -93,7 +93,7 @@
 #' diagnostic/reference Rubin pooling of PSIS-weighted fixed-effect summaries
 #' using model-based weighted covariance; this path does not construct an
 #' external BRR-Fay target. Group terms such as `(1 | school)` and
-#' `(1 || school)` are rejected for this v0.1 fixed-effect-only path. Failed
+#' `(1 || school)` are rejected for this fixed-effect-only path. Failed
 #' Pareto-k diagnostics cannot be reported as `status = "ok"`. With the default
 #' block fallback, failed PSIS diagnostics produce a blocked fit containing only
 #' the canonical scalar/vector Pareto-k decision record and its redaction
@@ -179,7 +179,7 @@
 #' schema-0.1 stack fits remain readable without the newer sampler gate.
 #'
 #' @section Reporting Scope:
-#' In v0.1, calibrated reporting is fixed-effect-only. Variance-component or
+#' Calibrated reporting is fixed-effect-only. Variance-component or
 #' sampler-diagnostic columns may be retained inside backend or stack-fit
 #' components, but they are not calibrated to the Rubin/BRR-Fay target and are
 #' not included in the reportable estimate table.

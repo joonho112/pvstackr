@@ -298,7 +298,7 @@ fits and **one** — "10 fits → 1".
 the computation** — how many model fits a method's architecture requires — not a
 benchmarked runtime. "One stacked fit instead of $M$" is an **architecture /
 topology** statement; the "10 fits → 1" figure is the $M = 10$ count for PISA
-reading [@oecd2024pisa], **not** a claim that the stacked path is faster. v0.1
+reading [@oecd2024pisa], **not** a claim that the stacked path is faster. The package
 reports no timings and makes **no** efficiency or "faster" claim (the H5 guardrail;
 A4 §7's honesty triad). The single stacked fit can be larger and slower per fit
 than one per-PV fit — it carries $M$ times the rows — so the count is genuinely a

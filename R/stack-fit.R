@@ -659,7 +659,7 @@ pv_stack_direct_preflight <- function(
     pv_abort("Do not embed `weights()` in `formula`; stacked weights are constructed internally.")
   }
   if (pv_formula_has_random_effect_bar(rhs)) {
-    pv_abort("Random-effect/group terms are not supported for `stack_direct` BRR target compatibility in v0.1.")
+    pv_abort("Random-effect/group terms are not supported for `stack_direct` BRR target compatibility.")
   }
   rhs_string <- pv_deparse_expr(rhs)
   family_link <- pv_compatibility_family_link(family)

@@ -213,7 +213,7 @@ unambiguous wherever the track cites it.
 **Positive-definite inputs, fail-fast — no automatic repair.** The map needs
 $L_{\text{raw}}^{-1}$, which exists only if $\Sigma_{\text{raw}}$ is positive
 definite, and $L_{\text{tgt}}$ likewise requires a positive-definite
-$\Sigma_{\text{tgt}}=T_{\text{MI}}$. In v0.1.0, CCC factors both covariances **as
+$\Sigma_{\text{tgt}}=T_{\text{MI}}$. CCC factors both covariances **as
 given** and applies **no** automatic Tikhonov or near-PD repair to either. When the
 raw draw cloud is **ill-conditioned** — near-collinear fixed effects, or too few
 effective draws relative to the dimension — that condition surfaces in one of two

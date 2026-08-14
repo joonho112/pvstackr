@@ -52,7 +52,7 @@ metadata marks them descriptive.
 
 Two scope notes, stated up front so nothing later surprises you:
 
-- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect block
+- **Fixed effects only.** The package calibrates and reports the fixed-effect block
   $\beta_{\text{FE}}$ (intercept and slopes). Variance components are estimated
   but **not** calibrated, and are not part of the reportable output.
 - **"One fit" is an architecture statement, not a speed claim.** It describes the

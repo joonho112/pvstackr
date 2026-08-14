@@ -45,7 +45,7 @@ test_that("real PISA guidance records licensing and scope boundaries", {
 
   # Method scope and the reportable / coverage rules.
   expect_match(guidance, "fixed-effect-only", fixed = TRUE)
-  expect_match(guidance, "not accepted by the v0.1 BRR-Fay target engine", fixed = TRUE)
+  expect_match(guidance, "not accepted by the BRR-Fay target engine", fixed = TRUE)
   expect_match(guidance, "control$center = \"target\"", fixed = TRUE)
   expect_match(guidance, "center-separation agreement", fixed = TRUE)
   expect_match(guidance, "diagnostic/exploratory only", fixed = TRUE)

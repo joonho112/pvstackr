@@ -187,13 +187,13 @@ vignettes for the line-by-line reading of the objects.
 
 ### 4.1 stack_direct requires an external BRR–Fay target
 
-In the v0.1 method stage, a reportable `stack_direct` fit requires an **external**
+A reportable `stack_direct` fit requires an **external**
 Rubin / BRR–Fay fixed-effect target built by `pv_brr_target()`. The target is
 **fixed-effect-only**: it forms a BRR–Fay sandwich covariance per plausible value
 and pools the $M$ results with Rubin's rules into the total
 $T_{\text{MI}} = \bar U + (1 + 1/M)\,B$ [@rubin1987multiple; @barnard1999small].
 Random-effect (group) terms such as `(1 | CNTSCHID)` or `(1 || CNTSCHID)` are
-**not accepted by the v0.1 BRR-Fay target engine**, by design — see A2 §3 for the
+**not accepted by the BRR-Fay target engine**, by design — see A2 §3 for the
 error this raises.
 
 ```{r target, purl = FALSE}
@@ -214,9 +214,11 @@ target
 
 With a design and a target in hand, `pv_fit(method = "stack_direct")` fits **one**
 stacked model on the N * M rows and calibrates it (via CCC) to the external target.
-On real data you supply a live Bayesian backend through the two adapter slots
-(`fit_function`, `draws_function`); this vignette runs **no** live backend, so the
-chunk shows only the shape — the adapter contracts are sketched in A2 §7.
+On real data you either ask for the bundled backend with
+`pv_control(backend = "brms")`, or supply your own engine through the three
+adapter slots (`fit_function`, `draws_function`, `diagnose_function` — all three
+are required for a reportable fit). This vignette runs **no** live backend, so
+the chunk shows only the shape; the adapter contracts are sketched in A2 §7.
 
 ```{r fit, purl = FALSE}
 fit <- pv_fit(

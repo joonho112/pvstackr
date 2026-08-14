@@ -107,7 +107,7 @@ The table is deliberately wide because it carries both the numbers and their
 
 **The three terms.** Rows are `b_Intercept`, `b_x`, and `b_female` — the
 fixed-effect block, with the `b_` prefix marking each as a fixed-effect
-coefficient. There are no variance-component rows: v0.1 calibrates and reports
+coefficient. There are no variance-component rows: the package calibrates and reports
 $\beta_{\text{FE}}$ only, a scope reminder carried over from A1/A2 and confirmed
 by the `parameter_scope` column below.
 

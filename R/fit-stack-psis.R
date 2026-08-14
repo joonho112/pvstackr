@@ -441,7 +441,7 @@ pv_stack_psis_blocked_redaction <- function() {
 
 pv_stack_psis_reject_group_rhs <- function(rhs) {
   if (pv_formula_has_random_effect_bar(rhs)) {
-    pv_abort("Random-effect/group terms are not supported for `stack_psis` in v0.1.")
+    pv_abort("Random-effect/group terms are not supported for `stack_psis`.")
   }
   invisible(FALSE)
 }

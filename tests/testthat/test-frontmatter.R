@@ -40,7 +40,7 @@ test_that("frontmatter files exist and record scope", {
   expect_match(readme_flat, "Kish-style iid weight ESS", fixed = TRUE)
   expect_match(readme_flat, "do not construct or calibrate to the external BRR-Fay target", fixed = TRUE)
   expect_match(readme, "Rubin/BRR-Fay fixed-effect target", fixed = TRUE)
-  expect_match(readme, "calibrated reporting is scoped to fixed", fixed = TRUE)
+  expect_match(readme, "alibrated reporting is scoped to fixed", fixed = TRUE)
   expect_match(readme, "not a full posterior for all model parameters", fixed = TRUE)
   expect_match(readme, "Under the default `control$center = \"target\"`", fixed = TRUE)
   expect_match(readme, "reported fixed-effect\\s+estimate and standard error are the external Rubin/BRR-Fay target\\s+values")

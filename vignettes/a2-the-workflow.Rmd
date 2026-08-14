@@ -51,7 +51,7 @@ Everything below runs on the package's bundled **synthetic** `pisa_tiny`
 fixture, so the whole article is offline and deterministic. Two scope reminders
 carried over from A1, because they govern what you may report:
 
-- **Fixed effects only.** v0.1 calibrates and reports the fixed-effect block
+- **Fixed effects only.** The package calibrates and reports the fixed-effect block
   $\beta_{\text{FE}}$ (intercept and slopes). Variance components are estimated
   but not calibrated and are not part of the reportable output.
 - **Coverage lives on one path.** A row's interval is coverage-claimable only
@@ -180,7 +180,7 @@ The full derivation of the BRR–Fay sandwich, Rubin pooling, the Barnard–Rubi
 degrees of freedom, and the design-variance coverage result lives in the
 **Method track, M2**.
 
-**The target is fixed-effect-only.** The v0.1 engine builds a target for the
+**The target is fixed-effect-only.** The target engine builds a target for the
 fixed-effect block and rejects random-effect (group) terms outright. Asking for
 `(1 | CNTSCHID)` is an error by design, not an oversight:
 
@@ -206,8 +206,8 @@ $M$-times-pooled answer" is the subject of **M3**.
 
 ### 4.1 The path we run here — load the cached fit
 
-A live `stack_direct` fit needs a modelling backend (an injected fitting engine),
-which this offline vignette does not assemble. The package therefore ships a
+A live `stack_direct` fit needs a modelling backend, which this offline vignette
+does not run. The package therefore ships a
 cached fit so the example is fast and MCMC-free. Load it:
 
 ```{r fit-cached}
@@ -228,30 +228,57 @@ explains exactly why, and what would change it.
 
 ### 4.2 The live call — its shape
 
-On real data you would call `pv_fit()` directly and hand it a backend. The chunk
-below shows that **shape**; it is **not run** here, because no live backend is
+On real data you would call `pv_fit()` directly and hand it a backend. The
+simplest route asks for the bundled one, which needs no adapter of your own:
+
+```{r fit-live-bundled, eval = FALSE}
+fit <- pv_fit(
+  data    = pisa_tiny,
+  formula = OUTCOME ~ x + female,
+  target  = target,                                         # from Section 3
+  method  = "stack_direct",
+  control = pv_control(method = "stack_direct", backend = "brms")
+)
+```
+
+`brms` is in Suggests, so it is needed only when you actually ask for this
+backend. It samples through `cmdstanr` when a configured CmdStan is available
+and through `rstan` otherwise.
+
+To drive a different engine, inject three functions instead. The chunk below
+shows that **shape**; it is **not run** here, because no live backend is
 assembled in this vignette:
 
 ```{r fit-live-shape, eval = FALSE}
 fit <- pv_fit(
-  data           = pisa_tiny,
-  formula        = OUTCOME ~ x + female,
-  target         = target,                                  # from Section 3
-  method         = "stack_direct",
-  control        = pv_control(
-                     method  = "stack_direct",
-                     backend = "injected"                   # backend policy
-                   ),
-  fit_function   = your_fit_function,                       # the modelling backend
-  draws_function = your_draws_function                      # extract posterior draws
+  data              = pisa_tiny,
+  formula           = OUTCOME ~ x + female,
+  target            = target,
+  method            = "stack_direct",
+  control           = pv_control(
+                        method  = "stack_direct",
+                        backend = "cmdstanr"                # passed to your engine
+                      ),
+  fit_function      = your_fit_function,      # estimates the stacked model
+  draws_function    = your_draws_function,    # extracts posterior draws
+  diagnose_function = your_diagnose_function, # reports sampler diagnostics
+  cache_dir         = NULL                    # an injected adapter owns its cache
 )
 ```
 
-The two adapter slots are the whole story of "going live": `fit_function` is the
-engine that estimates the stacked model, and `draws_function` pulls posterior
-draws from the backend fit so CCC can calibrate them. Their contracts — and how
-a real Bayesian backend slots in — are sketched in Section 7 and detailed for
-real data in **A5**.
+All three slots matter. `fit_function` is the engine that estimates the stacked
+model, `draws_function` pulls posterior draws so CCC can calibrate them, and
+`diagnose_function` reports the sampler evidence. A fit that arrives without
+that evidence is **blocked rather than reported**, so the third slot is not
+optional for a reportable analysis.
+
+You do not have to write all three from scratch: the bundled adapter's own
+functions are exported as `pv_backend_brms_fit_function()`,
+`pv_backend_brms_draws_function()`, and
+`pv_backend_brms_sampler_diagnostics()`, so you can pass those and replace only
+the piece that differs for your engine. Their contracts — and how a real
+Bayesian backend slots in — are sketched in Section 7 and detailed for real data
+in **A5**.
 
 ## 5. Inspect and report
 
@@ -366,7 +393,7 @@ only `stack_direct` is coverage-claimable in **M5** — is in the Method track.
 ## 7. The live backend, conceptually
 
 The same `pv_fit()` shape from Section 4.2 reaches a real Bayesian backend
-through the two adapter slots, with no change to the rest of the call. The sketch
+through the three adapter slots, with no change to the rest of the call. The sketch
 below is **not run** — no live backend executes in any vignette — and is purely
 illustrative of how an adapter conforms to the package's object contracts:
 
