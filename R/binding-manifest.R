@@ -3799,14 +3799,16 @@ pv_binding_target_content_from_brr_target <- function(
       if (identical(error$code, "PV_BIND_E080")) {
         stop(error)
       }
-      pv_binding_legacy_revalidation_abort(
-        "Legacy target raw-input recomputation did not complete successfully."
-      )
+      pv_binding_legacy_revalidation_abort(sprintf(
+        "Legacy target raw-input recomputation did not complete successfully: %s",
+        conditionMessage(error)
+      ))
     },
     error = function(error) {
-      pv_binding_legacy_revalidation_abort(
-        "Legacy target raw-input recomputation did not complete successfully."
-      )
+      pv_binding_legacy_revalidation_abort(sprintf(
+        "Legacy target raw-input recomputation did not complete successfully: %s",
+        conditionMessage(error)
+      ))
     }
   )
 
