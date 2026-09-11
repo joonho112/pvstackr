@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/joonho112/pvstackr/blob/main/inst/CITATION)
+[`inst/CITATION`](https://github.com/joonho112/pvstackr/blob/v0.2.1/inst/CITATION)
 
 Lee J (2026). *pvstackr: Bayesian Plausible-Value Analysis with One
 Calibrated Stacked Fit*. R package version 0.2.1,
