@@ -1,8 +1,8 @@
-# Access pvstackr Diagnostics
+# Get the diagnostics of a fit or comparison
 
-Return the structured diagnostics list stored on a fit or method
-comparison. Diagnostics keep method-specific details that are
-intentionally not flattened into the reportable estimate table.
+`get_diagnostics()` returns the diagnostics list of a fit or a method
+comparison: the results of pvstackr's checks and the details of a method
+that are not in the estimate table.
 
 ## Usage
 
@@ -26,41 +26,58 @@ get_diagnostics(x, ...)
 
 - x:
 
-  A pvstackr object.
+  A fit (class `pvstackr_fit`) or a method comparison from
+  [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md).
 
 - ...:
 
-  Reserved for future extensions.
+  Ignored.
 
 ## Value
 
-A structured diagnostics list. For a legacy PSIS inspection object this
-is bounded Pareto-k evidence plus its redaction record; historical
-pooling, weights, estimates, and draws are never returned.
+A named list whose elements depend on the object:
 
-## Details
+- A `stack_direct` fit: `preflight` (the check that `data`, `formula`
+  and `target` match), `sampler` and `sampler_gate` (the sampler
+  diagnostics and pvstackr's check of them), `stack_fit` and
+  `stack_fit_warnings` (records and notes from the stacked fit) and
+  `ccc` (the calibration diagnostics, such as `delta_c_max` and
+  `kappa_A`). A blocked fit has only `preflight`, `sampler`,
+  `sampler_gate`, `redaction` (what was removed) and, when the
+  calibration check blocked it, `ccc`, with its values grouped as
+  `center`, `conditioning`, `residual` and `prior`.
 
-Diagnostic keys are method-specific; inspect
-`names(get_diagnostics(x))`. A current `stack_direct` fit carries
-top-level `sampler` and `sampler_gate` records plus `preflight`,
-`stack_fit`, `stack_fit_warnings`, and `ccc`; sampler-blocked fits
-retain only slim preflight/sampler/gate evidence and the independently
-valid external target, rebuilt from an exact recursive allowlist with no
-formula object in preflight and a safe formula environment on the target
-snapshot. A legacy cached stack-direct fit may predate the sampler keys.
-A `per_pv` fit carries `reference` and `pooling`; a `stack_psis` fit
-carries `psis` (status and Pareto-k), `pooling`, and `weighted`. A
-method comparison instead carries comparison-level keys such as
-`agreement`, `method_diagnostics`, `timing`, and `target_overlap` (the
-shared-provenance summary).
+- A `per_pv` fit: `reference` (a record of the per-plausible-value fits
+  and, when kept, their draws) and `pooling` (their Rubin's-rules
+  combination).
+
+- A `stack_psis` fit: `psis` (the Pareto k-hat values, the decision and
+  the weight diagnostics), `pooling` and `weighted` (the weighted result
+  of each plausible value and, when kept, the stacked draws and the
+  normalized weights). A blocked fit has only `psis` and `redaction`.
+
+- A method comparison: `reference_method`, `methods`, `statuses`,
+  `blocked_methods`, `warning_methods`, `agreement`,
+  `method_diagnostics`, `timing` and `target_overlap` (see
+  [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)).
+
+- The inspection object that
+  [`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+  makes from a `stack_psis` fit of an earlier pvstackr version: `psis`
+  (the Pareto k-hat values and the decision) and `redaction` (what was
+  removed).
+
+`get_diagnostics()` stops with an error if the fit or comparison was
+changed after it was created.
 
 ## See also
 
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md);
-[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),
-[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md).
+[`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
+and
+[pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+for the elements of a fit's diagnostics; "Status and checks" in
+[pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+for the thresholds of the checks and their reason codes.
 
 Other pvstackr-accessors:
 [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
@@ -70,7 +87,9 @@ Other pvstackr-accessors:
 ## Examples
 
 ``` r
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   names(get_diagnostics(fit))

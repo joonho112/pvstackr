@@ -1,280 +1,406 @@
-# M1: Foundations and notation — the plausible-value setting, model, and estimand
+# Plausible values, survey weights and notation
 
 Abstract
 
-The opening page of the Method track, and the dictionary the rest of it
-cites by tag. This vignette fixes the vocabulary every later method page
-reuses without redefinition: what a plausible value is and why a survey
-publishes M of them per student, the balanced-repeated-replication
-weight design and its Fay variance multiplier, the two-level
-within-between model, the fixed-effect estimand, and the
-per-plausible-value likelihood that the stacked bridge later averages.
-It displays one equation in full and lists the other nine by tag, then
-orients you on the bundled synthetic fixture so the symbols have
-something concrete to point at. It is a lookup, not a derivation; the
-workflow lives in the Applied track.
+This article defines the quantities that pvstackr works with: plausible
+values, the final and replicate survey weights with Fay’s coefficient,
+the survey-weighted linear model whose fixed effects pvstackr reports,
+and the weighted likelihood of each plausible value. It lists the
+symbols and the main formulas of the Method articles and reads the
+design of the bundled synthetic data.
 
 ``` r
 
 library(pvstackr)
 ```
 
-## 1. Why a notation track
+## Plausible values and the replicate-weight design
 
-The Applied track (A1–A5) shows you *how to run* a pvstackr analysis:
-load a fit, read its intervals, compare methods, point the workflow at
-real PISA files. This Method track (M1–M5) is the other half — it ties
-each piece of machinery back to the mathematics and, wherever the light
-path allows, checks the identity in code.
+### Plausible values
 
-This page is the **dictionary** for that track. It establishes a
-*vocabulary contract*: every symbol and every displayed equation
-introduced here is reused **verbatim** by M2–M5. No later page redefines
-a symbol, re-letters an equation, or invents a synonym for a quantity
-already named here. When M2 needs the BRR–Fay sandwich it writes “see
-EQ-BRRFAY”; when M3 invokes the stacked-MLE identity it writes “Theorem
-2.2 / EQ-THM22”. So a reader who has internalised M1 should never meet
-an undefined symbol downstream.
+Large-scale assessments such as PISA do not observe proficiency
+directly. Each student receives \\M\\ plausible values: draws from the
+student’s posterior distribution of proficiency given the item responses
+and background variables (Mislevy 1991; von Davier et al. 2009). They
+are multiple imputations of a latent variable, so an analysis fits its
+model once for each plausible value and combines the \\M\\ results with
+Rubin’s rules (Rubin 1987). This convention presumes that the analysis
+model is congenial to the model that generated the plausible values, as
+the companion preprint notes (Lee et al. 2026, sec. 2); pvstackr does
+not check it. The variation of the \\M\\ estimates, the
+between-imputation variance, reflects the uncertainty that remains about
+proficiency; an analysis that uses only `PV1` omits it, so its standard
+errors are too small. In pvstackr the plausible values are \\M\\ columns
+of the data, such as `PV1READ` and `PV2READ`, and the model formula
+names the outcome `OUTCOME`, which pvstackr replaces by each of these
+columns in turn.
 
-That division of labour means M1 is deliberately **a lookup, not a
-derivation**. It displays exactly one equation in full — the model
-itself — and catalogues the other nine by tag, with a one-line gloss and
-a pointer to the page that derives each. The derivations live where they
-belong:
+### Final and replicate weights
 
-- **M2** — the external BRR–Fay fixed-effect *target* (Rubin combining,
-  the Fay sandwich, small-sample degrees of freedom, the fraction of
-  missing information).
-- **M3** — the *stacked fractional bridge* and the point identity
-  (Theorem 2.2).
-- **M4** — *CCC*, the Cholesky Calibration Correction, and its
-  center-separation diagnostics.
-- **M5** — the precise contrast of the three methods, PSIS tail-shape
-  thresholds, and what makes a fit coverage-claimable.
+PISA selects schools and then students within schools, and the selection
+probabilities vary. The final weight \\W_i\\ of student \\i\\ combines
+the inverse selection probabilities of the school and of the student
+with adjustment factors for non-response and trimming (OECD 2024). The
+data also carry \\R\\ replicate weights \\W_i^{(r)}\\, \\r = 1, \dots,
+R\\. An estimate is computed with the final weight and again with each
+replicate weight, and the spread of the \\R\\ replicate estimates around
+the full-sample estimate estimates its sampling variance under the
+design.
 
-**Scope of this page.** M1 fixes notation and orients you on the bundled
-fixture. It estimates nothing — there is no MCMC anywhere below, only
-the synthetic data table and read-only accessor calls. If you want to
-*run* a fit first, start with **A1 (getting started)** and **A2 (the
-end-to-end workflow)**, then return here for the mathematics those pages
-defer to.
+### Fay’s method
 
-## 2. The plausible-value survey setting
+PISA builds its replicate weights by balanced repeated replication (BRR)
+with Fay’s method (OECD 2024). In BRR the sample of each variance
+stratum is split into two halves, and a replicate multiplies the weights
+of one half by 2 and those of the other by 0. Fay’s method multiplies
+them by \\2 - k\\ and \\k\\ instead, where \\0 \le k \< 1\\ is the Fay
+coefficient, so each replicate changes the weights by \\1 - k\\ times as
+much as in BRR. For linear statistics the squared deviations of the
+replicate estimates from the full-sample estimate are then smaller by
+the factor \\(1 - k)^2\\, and Fay’s variance estimate, the mean of these
+squared deviations over the \\R\\ replicates, is multiplied by \\1/(1 -
+k)^2\\ (Judkins 1990). pvstackr applies this estimate to the vector of
+regression coefficients, with the factor \\1/\\R(1 - k)^2\\\\ in front
+of the sum of the outer products of the replicate deviations. The target
+stores this factor as `fay_variance_multiplier`, and [The design-based
+target: BRR–Fay replicate weights and Rubin’s
+rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.html#replicate-covariance)
+gives the formula.
 
-Large-scale assessments such as PISA never observe a student’s
-proficiency directly: it is a latent trait. Rather than publish a single
-point score (which would hide the measurement uncertainty), the survey
-publishes a set of **plausible values** — \\M\\ draws from each
-student’s posterior proficiency distribution, conditioning on their item
-responses and background variables (Mislevy 1991; Davier et al. 2009). A
-single plausible value is therefore not “the score”; it is one
-imputation of an unobserved quantity, and the spread *across* the \\M\\
-values encodes how much the assessment leaves uncertain.
+In PISA 2022 the sampled schools are paired into variance strata (with a
+triple, which gets other factors, where a stratum has an odd number of
+schools), and each of the 80 replicates multiplies the weights of one
+school in each pair by 1.5 and those of the other by 0.5, so \\k =
+0.5\\. The non-response adjustments and the trimming are then repeated
+for each replicate, so the replicate weights differ slightly from these
+factors, and they are columns of the data file. PISA 2022 also provides
+ten plausible values per domain, and the factor \\1/\\R(1 - k)^2\\ =
+1/(80 \times 0.25) = 0.05\\ is the one in its variance formula (OECD
+2024). The bundled synthetic example data are much smaller:
 
-The practical consequence is the rule that organises this entire track:
-an analysis must fit its model **once per plausible value** and then
-combine the \\M\\ results with multiple-imputation rules (Rubin 1987).
-Using only `PV1` and stopping silently throws away the
-between-imputation variance and reports intervals that are too narrow.
+| Data                              | \\M\\ | \\R\\ | \\k\\ | \\1/\\R(1-k)^2\\\\ |
+|:----------------------------------|:-----:|:-----:|:-----:|:------------------:|
+| PISA 2022                         |  10   |  80   |  0.5  |        0.05        |
+| Bundled example data, `pisa_tiny` |   2   |   4   |  0.5  |         1          |
 
-### 2.1 The replicate-weight design and the Fay coefficient
+In the example the factor is exactly 1 because \\R(1 - k)^2 = 4 \times
+0.25 = 1\\, a property of these two numbers only.
 
-PISA also supplies its sampling-variance machinery as **balanced
-repeated replication (BRR)** weights: alongside each student’s final
-survey weight \\W\_{ij}\\ come \\R\\ replicate weights
-\\W\_{ij}^{(r)}\\, each obtained by perturbing the sample in a balanced
-way. Re-estimating a quantity on every replicate and measuring how much
-it moves gives a design-based sampling variance.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+takes the final weight and at least two replicate weights as columns of
+the data (`weight_col`, `rep_weight_cols`) and the Fay coefficient as
+`fay_k` (default 0.5). It does not check `fay_k` against the replicate
+weights, and it requires every weight to be positive, so plain BRR
+weights, which are zero for half of the sample, are not accepted.
 
-PISA uses **Fay’s** variant of BRR, which shrinks the perturbation by a
-coefficient \\k\\ rather than zeroing out half-samples. The replicate
-spread is then rescaled by the **BRR–Fay multiplier**
+## The model pvstackr fits
 
-\\ a_d=\frac{1}{R\\(1-k)^2}, \\
+pvstackr works with one model: a linear regression of the plausible
+value on the covariates, weighted by the survey weights. For plausible
+value \\m\\ and student \\i = 1, \dots, N\\,
 
-so that the sandwich estimator returns the correct sampling variance (M2
-assembles the full estimator as EQ-BRRFAY). Two sets of constants matter
-for this track:
+\\ y_i^{(m)} = x_i^\top \beta + \varepsilon_i^{(m)}, \qquad
+\varepsilon_i^{(m)} \sim N(0, \sigma^2), \\
 
-| Setting | \\M\\ (PVs) | \\R\\ (replicates) | \\k\\ (Fay) | \\a_d=\tfrac{1}{R(1-k)^2}\\ |
-|----|:--:|:--:|:--:|:--:|
-| **PISA reading** (reference) | \\10\\ | \\80\\ | \\0.5\\ | \\0.05\\ |
-| **Bundled fixture** `pisa_tiny` | \\2\\ | \\4\\ | \\0.5\\ | \\1\\ |
+where \\x_i\\ is the row of the \\N \times p\\ design matrix \\X\\ for
+student \\i\\ (the intercept and the covariates of the formula),
+\\\beta\\ holds the \\p\\ fixed-effect coefficients, and \\\sigma\\ is
+the residual standard deviation. The covariates, and with them \\X\\,
+are the same for every plausible value; only the outcome changes. The
+formula of the examples, `OUTCOME ~ x + female`, has \\p = 3\\
+coefficients, which pvstackr names `b_Intercept`, `b_x` and `b_female`.
 
-The PISA-reading row is the design the package is built to serve (OECD
-2024); the fixture row is the deliberately tiny synthetic design that
-makes every example here run offline.
+pvstackr uses this model in two places, both with the survey weights.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+computes, for each plausible value, the weighted least-squares estimate
+of \\\beta\\ with the final weights
+([`lm.wfit()`](https://rdrr.io/r/stats/lmfit.html) from the stats
+package) and its covariance from the replicate weights; neither step
+uses the normal distribution of the errors. The stacked fit of
+`stack_direct` fits the model, normal errors included, once to all \\M\\
+plausible values together, with the survey weights in its likelihood
+([below](#estimand)). It uses a Bayesian engine, either the brms engine
+bundled with pvstackr or fitting functions that you supply, and it
+accepts only the Gaussian family with the identity link; any other
+family stops it with an error. Only the fixed effects are reported: the
+stacked fit also estimates \\\sigma\\, which pvstackr neither calibrates
+nor reports.
 
-**The fixture’s \\a_d=1\\ is an arithmetic coincidence — do not
-generalise.** With \\R=4\\ and \\k=0.5\\ the multiplier works out to
-\\1/\[4\\(1-0.5)^2\]=1/(4\cdot 0.25)=1\\. That is a quirk of this one
-tiny design (it equals the `fay_variance_multiplier` field you will read
-in Section 6), **not** a typical value. Real PISA reading has
-\\a_d=0.05\\. Never carry the fixture’s \\a_d=1\\ into a real-data
-setting.
+The model has no random effects. A formula with a random-effect term
+such as `(1 | CNTSCHID)` stops
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+`stack_direct` and `stack_psis` with an error, so pvstackr 0.2.x fits no
+school-level variance. `per_pv` fits no model itself: it pools, with
+Rubin’s rules, draws for each plausible value that you supply or that
+your fitting function returns. It does not check the formula for
+random-effect terms and does not add the survey weights to it, so for
+`per_pv` the model is the one that your function fits.
 
-## 3. The two-level hybrid model
+### School means as covariates
 
-Students (\\i\\) are nested in schools or clusters (\\j\\), so the model
-is two-level. For each plausible value \\m\\ — **tag EQ-MODEL**, the one
-equation this page displays in full:
+pvstackr computes no school or cluster means. A school mean that you
+compute and store as a column, for example the weighted mean \\\bar
+x_j\\ of a covariate \\x\\ over the sampled students of school \\j\\, is
+an ordinary covariate. When pvstackr stacks the data, it copies every
+covariate unchanged into each of the \\M\\ copies, so such a column has
+the same value for every plausible value. The companion preprint (Lee et
+al. 2026) needs this invariance. Its stacked fixed-effect point identity
+(Theorem 4.1 of the preprint) requires, as condition (R2), a design
+matrix common to all plausible values, which holds because the
+covariates, the analyzed rows and the cluster membership do not change
+with the plausible value (Appendix A.2 of the preprint). [One stacked
+fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.html#conditions)
+lists the conditions.
 
-\\ y\_{ij}^{(m)} = \beta_0 + \beta^{W}\big(x\_{ij}-\bar x\_{\cdot
-j}\big) + \beta^{B}\\\bar x\_{\cdot j} + \zeta_j +
-\varepsilon\_{ij}^{(m)},\quad \zeta_j\sim N(0,\sigma^2\_{\text{sch}}),\\
-\varepsilon\sim N(0,\sigma^2). \\
+With a school mean among the covariates, the regression can separate the
+association within schools from the association between schools. For
+student \\i\\ in school \\j\\, the within–between parameterisation
+enters the deviation \\x\_{ij} - \bar x_j\\ with slope \\\beta^W\\ and
+the school mean \\\bar x_j\\ with slope \\\beta^B\\. It is a
+reparameterization of the model that enters \\x\_{ij}\\ and \\\bar x_j\\
+together, the form of Mundlak (1978), who added the group means of the
+covariates to an error-components model:
 
-Here \\y\_{ij}^{(m)}\\ is the \\m\\-th plausible value for student
-\\ij\\, \\\zeta_j\\ is a school random effect, and
-\\\varepsilon\_{ij}^{(m)}\\ is the student-level residual.
+\\ \beta^W (x\_{ij} - \bar x_j) + \beta^B \bar x_j = \beta^W x\_{ij} +
+(\beta^B - \beta^W)\\ \bar x_j . \\
 
-The defining feature is the **within–between (Mundlak / hybrid)** split
-of the covariate \\x\\ (Mundlak 1978). Rather than entering \\x\_{ij}\\
-with a single slope, the model separates it into:
+In pvstackr both forms are covariates of the single-level model above;
+neither adds a school random effect.
 
-- a **within-cluster** deviation \\\big(x\_{ij}-\bar x\_{\cdot j}\big)\\
-  with slope \\\beta^{W}\\ — how an outcome moves with a student’s
-  standing *relative to their own school’s mean*; and
-- a **between-cluster** mean \\\bar x\_{\cdot j}\\ with slope
-  \\\beta^{B}\\ — how the outcome moves with the *school’s average*
-  level of \\x\\.
+### The model of the companion preprint
 
-This is what lets a single specification distinguish a student-level
-association from a school-level one. The cluster means \\\bar x\_{\cdot
-j}\\ are computed **once** from the full sample and reused across every
-plausible value; they are **PV-invariant**, so they are not recomputed
-for each \\m\\. That invariance is one of the regularity conditions
-behind the stacking identity in M3.
+The preprint develops the stacked fit and its calibration for a
+two-level model with a school random intercept (its Eq. (2)). In the
+notation of this article,
 
-Two scope facts, stated here and inherited by the whole track:
+\\ y\_{ij}^{(m)} = \beta_0 + \beta^W (x\_{ij} - \bar x_j) + \beta^B \bar
+x_j + \zeta_j + \varepsilon\_{ij}^{(m)}, \qquad \zeta_j \sim N(0,
+\tau^2), \quad \varepsilon\_{ij}^{(m)} \sim N(0, \sigma^2), \\
 
-- **Reportable scope is \\\beta\_{\text{FE}}\\ only.** The fixed-effect
-  block — the intercept and the slopes — is the calibrated, reportable
-  output. The variance components \\(\sigma^2,\sigma^2\_{\text{sch}})\\
-  are *fit* but **not** calibrated, and are deferred to later work.
+where \\\bar x_j\\ is the school mean of the covariate, which the
+preprint’s application estimates by the weighted mean of the sampled
+students; the preprint writes \\\theta\_{ij}^{(m)}\\ for the plausible
+value. Its weighted likelihood multiplies each student’s log-likelihood
+contribution by the student’s normalized weight inside the integral over
+the random intercept \\\zeta_j\\ (its Eq. (3)), and the variance
+components \\\tau^2\\ and \\\sigma^2\\ are nuisance parameters. The
+preprint’s default target is computed from model-based fits of each
+plausible value, by restricted maximum likelihood, with a
+replicate-weight target as an alternative (its Appendices C.2 and C.3).
+pvstackr 0.2.x does not fit this model, and it computes only the
+replicate-weight target.
 
-**The fixture’s `b_x` is a single-covariate demo, not a within/between
-pair.** EQ-MODEL above shows the general hybrid parameterization with
-both \\\beta^{W}\\ and \\\beta^{B}\\. The bundled `pisa_tiny` fit,
-however, uses the simpler formula `OUTCOME ~ x + female` and reports
-fixed-effect terms `b_Intercept`, `b_x`, `b_female`. That single `b_x`
-slope is the *simplest* instance of EQ-MODEL — it does **not** exercise
-the explicit within/between split. Read `b_x` as a plain
-single-covariate stand-in, not as a \\(\beta^{W},\beta^{B})\\ pair.
+## The estimand and the survey-weighted likelihood
 
-## 4. The fixed-effect estimand and the per-PV likelihood
+The estimand is \\\beta\\, the vector of the \\p\\ fixed-effect
+coefficients (the intercept and the slopes) of the model above;
+\\\sigma\\ is a nuisance parameter. For each coefficient
+\\\beta\_\ell\\, \\\ell = 1, \dots, p\\, pvstackr reports an estimate, a
+standard error, degrees of freedom and an interval.
 
-The estimand this package calibrates and reports is the fixed-effect
-block \\\beta\_{\text{FE}}\\ from EQ-MODEL — and only that block.
-Everything in M2–M4 is in service of getting \\\beta\_{\text{FE}}\\ and
-its uncertainty right.
+The survey weights enter through the likelihood. Let \\\overline W\\ be
+the mean of the final weights and \\\tilde w_i = W_i / \overline W\\ the
+normalized weight of student \\i\\, which has mean 1. The
+survey-weighted likelihood for plausible value \\m\\ is
 
-Working one plausible value at a time gives the per-PV building blocks.
-Fitting EQ-MODEL to plausible value \\m\\ yields a fixed-effect estimate
-\\\hat\beta_m\\ and an estimated covariance \\\hat U_m\\. Combining
-these across \\m=1,\dots,M\\ with the Rubin rules produces the
-reportable quantities — the Rubin mean \\\bar\beta\\, the within- and
-between-imputation covariances \\\bar U\\ and \\B\\, and the total
-\\T\_{\text{MI}}\\ — which **M2** assembles as EQ-TMI, with the
-design-based \\\hat U_m\\ coming from the BRR–Fay sandwich (EQ-BRRFAY).
+\\ \tilde L_m(\beta, \sigma) = \prod\_{i=1}^{N} \phi\big(y_i^{(m)};\\
+x_i^\top \beta,\\ \sigma^2\big)^{\tilde w_i}, \\
 
-There is one more object to name now, because the stacked machinery
-downstream is built on it. For each plausible value \\m\\, write
-\\L_m^{0}(\psi)\\ for the **unweighted per-PV likelihood** — the
-likelihood of the parameters \\\psi\\ under EQ-MODEL fit to plausible
-value \\m\\ alone, with no survey weighting applied. M1 only *names* it.
-Its role is what matters for the rest of the track: **M3** shows that
-stacking all \\M\\ plausible values into one model with a \\1/M\\ weight
-per row makes the stacked objective the *average* of these per-PV
-likelihoods (the bridge EQ-BRIDGE), and that the resulting fixed-effect
-estimate coincides with the Rubin mean \\\bar\beta\\ under stated
-conditions (Theorem 2.2 / EQ-THM22). In other words, \\L_m^{0}\\ is the
-term the stacked bridge averages — keep it in view as you read M3.
+where \\\phi(\cdot\\; \mu, \sigma^2)\\ is the normal density with mean
+\\\mu\\ and variance \\\sigma^2\\: each student’s log-likelihood
+contribution is multiplied by \\\tilde w_i\\. This is the preprint’s
+weighted likelihood (its Eq. (3), whose weights are also normalized to
+mean 1) for a model without the random intercept. For any fixed
+\\\sigma\\, \\\tilde L_m\\ is largest, as a function of \\\beta\\, at
+the weighted least-squares estimate \\\hat\beta_m\\, the estimate that
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+computes for plausible value \\m\\ with the final weights; the scale of
+the weights does not change it.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+also estimates the covariance \\\hat U_m\\ of \\\hat\beta_m\\ from the
+replicate weights and combines the \\M\\ results with Rubin’s rules into
+\\\bar\beta\\, the average of the \\\hat\beta_m\\, and its covariance
+\\T\_{\text{MI}}\\ ([The design-based target: BRR–Fay replicate weights
+and Rubin’s
+rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.html#rubin)).
 
-Two pointers, no derivations here: the *variance* answer (not just the
-point) comes from the external target of **M2**, mapped onto the stacked
-fit by the calibration of **M4** (EQ-CCC); and which fits may carry a
-coverage claim is the subject of **M5**.
+The stacked fit of `stack_direct` uses the stacked data: one copy of the
+data for each plausible value, \\N \cdot M\\ rows in all, where row
+\\i\\ of copy \\m\\ has the outcome \\y_i^{(m)}\\ and the weight
+\\\tilde w_i / M\\. The weights of each copy sum to \\N/M\\, and those
+of all rows to \\N\\. The bundled brms engine multiplies the
+log-likelihood of each row by its weight, so the log likelihood of the
+stacked fit is the average of the \\M\\ survey-weighted log-likelihoods,
+the stacked objective, and its posterior is the stacked fractional
+posterior of the preprint (its Eq. (4)),
 
-## 5. Symbol table & equation inventory at a glance
+\\ q(\beta, \sigma) \propto p(\beta, \sigma) \prod\_{m=1}^{M} \tilde
+L_m(\beta, \sigma)^{1/M}, \\
 
-This section is the reference card. The first table is the symbol lock;
-the second is the catalogue of tagged equations. **M1 prints only
-EQ-MODEL (Section 3) in full** — every other equation is listed here by
-tag and derived on the page named in the last column. This is the
-“lookup, not a derivation” promise made concrete. The math typeset in
-the cells renders via MathJax.
+where \\p(\beta, \sigma)\\ is the prior. A fitting function of your own
+receives the weights in the formula term `weights(.pvstackr_weight)` and
+the data column `.pvstackr_weight`, and has to use them in the same way
+([The full analysis
+workflow](https://joonho112.github.io/pvstackr/articles/a2-the-workflow.html#own-engine)).
+The stacked fixed-effect point identity gives conditions under which the
+maximizer of the stacked objective in \\\beta\\ equals \\\bar\beta\\;
+[One stacked fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.html#point-identity)
+states them and applies them to pvstackr’s model. The identity concerns
+the point estimate only. The variance comes from the target: the
+calibration gives the fixed-effect draws of the stacked fit the target’s
+mean \\\bar\beta\\ and covariance \\T\_{\text{MI}}\\ ([Calibrating the
+fixed-effect draws
+(CCC)](https://joonho112.github.io/pvstackr/articles/m4-ccc-calibration.html#map)).
 
-### 5.1 Symbol table
+## Symbols and formulas
 
-| Symbol | Meaning |
-|----|----|
-| \\i,j\\ | student \\i\\ in school/cluster \\j\\ |
-| \\M\\ | number of plausible values (PVs); PISA reading \\M=10\\; **fixture \\M=2\\** |
-| \\R\\ | number of BRR replicate weights; PISA \\R=80\\; **fixture \\R=4\\** |
-| \\k\\ | Fay coefficient; PISA \\k=0.5\\; **fixture \\k=0.5\\** |
-| \\a_d\\ | BRR–Fay multiplier \\=\dfrac{1}{R(1-k)^2}\\; PISA \\\Rightarrow a_d=0.05\\; **fixture \\\Rightarrow a_d=1\\** (arithmetic coincidence of \\R{=}4,k{=}0.5\\; matches `fay_variance_multiplier == 1`; **do not generalize**) |
-| \\y\_{ij}^{(m)}\\ | the \\m\\-th plausible value for student \\ij\\ |
-| \\\beta\_{\text{FE}}\\ | fixed-effect parameter block (the **only** calibrated/reportable block) |
-| \\\beta^{W},\beta^{B}\\ | within- and between-cluster slopes (hybrid/Mundlak parameterization) |
-| \\W\_{ij}\\, \\W\_{ij}^{(r)}\\ | final survey weight and \\r\\-th replicate weight |
-| \\\hat\beta_m,\hat U_m\\ | per-PV fixed-effect estimate and its covariance |
-| \\\bar\beta,\bar U,B\\ | Rubin mean, within-, and between-imputation covariance |
-| \\T\_{\text{MI}}\\ | Rubin total (the external target covariance) |
-| \\\nu\_{\text{BR}}\\ | Barnard–Rubin degrees of freedom |
-| \\\gamma_k\\ | fraction of missing information for coefficient \\k\\ |
-| \\\hat k\\ (or \\\hat\kappa\\) | PSIS Pareto tail-shape diagnostic (`stack_psis`) |
+The Method articles use the symbols below, and each article defines them
+again where it first uses them. The last column gives the argument,
+field or column of pvstackr that holds the quantity.
 
-A few **auxiliary symbols** appear inside individual equations
-downstream; they are listed here once so M2–M5 may cite them without
-reintroduction:
+### Symbols
 
-| Symbol | Meaning | First used |
-|----|----|----|
-| \\\hat\beta_m^{(r)}\\ | per-PV estimate on the \\r\\-th replicate weight | EQ-BRRFAY (M2) |
-| \\L,\\ L L^\top=\Sigma\\ | lower-triangular Cholesky factor of a covariance \\\Sigma\\ | EQ-CCC (M4) |
-| \\L\_{\text{raw}},L\_{\text{tgt}}\\ | Cholesky factors of \\\Sigma\_{\text{raw}}\\ (raw draw covariance) and \\\Sigma\_{\text{tgt}}=T\_{\text{MI}}\\ (target) | EQ-CCC (M4) |
-| \\\beta_s,\\ \beta_s^{\text{cal}}\\ | the \\s\\-th raw posterior draw and its CCC-calibrated image | EQ-CCC (M4) |
-| \\c,\\ \bar\beta^{\text{raw}}\\ | target center the calibrated draws are shifted to (\\c=\bar\beta\\ for reporting), and the mean of the raw draw cloud | EQ-CCC (M4) |
-| \\\Delta_c\\ | center-separation diagnostic (raw center vs \\\bar\beta\\, on the target-SE scale) | EQ-DELTAC (M4) |
-| \\L_m^{0}(\psi),\\ q\_{\text{SWL}}(\psi)\\ | unweighted per-PV likelihood for PV \\m\\, and the stacked fractional objective | EQ-BRIDGE (M3) |
-| \\\hat\beta\_{\text{FE}}^{q}\\ | fixed-effect estimate from maximizing the stacked objective | EQ-THM22 (M3) |
-| \\B\_{kk},\\T\_{\text{MI},kk}\\ | the \\k\\-th diagonal entries of \\B\\ and \\T\_{\text{MI}}\\ | EQ-FMI (M2) |
-| \\N\\ | number of students (the stacked design has \\N\cdot M\\ rows) | EQ-BRIDGE (M3) |
+The indices:
 
-### 5.2 Equation inventory
+| Symbol   | Meaning                                  | Range           |
+|:---------|:-----------------------------------------|:----------------|
+| \\i\\    | student (a row of the data)              | \\1, \dots, N\\ |
+| \\m\\    | plausible value                          | \\1, \dots, M\\ |
+| \\r\\    | replicate weight                         | \\1, \dots, R\\ |
+| \\\ell\\ | fixed-effect coefficient                 | \\1, \dots, p\\ |
+| \\s\\    | posterior draw                           | \\1, \dots, S\\ |
+| \\j\\    | school, where a school mean is discussed | —               |
 
-Each row names a tagged equation, glosses it in one plain-English line,
-and points to the vignette that derives it. Only EQ-MODEL is displayed
-in full on this page (Section 3).
+The letter \\k\\ is not an index: it denotes the Fay coefficient, and
+the Pareto shape estimate of importance sampling is always written
+Pareto \\\hat k\\.
 
-| Tag | What it says (one line) | Derived in |
-|----|----|:--:|
-| **EQ-MODEL** | the two-level within–between (hybrid) model for each plausible value | **M1** (Section 3) |
-| **EQ-TMI** | Rubin combining: \\\bar\beta\\, \\\bar U\\, \\B\\, and the external total \\T\_{\text{MI}}=\bar U+(1+1/M)B\\ | **M2** |
-| **EQ-BRRFAY** | the BRR–Fay replicate-weight sandwich for each per-PV covariance \\\hat U_m\\ | **M2** |
-| **EQ-BARNARD** | Barnard–Rubin small-sample degrees of freedom \\\nu\_{\text{BR}}\\ | **M2** |
-| **EQ-FMI** | fraction of missing information \\\gamma_k\\ for each coefficient | **M2** |
-| **EQ-BRIDGE** | the stacked fractional objective: one fit on \\N\cdot M\\ rows, weight \\1/M\\ per row, averaging the \\L_m^{0}\\ | **M3** |
-| **EQ-THM22** | Theorem 2.2: under regularity R0–R5 the stacked fixed-effect estimate equals \\\bar\beta\\ | **M3** |
-| **EQ-CCC** | the Cholesky Calibration Correction — an affine map matching the draw cloud’s first two moments to the target | **M4** |
-| **EQ-DELTAC** | the center-separation diagnostic \\\Delta_c\\ that gates the calibrated fit | **M4** |
-| **EQ-PSIS** | Pareto-smoothed importance-sampling tail-shape \\\hat k\\ and its good/borderline/unreliable thresholds | **M5** |
+The data, the weights and the model:
 
-**How to read a tag downstream.** When M3 writes “by EQ-THM22”, it means
-the identity in the row above, derived in M3. M1 does not prove any of
-these; it only fixes their names and symbols so the later pages need
-not.
+| Symbol | Meaning | In pvstackr |
+|:---|:---|:---|
+| \\y_i^{(m)}\\ | outcome of student \\i\\ under plausible value \\m\\ | plausible-value columns such as `PV1READ` (`OUTCOME` in the formula) |
+| \\x_i\\, \\X\\ | covariate row of student \\i\\; the \\N \times p\\ design matrix, the same for every \\m\\ | model matrix of the formula |
+| \\\beta\\, \\\beta\_\ell\\ | fixed-effect coefficients; coefficient \\\ell\\ | rows of the estimate table (`term`: `b_Intercept`, `b_x`, …) |
+| \\\sigma\\ | residual standard deviation, not reported | — |
+| \\W_i\\ | final survey weight of student \\i\\ | `weight_col` |
+| \\\overline W\\ | mean of the final weights | — |
+| \\\tilde w_i = W_i / \overline W\\ | normalized final weight (mean 1) | — |
+| \\\tilde w_i / M\\ | weight of row \\i\\ in each of the \\M\\ stacked copies | column `.pvstackr_weight` of the stacked data |
+| \\W_i^{(r)}\\ | replicate weight \\r\\ of student \\i\\ | `rep_weight_cols` |
+| \\k\\ | Fay coefficient | `fay_k` (PISA: 0.5) |
+| \\\tilde L_m(\beta, \sigma)\\ | survey-weighted likelihood for plausible value \\m\\ | — |
 
-## 6. Orientation panel
+The target, the stacked fit and the calibration:
 
-Now we attach the symbols to something concrete. The package ships a
-tiny **synthetic** PISA-shaped table, `pisa_tiny`, and a cached
-`stack_direct` fit on it, so that every example runs offline and
-deterministically. The panel below reads only — it detects the design
-and reads the fitted target’s metadata. **Nothing is estimated.**
+| Symbol | Meaning | In pvstackr |
+|:---|:---|:---|
+| \\\hat\beta_m\\ | weighted least-squares estimate for plausible value \\m\\ with the final weights | `per_pv[[m]]$beta` in the target |
+| \\\hat\beta_m^{(r)}\\ | the same with replicate weight \\r\\ | columns of `per_pv[[m]]$replicate_beta` |
+| \\\hat U_m\\ | BRR–Fay replicate covariance of \\\hat\beta_m\\ | `per_pv[[m]]$U` |
+| \\\bar\beta\\ | combined estimate, the average of the \\\hat\beta_m\\ | `beta`, `beta_bar` |
+| \\\bar U\\ | average covariance within plausible values | `U_bar` |
+| \\B\\ | covariance between plausible values | `B` |
+| \\T\_{\text{MI}}\\ | total covariance of \\\bar\beta\\ | `T_MI` |
+| \\\lambda\_\ell\\ | fraction of missing information of coefficient \\\ell\\ (Barnard and Rubin’s approximation) | `fmi`, `lambda` (same values) |
+| \\\mathrm{riv}\_\ell\\ | relative increase in variance | `riv` |
+| \\\nu\_\ell\\ | classic degrees of freedom | `df` with `df_method = "classic"` |
+| \\\nu\_{\text{com}}\\ | complete-data degrees of freedom, stated by the user | `df_complete` |
+| \\\nu\_{\text{obs},\ell}\\, \\\nu\_{\text{BR},\ell}\\ | Barnard–Rubin observed-data and adjusted degrees of freedom | `df` with `df_method = "barnard_rubin"` |
+| \\q(\beta, \sigma)\\ | stacked fractional posterior | — |
+| \\\beta_s\\ | fixed-effect draw \\s\\ of the stacked fit, before calibration | — |
+| \\\bar\beta^{\text{raw}}\\, \\\Sigma\_{\text{raw}}\\ | mean and covariance of these draws | — |
+| \\L\_{\text{raw}}\\, \\L\_{\text{tgt}}\\ | lower Cholesky factors of \\\Sigma\_{\text{raw}}\\ and \\T\_{\text{MI}}\\ | — |
+| \\A\\ | calibration matrix | — |
+| \\\beta^{\text{cal}}\_s\\ | calibrated draw | rows of `get_draws(fit)` |
+| \\\kappa_A\\ | condition number of \\A\\, the ratio of its largest to its smallest singular value | `kappa_A` in `get_diagnostics(fit)$ccc` |
+| \\\Delta_c\\ | center separation | `delta_c_max` in `get_diagnostics(fit)$ccc` |
+| \\\omega_s^{(m)}\\ | importance weight of draw \\s\\ for plausible value \\m\\, supplied by the user; pvstackr divides each column by its sum | `psis_weights` (one row per draw, one column per plausible value) |
+| \\\hat k_m\\ | Pareto \\\hat k\\ for plausible value \\m\\, supplied by the user | `pareto_k` |
 
-First, load the raw table and see its shape:
+[Choosing a method and reading its
+intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.html#three-methods)
+also uses \\\hat\beta_m\\ and \\\hat U_m\\ for the per-PV estimate and
+covariance of `per_pv` and `stack_psis`.
+
+### Main formulas
+
+The target of
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+is derived in [The design-based target: BRR–Fay replicate weights and
+Rubin’s
+rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.md):
+the BRR–Fay replicate covariance of each \\\hat\beta_m\\,
+
+\\ \hat U_m = \frac{1}{R(1-k)^2} \sum\_{r=1}^{R}
+\big(\hat\beta_m^{(r)} - \hat\beta_m\big)\big(\hat\beta_m^{(r)} -
+\hat\beta_m\big)^\top , \\
+
+Rubin’s rules,
+
+\\ \bar\beta = \frac{1}{M} \sum\_{m=1}^{M} \hat\beta_m, \qquad \bar U =
+\frac{1}{M} \sum\_{m=1}^{M} \hat U_m, \\
+
+\\ B = \frac{1}{M-1} \sum\_{m=1}^{M} \big(\hat\beta_m -
+\bar\beta\big)\big(\hat\beta_m - \bar\beta\big)^\top, \qquad
+T\_{\text{MI}} = \bar U + \Big(1 + \frac{1}{M}\Big) B , \\
+
+and, for each coefficient \\\ell\\, the fraction of missing information,
+the relative increase in variance, and the classic and Barnard–Rubin
+degrees of freedom:
+
+\\ \lambda\_\ell = \frac{(1 + 1/M)\\
+B\_{\ell\ell}}{T\_{\text{MI},\ell\ell}}, \qquad \mathrm{riv}\_\ell =
+\frac{(1 + 1/M)\\ B\_{\ell\ell}}{\bar U\_{\ell\ell}}, \qquad \nu\_\ell =
+\frac{M - 1}{\lambda\_\ell^2}, \\
+
+\\ \nu\_{\text{obs},\ell} = \frac{\nu\_{\text{com}} +
+1}{\nu\_{\text{com}} + 3}\\ \nu\_{\text{com}} (1 - \lambda\_\ell),
+\qquad \nu\_{\text{BR},\ell} = \Big(\frac{1}{\nu\_\ell} +
+\frac{1}{\nu\_{\text{obs},\ell}}\Big)^{-1} . \\
+
+The stacked fractional posterior \\q(\beta, \sigma)\\ is given
+[above](#estimand); [One stacked fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.html#stacked-objective)
+derives the stacked objective and the point identity.
+
+The calibration map and the center separation are derived in
+[Calibrating the fixed-effect draws
+(CCC)](https://joonho112.github.io/pvstackr/articles/m4-ccc-calibration.md).
+With `center = "target"`, which `stack_direct` requires, each
+fixed-effect draw of the stacked fit is mapped to
+
+\\ \beta^{\text{cal}}\_s = \bar\beta + A\big(\beta_s -
+\bar\beta^{\text{raw}}\big), \qquad A = L\_{\text{tgt}}
+L\_{\text{raw}}^{-1}, \\
+
+where \\L\_{\text{raw}} L\_{\text{raw}}^\top = \Sigma\_{\text{raw}}\\
+and \\L\_{\text{tgt}} L\_{\text{tgt}}^\top = T\_{\text{MI}}\\, so that
+the calibrated draws have mean \\\bar\beta\\ and covariance
+\\T\_{\text{MI}}\\. Before the calibration, pvstackr measures how far
+the stacked fit is from the target by
+
+\\ \Delta_c = \max\_\ell \frac{\lvert \bar\beta\_\ell -
+\bar\beta^{\text{raw}}\_\ell \rvert} {\sqrt{T\_{\text{MI},\ell\ell}}} ,
+\\
+
+stored as `delta_c_max`; `delta_c_rel` is the root mean square of the
+same ratios.
+
+The pooling of `per_pv` and `stack_psis`, with the importance weights
+\\\omega_s^{(m)}\\ and the Pareto \\\hat k_m\\ of `stack_psis`, is given
+in [Choosing a method and reading its
+intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.html#three-methods).
+
+## The symbols on the example data
+
+pvstackr includes a small synthetic data set, `pisa_tiny`, and a
+`stack_direct` fit made from it; [Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html#example-fit)
+describes both. The chunks below only read the data and the target of
+the fit; they estimate nothing.
 
 ``` r
 
@@ -282,7 +408,7 @@ pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
 
-dim(pisa_tiny)        # 12 rows x 12 columns
+dim(pisa_tiny)        # 12 students, 12 columns
 #> [1] 12 12
 names(pisa_tiny)
 #>  [1] "CNT"        "CNTSCHID"   "CNTSTUID"   "x"          "female"    
@@ -290,35 +416,38 @@ names(pisa_tiny)
 #> [11] "W_FSTURWT3" "W_FSTURWT4"
 ```
 
-It is one make-believe country with 12 students: a continuous covariate
-`x`, a binary `female` indicator, **two** plausible reading values
-`PV1READ` / `PV2READ`, **four** BRR replicate weights
-`W_FSTURWT1`–`W_FSTURWT4`, a final weight `W_FSTUWT`, and student /
-school identifiers.
+The rows are 12 students in three schools of one made-up country (`CNT`
+is `"SYN"`), so \\N = 12\\; `CNTSCHID` and `CNTSTUID` identify the
+schools and the students. The covariates are `x` and the 0/1 indicator
+`female`. `PV1READ` and `PV2READ` are the \\M = 2\\ plausible values
+\\y_i^{(1)}\\ and \\y_i^{(2)}\\, `W_FSTUWT` is the final weight \\W_i\\,
+and `W_FSTURWT1` to `W_FSTURWT4` are the \\R = 4\\ replicate weights
+\\W_i^{(r)}\\. The replicate weights were typed in for the example
+rather than formed from half-samples by Fay’s method; `fay_k = 0.5` is
+the value declared for them.
 
-The detectors recover the design constants from the column names. The
-plausible values carry a `READ` suffix, so you must pass
-`suffix = "READ"`:
+[`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)
+and
+[`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md)
+find the plausible-value and replicate-weight columns by their names:
 
 ``` r
 
-detect_pisa_pv_columns(pisa_tiny, suffix = "READ")   # -> c("PV1READ","PV2READ")  => M = 2
+detect_pisa_pv_columns(pisa_tiny, suffix = "READ")   # the M = 2 plausible values
 #> [1] "PV1READ" "PV2READ"
-detect_pisa_brr_replicate_weights(pisa_tiny)         # -> 4 W_FSTURWT* cols        => R = 4
+detect_pisa_brr_replicate_weights(pisa_tiny)         # the R = 4 replicate weights
 #> [1] "W_FSTURWT1" "W_FSTURWT2" "W_FSTURWT3" "W_FSTURWT4"
 ```
 
-**The bare detector call errors on this fixture.** Calling
-`detect_pisa_pv_columns(pisa_tiny)` *without* the suffix raises “No
-plausible-value columns detected …”, because the default looks for
-unsuffixed `PV` columns and this fixture’s columns are subject-suffixed
-(`PV1READ`, `PV2READ`). You must pass `suffix = "READ"`, as above.
-Modern PISA files are suffixed this way, so this is the common case, not
-an edge case.
+The plausible-value names carry the subject suffix `READ`, as in PISA
+2022 files, so the call gives `suffix = "READ"`. With the default suffix
+`""`,
+[`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)
+looks for bare names such as `PV1` and stops with an error on these
+data.
 
-Finally, read the design straight off the cached fit’s external target.
-The same two constants (\\M=2\\, \\R=4\\) reappear, together with the
-Fay coefficient and the fixed-effect term names:
+The target of the example fit records the same design and the names of
+the coefficients:
 
 ``` r
 
@@ -328,98 +457,33 @@ fit <- readRDS(
 )$fit
 tg <- get_target(fit)
 
-c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
+c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # M, R and the Fay coefficient k
 #>     M     R fay_k 
 #>   2.0   4.0   0.5
-tg$fe_names                               # "b_Intercept" "b_x" "b_female"
+tg$fe_names                               # the p = 3 fixed-effect coefficients
 #> [1] "b_Intercept" "b_x"         "b_female"
 ```
 
-So the fixture realises \\M=2\\, \\R=4\\, \\k=0.5\\ — and therefore the
-BRR–Fay multiplier \\a_d=1/\[4\\(1-0.5)^2\]=1\\, exactly the
-`fay_variance_multiplier` field. The three fixed-effect terms are
-`b_Intercept`, `b_x`, and `b_female`, the reportable
-\\\beta\_{\text{FE}}\\ block from Section 4.
+The three coefficients `b_Intercept`, `b_x` and `b_female` of the
+formula `OUTCOME ~ x + female` make up \\\beta\\ in this example, and
+the estimate table of the fit has one row for each.
 
-**Honesty notes for this fixture (carried by the whole track).**
-
-- **It is synthetic and illustrative.** One make-believe country
-  (`CNT == "SYN"`), 12 students, \\M=2\\, \\R=4\\. The numbers are
-  included only so examples and package checks run without licensed data
-  — they are **not** real PISA results and must never be cited as such.
-  The package is **not** OECD-affiliated and bundles no real PISA.
-- **`b_x` is a single-covariate demo**, not a within/between
-  \\(\beta^{W}, \beta^{B})\\ pair (Section 3).
-- **\\a_d=1\\ is the tiny-design coincidence** of \\R=4,k=0.5\\ —
-  distinct from PISA’s \\a_d=0.05\\. Do not generalise it (Section 2.1).
-- **Fixed-effect-only scope.** Variance components are fit but not
-  calibrated and are not part of the reportable output (Section 3).
-
-## 7. Where to next
-
-You now hold the vocabulary the rest of the Method track cites by tag.
-From here:
-
-- **M2 · The BRR–Fay fixed-effect target** — the natural next step: it
-  derives EQ-TMI, EQ-BRRFAY, EQ-BARNARD, and EQ-FMI, building the
-  external target that \\\beta\_{\text{FE}}\\ is calibrated against, and
-  re-derives Rubin pooling on the cached target in code.
-- Then **M3** (the stacked fractional bridge and Theorem 2.2), **M4**
-  (CCC and the center-separation diagnostics), and **M5** (the three
-  methods, PSIS, and what makes a fit coverage-claimable) complete the
-  provenance chain.
-
-To see the workflow these equations sit underneath, the Applied track is
-the place: **A1 · Getting started** (load a fit and read it three ways)
-and **A2 · The end-to-end workflow** (declare the design, assemble the
-target, run the fit, report).
-
-Bug reports and feature requests:
-<https://github.com/joonho112/pvstackr/issues>.
-
-### Session info
-
-``` r
-
-sessionInfo()
-#> R version 4.6.1 (2026-06-24)
-#> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.4 LTS
-#> 
-#> Matrix products: default
-#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
-#> 
-#> locale:
-#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
-#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
-#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
-#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
-#> 
-#> time zone: UTC
-#> tzcode source: system (glibc)
-#> 
-#> attached base packages:
-#> [1] stats     graphics  grDevices utils     datasets  methods   base     
-#> 
-#> other attached packages:
-#> [1] pvstackr_0.2.0
-#> 
-#> loaded via a namespace (and not attached):
-#>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
-#>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
-#> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.3.0       fs_2.1.0
-```
+The next Method article, [The design-based target: BRR–Fay replicate
+weights and Rubin’s
+rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.md),
+derives the target from these quantities.
 
 ## References
 
-Davier, Matthias von, Eugenio Gonzalez, and Robert J. Mislevy. 2009.
-“What Are Plausible Values and Why Are They Useful?” *IERI Monograph
-Series* 2: 9–36.
+Judkins, David R. 1990. “Fay’s Method for Variance Estimation.” *Journal
+of Official Statistics* 6 (3): 223–39.
+<https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/fay39s-method-for-variance-estimation.pdf>.
+
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026. *One
+Markov Chain Monte Carlo Fit for Many Plausible Values: A Calibrated
+Stacked Posterior Workflow for Bayesian Multilevel Models of Large-Scale
+Assessment Data*. Zenodo preprint, version 1.
+<https://doi.org/10.5281/zenodo.22407935>.
 
 Mislevy, Robert J. 1991. “Randomization-Based Inference about Latent
 Variables from Complex Samples.” *Psychometrika* 56 (2): 177–96.
@@ -428,7 +492,13 @@ Variables from Complex Samples.” *Psychometrika* 56 (2): 177–96.
 Mundlak, Yair. 1978. “On the Pooling of Time Series and Cross Section
 Data.” *Econometrica* 46 (1): 69–85. <https://doi.org/10.2307/1913646>.
 
-OECD. 2024. *PISA 2022 Technical Report*. OECD Publishing.
+OECD. 2024. *PISA 2022 Technical Report*. PISA. OECD Publishing.
+<https://doi.org/10.1787/01820d6d-en>.
 
 Rubin, Donald B. 1987. *Multiple Imputation for Nonresponse in Surveys*.
 John Wiley & Sons. <https://doi.org/10.1002/9780470316696>.
+
+von Davier, Matthias, Eugenio J. Gonzalez, and Robert J. Mislevy. 2009.
+“What Are Plausible Values and Why Are They Useful?” *IERI Monograph
+Series: Issues and Methodologies in Large-Scale Assessments* 2: 9–36.
+<https://www.ets.org/research/policy_research_reports/publications/chapter/2009/hlbj.html>.

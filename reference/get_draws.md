@@ -1,8 +1,9 @@
-# Access pvstackr Draws
+# Get the calibrated draws of a fit
 
-Return retained top-level reportable draws from a fit. Methods that do
-not synthesize a single reportable draw matrix, or fits created with
-`return_draws = FALSE`, return `NULL`.
+`get_draws()` returns the calibrated fixed-effect draws of a
+`stack_direct` fit: the draws of the stacked fit after the Cholesky
+calibration correction (CCC), which gives them the mean and covariance
+of the target.
 
 ## Usage
 
@@ -23,36 +24,40 @@ get_draws(x, ...)
 
 - x:
 
-  A pvstackr fit object.
+  A fit (class `pvstackr_fit`).
 
 - ...:
 
-  Reserved for future extensions.
+  Ignored.
 
 ## Value
 
-The retained reportable draw matrix, or `NULL` when draws were not
-retained or the method does not synthesize top-level reportable draws.
-Per-PV reference draws and the PSIS proposal/weight pair, when retained,
-remain available in diagnostics rather than through this top-level
-reportable-draw accessor. An inspection-only legacy PSIS object fails
-explicitly instead of returning historical draws.
+A numeric matrix with one row per draw of the stacked fit and one column
+per fixed effect, named as in the estimate table (such as
+`b_Intercept`). `NULL` for a fit made with `return_draws = FALSE` (such
+as the bundled example fit), for a blocked fit, and for `per_pv` and
+`stack_psis` fits.
+
+`get_draws()` stops with an error if the fit was changed after it was
+created, and for the inspection object that
+[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+makes from a `stack_psis` fit of an earlier pvstackr version, which has
+no draws.
 
 ## Details
 
-This accessor returns only the synthesized top-level reportable draw
-matrix. Per-PV reference draws (`per_pv`) and the PSIS fixed-effect
-proposal/weight pair (`stack_psis`), when retained, are not surfaced
-here; they live in the fit's diagnostics (see
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)),
-not in this top-level reportable-draw accessor.
+A fit keeps these draws only with `return_draws = TRUE`, the default of
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md).
+`per_pv` and `stack_psis` fits keep their draws in
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+instead; "The fit object" in
+[pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+says where.
 
 ## See also
 
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md);
-[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md).
+[`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
+for how the draws are calibrated.
 
 Other pvstackr-accessors:
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md),
@@ -62,10 +67,12 @@ Other pvstackr-accessors:
 ## Examples
 
 ``` r
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
-  get_draws(fit)
+  get_draws(fit)   # NULL: the example fit was saved without its draws
 }
 #> NULL
 ```

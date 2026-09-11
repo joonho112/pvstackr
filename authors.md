@@ -8,16 +8,16 @@
 ## Citation
 
 Source:
-[`inst/CITATION`](https://github.com/joonho112/pvstackr/blob/v0.2.0/inst/CITATION)
+[`inst/CITATION`](https://github.com/joonho112/pvstackr/blob/main/inst/CITATION)
 
-Lee J (2026). *pvstackr: Stacked-Fit Calibration to Rubin/BRR-Fay
-Fixed-Effect Targets for Plausible Values*. R package version 0.2.0,
+Lee J (2026). *pvstackr: Bayesian Plausible-Value Analysis with One
+Calibrated Stacked Fit*. R package version 0.2.1,
 <https://github.com/joonho112/pvstackr>.
 
     @Manual{,
-      title = {pvstackr: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values},
+      title = {pvstackr: Bayesian Plausible-Value Analysis with One Calibrated Stacked Fit},
       author = {JoonHo Lee},
       year = {2026},
-      note = {R package version 0.2.0},
+      note = {R package version 0.2.1},
       url = {https://github.com/joonho112/pvstackr},
     }

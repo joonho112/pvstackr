@@ -1,9 +1,9 @@
-# Access pvstackr Estimates
+# Get the estimate table of a fit
 
-Return the reportable fixed-effect estimate table for a fit, or the
-aligned estimate table for a method comparison. The returned columns
-depend on the method contract but keep interval and provenance fields
-intact.
+`get_estimates()` returns the table of fixed-effect estimates of a fit,
+with their standard errors, degrees of freedom and intervals. For a
+method comparison it returns the table that lines up the estimates of
+the compared fits.
 
 ## Usage
 
@@ -27,28 +27,49 @@ get_estimates(x, ...)
 
 - x:
 
-  A pvstackr object.
+  A fit (class `pvstackr_fit`) from
+  [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+  or a method function, or a method comparison from
+  [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md).
 
 - ...:
 
-  Reserved for future extensions.
+  Ignored.
 
 ## Value
 
-A data frame of reportable fixed-effect estimates. Fit estimate tables
-include interval/provenance columns such as `df_method`, `df_complete`,
-`interval_role`, `coverage_claim_allowed`, `target_source`,
-`target_hash`, `pooling_source`, and `pooling_hash` when those columns
-are part of the method contract. An inspection-only legacy PSIS object
-fails explicitly instead of returning historical numeric output.
+A data frame with one row per fixed effect. For a `stack_direct` fit it
+has 17 columns: `term`, `estimate`, `se`, `std.error`, `df`,
+`df_method`, `df_complete`, `conf_level`, `conf_low`, `conf_high`,
+`conf.low`, `conf.high`, `interval_role`, `coverage_claim_allowed`,
+`parameter_scope`, `target_source` and `target_hash`. `per_pv` and
+`stack_psis` fits add further columns. The fraction of missing
+information is not a column; for `stack_direct` and `per_pv` fits it is
+`get_target(fit)$fmi`. A blocked fit gives an empty data frame. For a
+method comparison, the data frame has one row per method and fixed
+effect (see
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)).
+
+`get_estimates()` stops with an error if the fit or comparison was
+changed after it was created, and for the inspection object that
+[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+makes from a `stack_psis` fit of an earlier pvstackr version, which has
+no estimates.
+
+## Details
+
+Only the fixed effects are reported. `coverage_claim_allowed` says
+whether pvstackr's reporting rule lets you read the interval of a row as
+a confidence interval with nominal coverage;
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+gives the rule, and
+[pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+describes every column.
 
 ## See also
 
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md);
-[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),
-[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md).
+[pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+for the columns of the estimate table.
 
 Other pvstackr-accessors:
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md),
@@ -58,7 +79,9 @@ Other pvstackr-accessors:
 ## Examples
 
 ``` r
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   head(get_estimates(fit))

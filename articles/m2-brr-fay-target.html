@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>M2: The BRR–Fay fixed-effect target — Rubin combining, design variance, and degrees of freedom • pvstackr</title>
+<title>The design-based target: BRR–Fay replicate weights and Rubin's rules • pvstackr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -21,7 +21,8 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="M2: The BRR–Fay fixed-effect target — Rubin combining, design variance, and degrees of freedom">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="The design-based target: BRR–Fay replicate weights and Rubin's rules">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -31,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,23 +41,24 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/a1-getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><h6 class="dropdown-header" data-toc-skip>Applied Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">A1 · Getting started</a></li>
-    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">A2 · The end-to-end workflow</a></li>
-    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">A3 · Reading results &amp; what to report</a></li>
-    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">A4 · Comparing methods</a></li>
-    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">A5 · Real PISA data guidance</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Applied articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">Getting started with pvstackr</a></li>
+    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">The full analysis workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">Reading and reporting the results</a></li>
+    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">Comparing the three fitting methods</a></li>
+    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">Real PISA data: access, memory and reproducibility</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Method Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">M1 · Foundations and notation</a></li>
-    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">M2 · The BRR–Fay fixed-effect target</a></li>
-    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">M3 · The stacked fractional bridge</a></li>
-    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">M4 · CCC: Cholesky Calibration Correction</a></li>
-    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">M5 · Methods, PSIS, and coverage</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Method articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">Plausible values, survey weights and notation</a></li>
+    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">The design-based target: BRR–Fay replicate weights and Rubin's rules</a></li>
+    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">One stacked fit and the Rubin point estimate</a></li>
+    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">Calibrating the fixed-effect draws (CCC)</a></li>
+    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">Choosing a method and reading its intervals</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -78,437 +80,424 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>M2: The BRR–Fay fixed-effect target — Rubin combining, design variance, and degrees of freedom</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>The design-based target: BRR–Fay replicate weights and Rubin's rules</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee</h4>
             
-            <h4 data-toc-skip class="date">2026-08-14</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/v0.2.0/vignettes/m2-brr-fay-target.Rmd" class="external-link"><code>vignettes/m2-brr-fay-target.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/vignettes/m2-brr-fay-target.Rmd" class="external-link"><code>vignettes/m2-brr-fay-target.Rmd</code></a></small>
       <div class="d-none name"><code>m2-brr-fay-target.Rmd</code></div>
     </div>
 
     
         <div class="abstract">
       <p class="abstract">Abstract</p>
-      <p>The second page of the Method track derives the external
-      variance answer the rest of the machinery is built to report. It
-      assembles the per-plausible-value design covariance from the
-      balanced-repeated-replication Fay sandwich, combines the M
-      per-value fits with the Rubin rules into the external total
-      covariance, and explains the two degrees-of-freedom regimes — the
-      classic Rubin formula the bundled fixture carries, and the
-      small-sample Barnard–Rubin correction that a coverage-claimable
-      target supplies. It relates the fraction of missing information to
-      the collapse of degrees of freedom at small M, states the
-      design-variance coverage result qualitatively, and re-derives the
-      whole Rubin pooling chain on the cached target so every quantity
-      can be checked against the stored object. Where M1 named these
-      equations, M2 derives them.</p>
+      <p>The function <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> computes the
+      design-based target that a <code>stack_direct</code> fit reports:
+      for each plausible value, weighted least-squares estimates of the
+      fixed effects and their BRR–Fay replicate covariance, combined
+      over the plausible values with Rubin’s rules. This article gives
+      these formulas, the classic and Barnard–Rubin degrees of freedom
+      and the fraction of missing information, with the source of each.
+      It then recomputes the combined quantities of the example target
+      from the estimates and covariances stored in it for each plausible
+      value.</p>
     </div>
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://joonho112.github.io/pvstackr/">pvstackr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="the-target-as-an-external-object">1. The target as an external object<a class="anchor" aria-label="anchor" href="#the-target-as-an-external-object"></a>
+<h2 id="the-target-and-the-fit-that-reports-it">The target and the fit that reports it<a class="anchor" aria-label="anchor" href="#the-target-and-the-fit-that-reports-it"></a>
 </h2>
-<p>M1 fixed the vocabulary; this page derives the first piece of
-machinery that vocabulary describes — the <strong>external fixed-effect
-target</strong>. The single most important fact about it is structural:
-the variance answer for <span class="math inline">\(\beta_{\text{FE}}\)</span> does
-<strong>not</strong> come out of the model fit. It is assembled
-separately, from the plausible values and the replicate-weight design,
-and the stacked fit is then <em>calibrated to report it</em> (the
-calibration is M4’s subject). The target is an object in its own right —
-class <code>pvstackr_brr_target</code>, reached with
-<code>get_target(fit)</code> — carrying the pooled coefficients, the
-total covariance, the degrees of freedom, and the fraction of missing
-information.</p>
-<p>Why insist on this separation? Because <strong>provenance is what
-licenses a coverage claim</strong>, not the arithmetic of the fit. A
-correct point estimate paired with a model-based standard error can
-under-cover badly (Section 6); what restores nominal coverage is a
-variance built from the <em>design</em> — the BRR–Fay sandwich (Section
-2) combined by the Rubin rules (Section 3). A3 §6.1 met this object from
-the reading side: the standard errors in <code><a href="../reference/get_estimates.html">get_estimates()</a></code>
-are <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>
-and the point estimates are the pooled <code>beta_bar</code>, both read
-straight off the target under the reportable convention
-<code>center = "target"</code>. This vignette opens that object up and
-derives every field in it.</p>
-<div class="alert alert-info">
-<p><strong>Scope of this page.</strong> M2 derives the target. It
-estimates nothing — there is no MCMC below, only base-R linear algebra
-and read-only accessor calls against the bundled synthetic fixture. The
-calibration that maps this target onto a stacked fit is
-<strong>M4</strong>; why only <code>stack_direct</code> fits may carry a
-coverage claim is <strong>M5</strong>.</p>
-</div>
-<p>The shared light-path load — the same one used across the Method
-track — gives us the fit and its target to point at:</p>
+<p><code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> estimates the fixed effects of a
+survey-weighted linear regression from plausible-value data, together
+with their covariance matrix. It fits no Bayesian model. For each
+plausible value it fits the regression by weighted least squares, once
+with the final weight and once with each replicate weight, and estimates
+the sampling covariance of the coefficients from the spread of the
+replicate estimates. Rubin’s rules then combine the results for the
+<span class="math inline">\(M\)</span> plausible values. The replicate
+weights are assumed to come from balanced repeated replication (BRR)
+with Fay’s method, as in PISA. Because the sampling covariance comes
+from these replicate weights of the survey design, not from a model, the
+target is called design-based.</p>
+<p>The result, an object of class <code>pvstackr_brr_target</code>,
+holds the combined estimates <span class="math inline">\(\bar\beta\)</span>, their covariance matrix <span class="math inline">\(T_{\text{MI}}\)</span>, the standard errors, the
+degrees of freedom and the fraction of missing information;
+<code><a href="../reference/pv_brr_target.html">?pv_brr_target</a></code> lists all its fields. The regression has
+fixed effects only: a random-effect term such as
+<code>(1 | school)</code> in the formula stops
+<code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> with an error (<a href="m1-foundations-and-notation.html#model">Plausible values, survey
+weights and notation</a> describes the model and the symbols).</p>
+<p>A <code>stack_direct</code> fit reports this target: its estimate
+table copies the target’s numbers (<a href="a2-the-workflow.html#center-target">The full analysis
+workflow</a>), and <code>get_target(fit)</code> returns the target.</p>
+<p>pvstackr takes the covariance from the target because a single
+stacked fit cannot supply it. The draws of the stacked fit do not
+contain the variation between plausible values, <span class="math inline">\(B\)</span>, which exists only across separate
+analyses of the plausible values, as the companion preprint notes <span class="citation">(Lee et al. 2026, sec. 4.4)</span>. Their variance
+within a plausible value comes from the model, not from the replicate
+weights. The Cholesky calibration correction (CCC) gives the stacked
+draws the mean <span class="math inline">\(\bar\beta\)</span> and the
+covariance <span class="math inline">\(T_{\text{MI}}\)</span> of the
+target (<a href="m4-ccc-calibration.html">Calibrating the fixed-effect
+draws (CCC)</a>).</p>
+<p>pvstackr’s reporting rule labels the intervals of a
+<code>stack_direct</code> fit coverage-claimable, that is, readable as
+confidence intervals with nominal coverage, only when its target uses
+the Barnard–Rubin degrees of freedom described below (<a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a> states the rule in full).</p>
+<p>The code below reads the target of the example fit that ships with
+pvstackr and recomputes parts of it with base R; it fits no model. The
+target was computed by <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> from the bundled
+synthetic data, which <a href="a1-getting-started.html#example-fit">Getting started with
+pvstackr</a> describes together with the example fit:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"examples"</span>, <span class="st">"pisa_tiny_stack_direct.rds"</span>,</span>
 <span>              package <span class="op">=</span> <span class="st">"pvstackr"</span><span class="op">)</span></span>
 <span><span class="op">)</span><span class="op">$</span><span class="va">fit</span></span>
-<span><span class="va">tg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_target.html">get_target</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>   <span class="co"># external Rubin / BRR–Fay target (class pvstackr_brr_target)</span></span>
+<span><span class="va">tg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_target.html">get_target</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>   <span class="co"># the target of the fit, a pvstackr_brr_target object</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">tg</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "pvstackr_brr_target" "list"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>M <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">M</span>, R <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">R</span>, fay_k <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">fay_k</span><span class="op">)</span>   <span class="co"># 2, 4, 0.5</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>M <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">M</span>, R <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">R</span>, fay_k <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">fay_k</span><span class="op">)</span></span>
 <span><span class="co">#&gt;     M     R fay_k </span></span>
 <span><span class="co">#&gt;   2.0   4.0   0.5</span></span></code></pre></div>
-<p>The design is the tiny synthetic one M1 introduced: <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights, Fay coefficient
-<span class="math inline">\(k = 0.5\)</span>.</p>
+<p>The synthetic data have <span class="math inline">\(M = 2\)</span>
+plausible values, <span class="math inline">\(R = 4\)</span> replicate
+weights and the Fay coefficient <span class="math inline">\(k =
+0.5\)</span>.</p>
 </div>
 <div class="section level2">
-<h2 id="per-pv-design-variance-the-brrfay-sandwich">2. Per-PV design variance: the BRR–Fay sandwich<a class="anchor" aria-label="anchor" href="#per-pv-design-variance-the-brrfay-sandwich"></a>
+<h2 id="replicate-covariance">The BRR–Fay replicate covariance<a class="anchor" aria-label="anchor" href="#replicate-covariance"></a>
 </h2>
-<p>The first ingredient is the per-plausible-value covariance <span class="math inline">\(\hat U_m\)</span>. In this package it is
-<strong>design-based</strong>: rather than trust the model’s nominal
-covariance, it is built from PISA’s replicate-weight machinery. As M1
-§2.1 set out, alongside each student’s final weight <span class="math inline">\(W_{ij}\)</span> come <span class="math inline">\(R\)</span> replicate weights <span class="math inline">\(W_{ij}^{(r)}\)</span>, each a balanced
-perturbation of the sample. Re-estimating the fixed effects on every
-replicate and measuring how much they move is the design-based sampling
-variance.</p>
-<p>For plausible value <span class="math inline">\(m\)</span>, write
-<span class="math inline">\(\hat\beta_m\)</span> for the full-weight
-estimate and <span class="math inline">\(\hat\beta_m^{(r)}\)</span> for
-the estimate on the <span class="math inline">\(r\)</span>-th replicate
-weight. The <strong>BRR–Fay sandwich</strong> — <strong>tag
-EQ-BRRFAY</strong> — is</p>
+<p>For plausible value <span class="math inline">\(m\)</span>, let <span class="math inline">\(\hat\beta_m\)</span> be the weighted least-squares
+estimate of the <span class="math inline">\(p\)</span> fixed-effect
+coefficients with the final weights <span class="math inline">\(W_i\)</span>, and <span class="math inline">\(\hat\beta_m^{(r)}\)</span> the estimate with
+replicate weight <span class="math inline">\(W_i^{(r)}\)</span>, for
+<span class="math inline">\(r = 1, \dots, R\)</span>. pvstackr computes
+them with <code><a href="https://rdrr.io/r/stats/lmfit.html" class="external-link">lm.wfit()</a></code> from the stats package, <span class="math inline">\(M(R + 1)\)</span> fits in all. The BRR–Fay
+replicate covariance of <span class="math inline">\(\hat\beta_m\)</span>
+is</p>
 <p><span class="math display">\[
-\hat
-U_m^{\text{BRR-Fay}}=a_d\sum_{r=1}^{R}\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\big(\hat\beta_m^{(r)}-\hat\beta_m\big)^\top,\quad
-a_d=\tfrac1{R(1-k)^2}.
+\hat U_m = \frac{1}{R(1-k)^2} \sum_{r=1}^{R}
+  \big(\hat\beta_m^{(r)} - \hat\beta_m\big)\big(\hat\beta_m^{(r)} -
+\hat\beta_m\big)^\top ,
 \]</span></p>
-<p>Read it as a sum of outer products of replicate deviations. Each term
-<span class="math inline">\(\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\)</span>
-records how far the <span class="math inline">\(r\)</span>-th replicate
-pulls the estimate from its full-weight value; squaring and summing
-those deviations across the <span class="math inline">\(R\)</span>
-replicates measures the sampling spread, and the <strong>Fay
-multiplier</strong> <span class="math inline">\(a_d\)</span> rescales it
-to the correct variance <span class="citation">(Judkins
-1990)</span>.</p>
-<p>The multiplier carries the whole Fay correction. PISA uses Fay’s
-variant of BRR, which shrinks each perturbation by the coefficient <span class="math inline">\(k\)</span> rather than zeroing out half-samples;
-the factor <span class="math inline">\(1/(1-k)^2\)</span> undoes that
-shrinkage and <span class="math inline">\(1/R\)</span> averages over the
-replicates. For PISA reading (<span class="math inline">\(R =
-80\)</span>, <span class="math inline">\(k = 0.5\)</span>) this gives
-<span class="math inline">\(a_d = 1/[80\cdot 0.25] = 0.05\)</span>.</p>
-<div class="alert alert-warning">
-<p><strong>The fixture’s <span class="math inline">\(a_d = 1\)</span> is
-an arithmetic coincidence — do not generalise.</strong> With the
-fixture’s <span class="math inline">\(R = 4\)</span> and <span class="math inline">\(k = 0.5\)</span>, <span class="math inline">\(a_d
-= 1/[4\,(1-0.5)^2] = 1/(4\cdot
-0.25) = 1\)</span>. That is a quirk of this one tiny design — it matches
-the <code>fay_variance_multiplier</code> field on the target —
-<strong>not</strong> a typical value. Real PISA reading has <span class="math inline">\(a_d = 0.05\)</span> (M1 §2.1).</p>
-</div>
-<p>The replicate ingredients are stored on the target, one entry per
-plausible value. We can peek at the deviation matrix <span class="math inline">\(\big(\hat\beta_m^{(r)}-\hat\beta_m\big)\)</span>
-that EQ-BRRFAY sums over — for the first plausible value it is a <span class="math inline">\(3 \times R\)</span> matrix (three fixed-effect
-terms, <span class="math inline">\(R = 4\)</span> replicates):</p>
+<p>where <span class="math inline">\(k\)</span> is the Fay coefficient
+<code>fay_k</code>. The sum adds the outer products of the deviations of
+the replicate estimates from the estimate with the final weights. <span class="math inline">\(\hat U_m\)</span> is a replication estimate of
+variance: it needs only the replicate estimates, not a linearization of
+the estimator. In the terms of multiple imputation, <span class="math inline">\(\hat\beta_m\)</span> and <span class="math inline">\(\hat U_m\)</span> are the complete-data estimate
+and its variance for the data set completed with plausible value <span class="math inline">\(m\)</span>.</p>
+<p>Fay’s method changes the weights less than plain BRR: in each
+replicate it multiplies the weights of one half-sample by <span class="math inline">\(2 - k\)</span> and those of the other by <span class="math inline">\(k\)</span>, where plain BRR uses 2 and 0 (<a href="m1-foundations-and-notation.html#pv-design">Plausible values,
+survey weights and notation</a> describes the replicate weights). For a
+linear statistic the replicate deviations are then <span class="math inline">\(1 - k\)</span> times those of plain BRR, so their
+mean square is too small by the factor <span class="math inline">\((1-k)^2\)</span>, and multiplying by <span class="math inline">\(1/(1-k)^2\)</span> corrects it <span class="citation">(Judkins 1990, 224–25)</span>. The factor <span class="math inline">\(1/R\)</span> averages over the replicates.
+pvstackr requires positive replicate weights, so it does not accept
+plain BRR weights, which are zero for half of the sample.</p>
+<p>The target stores the factor <span class="math inline">\(1/\{R(1-k)^2\}\)</span> as
+<code>fay_variance_multiplier</code>. For PISA 2022, with <span class="math inline">\(R = 80\)</span> and <span class="math inline">\(k
+= 0.5\)</span>, it is <span class="math inline">\(1/(80 \cdot 0.25) =
+0.05\)</span>, the constant in the variance formula of the PISA 2022
+Technical Report <span class="citation">(OECD 2024, ch. 10)</span>. In
+the example, <span class="math inline">\(R = 4\)</span> and <span class="math inline">\(k = 0.5\)</span> give <span class="math inline">\(1/(4 \cdot 0.25) = 1\)</span>, a value that
+follows from the small example design.</p>
+<p>For each plausible value, <code>per_pv[[m]]</code> holds
+<code>beta</code> (<span class="math inline">\(\hat\beta_m\)</span>),
+<code>U</code> (<span class="math inline">\(\hat U_m\)</span>),
+<code>replicate_beta</code> (the <span class="math inline">\(\hat\beta_m^{(r)}\)</span>, one column per
+replicate weight) and <code>replicate_diff</code> (the deviations <span class="math inline">\(\hat\beta_m^{(r)} - \hat\beta_m\)</span>). For the
+first plausible value:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tg</span><span class="op">$</span><span class="va">fay_variance_multiplier</span>                 <span class="co"># a_d = 1 on this fixture (coincidence)</span></span>
+<code class="sourceCode R"><span><span class="va">tg</span><span class="op">$</span><span class="va">fay_variance_multiplier</span>                 <span class="co"># 1/(R (1 - k)^2), 1 in the example</span></span>
 <span><span class="co">#&gt; [1] 1</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">replicate_diff</span><span class="op">)</span>         <span class="co"># 3 x 4 : (beta_hat_m^(r) - beta_hat_m)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">replicate_diff</span><span class="op">)</span>         <span class="co"># 3 coefficients x 4 replicate weights</span></span>
 <span><span class="co">#&gt; [1] 3 4</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">replicate_diff</span><span class="op">)</span></span>
 <span><span class="co">#&gt;  num [1:3, 1:4] 0.0191 0.0562 -0.1768 0.0274 -0.0516 ...</span></span>
 <span><span class="co">#&gt;  - attr(*, "dimnames")=List of 2</span></span>
 <span><span class="co">#&gt;   ..$ : chr [1:3] "b_Intercept" "b_x" "b_female"</span></span>
 <span><span class="co">#&gt;   ..$ : chr [1:4] "W_FSTURWT1" "W_FSTURWT2" "W_FSTURWT3" "W_FSTURWT4"</span></span></code></pre></div>
-<p>Each column is one replicate’s deviation from the full-weight
-estimate; the sandwich in EQ-BRRFAY forms <span class="math inline">\(a_d\sum_r\)</span> of the outer products of these
-columns to give <span class="math inline">\(\hat U_m\)</span>. (Section
-7 reads the assembled <span class="math inline">\(\hat U_m\)</span> back
-as <code>per_pv[[m]]$U</code> and pools it.)</p>
+<p>Each column holds the deviations of the three coefficients for one
+replicate weight. <span class="math inline">\(\hat U_1\)</span>, stored
+as <code>per_pv[[1]]$U</code>, is <code>fay_variance_multiplier</code>
+times the sum of the outer products of these columns.</p>
 </div>
 <div class="section level2">
-<h2 id="rubin-combining">3. Rubin combining<a class="anchor" aria-label="anchor" href="#rubin-combining"></a>
+<h2 id="rubin">Rubin’s rules<a class="anchor" aria-label="anchor" href="#rubin"></a>
 </h2>
-<p>With a per-PV point estimate <span class="math inline">\(\hat\beta_m\)</span> and its design covariance
-<span class="math inline">\(\hat U_m\)</span> in hand for each <span class="math inline">\(m = 1,\dots,M\)</span>, the <strong>Rubin
-rules</strong> combine the <span class="math inline">\(M\)</span> fits
-into a single external answer <span class="citation">(Rubin
-1987)</span>. <strong>Tag EQ-TMI</strong> is the three combining
-quantities followed by the boxed total:</p>
+<p>Rubin’s rules combine the <span class="math inline">\(M\)</span>
+estimates and covariances <span class="citation">(Rubin 1987,
+76–77)</span>:</p>
 <p><span class="math display">\[
-\bar\beta=\tfrac1M\textstyle\sum_m\hat\beta_m,\quad
-\bar U=\tfrac1M\textstyle\sum_m\hat U_m,\quad
-B=\tfrac1{M-1}\textstyle\sum_m(\hat\beta_m-\bar\beta)(\hat\beta_m-\bar\beta)^\top,
+\bar\beta = \frac{1}{M}\sum_{m=1}^{M} \hat\beta_m, \qquad
+\bar U = \frac{1}{M}\sum_{m=1}^{M} \hat U_m, \qquad
+B = \frac{1}{M-1}\sum_{m=1}^{M}
+  (\hat\beta_m - \bar\beta)(\hat\beta_m - \bar\beta)^\top,
 \]</span></p>
 <p><span class="math display">\[
-\boxed{\,T_{\text{MI}}=\bar U+\big(1+\tfrac1M\big)B\,}.
+T_{\text{MI}} = \bar U + \Big(1 + \frac{1}{M}\Big) B .
 \]</span></p>
-<p>The three pieces decompose the uncertainty:</p>
 <ul>
 <li>
-<span class="math inline">\(\bar\beta\)</span> is the <strong>Rubin
-mean</strong> — the simple average of the per-PV estimates, and the
-reportable point. (M3 shows one stacked fit recovers exactly this value
-under stated conditions; here it is the combining rule that defines
-it.)</li>
+<span class="math inline">\(\bar\beta\)</span> (field
+<code>beta_bar</code>, also stored as <code>beta</code>) is the average
+of the <span class="math inline">\(M\)</span> estimates, the target’s
+estimate of the coefficients.</li>
 <li>
-<span class="math inline">\(\bar U\)</span> is the
-<strong>within-imputation covariance</strong> — the average of the
-per-PV design covariances <span class="math inline">\(\hat U_m\)</span>.
-It is the sampling uncertainty you would have if the plausible values
-agreed perfectly.</li>
+<span class="math inline">\(\bar U\)</span> (<code>U_bar</code>) is
+the average of the replicate covariances: the complete-data covariance,
+that is, the sampling covariance an estimate would have if the plausible
+value were the observed outcome.</li>
 <li>
-<span class="math inline">\(B\)</span> is the
-<strong>between-imputation covariance</strong> — the spread of the
-per-PV estimates <em>around</em> their mean. It is the extra uncertainty
-the measurement leaves, the part that exists precisely because the
-proficiency is imputed rather than observed.</li>
+<span class="math inline">\(B\)</span> (<code>B</code>) is the
+covariance matrix of the <span class="math inline">\(M\)</span>
+estimates, with divisor <span class="math inline">\(M - 1\)</span>: the
+variation between plausible values, which comes from the uncertainty
+about each student’s proficiency.</li>
+<li>
+<span class="math inline">\(T_{\text{MI}}\)</span>
+(<code>T_MI</code>, also stored as <code>total_var</code>) is the total
+covariance matrix of <span class="math inline">\(\bar\beta\)</span>. The
+standard errors (<code>se</code>) are the square roots of its
+diagonal.</li>
 </ul>
-<p>The total <span class="math inline">\(T_{\text{MI}}\)</span> adds
-them, inflating the between-component by the finite- <span class="math inline">\(M\)</span> factor <span class="math inline">\((1+1/M)\)</span> that corrects for estimating
-<span class="math inline">\(B\)</span> from only <span class="math inline">\(M\)</span> imputations. This <span class="math inline">\(T_{\text{MI}}\)</span> is the external target
-covariance — the variance answer the whole package is engineered to
-report, and the <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>
-that M4’s calibration imposes on the stacked draws. Section 7 re-derives
-every quantity here from the stored per-PV pieces and checks it against
-the target.</p>
+<p>The factor <span class="math inline">\(1 + 1/M\)</span> adds <span class="math inline">\(B/M\)</span> to <span class="math inline">\(\bar U
++ B\)</span>. It accounts for the simulation variance of <span class="math inline">\(\bar\beta\)</span>, which averages a finite number
+of plausible values: <span class="math inline">\(B/M\)</span> estimates
+the variance of <span class="math inline">\(\bar\beta\)</span> around
+the average over infinitely many plausible values <span class="citation">(Rubin 1987, 89–90; Barnard and Rubin 1999,
+950)</span>.</p>
+<p>For a single statistic this is the combination that the PISA 2022
+Technical Report gives for estimates from plausible values, with the
+sampling variance of each plausible value from the replicate weights
+<span class="citation">(OECD 2024, ch. 11)</span>. pvstackr applies it
+to the whole coefficient vector and keeps the full matrices: CCC uses
+all of <span class="math inline">\(T_{\text{MI}}\)</span>, not only its
+diagonal, as the covariance of the calibrated draws (<a href="m4-ccc-calibration.html#map">Calibrating the fixed-effect draws
+(CCC)</a>).</p>
 </div>
 <div class="section level2">
-<h2 id="small-sample-degrees-of-freedom">4. Small-sample degrees of freedom<a class="anchor" aria-label="anchor" href="#small-sample-degrees-of-freedom"></a>
+<h2 id="degrees-of-freedom">Degrees of freedom<a class="anchor" aria-label="anchor" href="#degrees-of-freedom"></a>
 </h2>
-<p>A variance is only half of an interval; the other half is the degrees
-of freedom that set the reference distribution’s tails. Two regimes
-matter, and the distinction governs whether an interval may carry a
-coverage claim.</p>
-<p>The <strong>classic Rubin</strong> degrees of freedom derive from the
-relative increase in variance alone and assume the complete-data
-analysis has effectively unlimited df <span class="citation">(Rubin
-1987)</span>. They are what the bundled fixture carries (Section 7).</p>
-<p>The small-sample correction is the <strong>Barnard–Rubin</strong>
-degrees of freedom <span class="math inline">\(\nu_{\text{BR}}\)</span>
-— <strong>tag EQ-BARNARD</strong> <span class="citation">(Barnard and
-Rubin 1999)</span>. It computes the combined-data df from two inputs:
-the <strong>fraction of missing information</strong> <span class="math inline">\(\lambda_k\)</span> (the FMI <span class="math inline">\(\gamma_k\)</span> of Section 5) and the
-<strong>complete-data df</strong> <span class="math inline">\(\nu_{\text{com}}\)</span>, the degrees of freedom
-the analysis would have had with no missing information (package field
-<code>df_complete</code>). When the complete-data analysis is itself
-small-sample, <span class="math inline">\(\nu_{\text{BR}}\)</span>
-corrects the classic formula downward; it is the df a
-<em>coverage-claimable</em> interval requires. Concretely, with <span class="math inline">\(\lambda_k=\gamma_k=(1+1/M)\,B_{kk}/T_{\text{MI},kk}\)</span>
-and <span class="math inline">\(\nu_{\text{com},k}\)</span> the
-complete-data df (<code>df_complete</code>), EQ-BARNARD combines the
-classic df <span class="math inline">\(\nu_{\text{old},k}=(M-1)/\lambda_k^{2}\)</span>
-with an <strong>observed-data df</strong> <span class="math inline">\(\nu_{\text{obs},k}\)</span> harmonically:</p>
+<p>A <code>stack_direct</code> fit forms each interval as the estimate
+plus or minus a <span class="math inline">\(t\)</span> quantile times
+the standard error. The quantile uses the degrees of freedom of the
+target and the level <code>conf_level</code> of
+<code><a href="../reference/pv_control.html">pv_control()</a></code> (0.95 by default); the <code>conf_level</code>
+stored in the target does not set it. Both rules for the degrees of
+freedom work coefficient by coefficient with the ratio</p>
 <p><span class="math display">\[
-\nu_{\text{obs},k}=\dfrac{\nu_{\text{com},k}+1}{\nu_{\text{com},k}+3}\,
-\nu_{\text{com},k}\,(1-\lambda_k),\qquad
-\nu_{\text{BR},k}=\left(\nu_{\text{old},k}^{-1}+\nu_{\text{obs},k}^{-1}\right)^{-1}.
+\lambda_\ell = \frac{(1 + 1/M)\,B_{\ell\ell}}{T_{\text{MI},\ell\ell}} ,
 \]</span></p>
-<p>The observed-data term pulls <span class="math inline">\(\nu_{\text{BR}}\)</span> below the classic value
-when <span class="math inline">\(\nu_{\text{com}}\)</span> is small; as
-<span class="math inline">\(\nu_{\text{com}}\to\infty\)</span> it sends
-<span class="math inline">\(\nu_{\text{obs}}\to\infty\)</span> and <span class="math inline">\(\nu_{\text{BR},k}\to\nu_{\text{old},k}\)</span>,
-recovering classic Rubin. The package evaluates this
-<strong>only</strong> on the Barnard–Rubin path; the bundled fixture
-carries classic df, so this vignette prints the formula but does
-<strong>not</strong> numerically evaluate it or fabricate a <span class="math inline">\(\nu_{\text{BR}}\)</span> number for it.</p>
-<div class="alert alert-warning">
-<p><strong>The cached fixture carries classic df, not <span class="math inline">\(\nu_{\text{BR}}\)</span>.</strong> Every term on
-this target has <code>df_method == "classic"</code> and
-<code>df_complete == NA</code>, so the <code>df</code> it reports is the
-<strong>classic Rubin</strong> value, <em>not</em> the Barnard–Rubin
-<span class="math inline">\(\nu_{\text{BR}}\)</span>. The complete-data
-df that EQ-BARNARD needs is simply not present
-(<code>df_complete == NA</code>), because the classic path does not use
-it. The Barnard–Rubin correction is the path a <strong>reportable,
-coverage-claimable</strong> target would take — it is <em>not</em>
-exercised on <code>pisa_tiny</code>. Accordingly, this vignette reads
-the <strong>classic</strong> <code>df</code> / <code>df_method</code> /
-<code>df_complete</code> off the fixture (mirroring A3 §4) and does
-<strong>not</strong> compute or display a <span class="math inline">\(\nu_{\text{BR}}\)</span> number here.</p>
-</div>
-<p>Section 7 reads <code>df</code>, <code>df_method</code>, and
-<code>df_complete</code> directly off the target so the regime is
-visible in the object, exactly as A3 §4 reads them off the estimate
-table.</p>
-</div>
-<div class="section level2">
-<h2 id="fraction-of-missing-information">5. Fraction of missing information<a class="anchor" aria-label="anchor" href="#fraction-of-missing-information"></a>
-</h2>
-<p>The quantity that drives the degrees of freedom is the
-<strong>fraction of missing information</strong> (FMI). For coefficient
-<span class="math inline">\(k\)</span> it is the share of the total
-uncertainty contributed by the between-imputation component —
-<strong>tag EQ-FMI</strong>:</p>
+<p>the share of the total variance of coefficient <span class="math inline">\(\ell\)</span> that comes from the variation
+between plausible values (<a href="#fmi">the fraction of missing
+information</a> returns to it). The argument <code>df_method</code> of
+<code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> chooses the rule.</p>
+<p><code>df_method = "classic"</code>, the default, is the rule of <span class="citation">Rubin (1987, 77)</span>:</p>
 <p><span class="math display">\[
-\gamma_k=\dfrac{(1+1/M)\,B_{kk}}{T_{\text{MI},kk}},
+\nu_\ell=(M-1)/\lambda_\ell^{2} .
 \]</span></p>
-<p>where <span class="math inline">\(B_{kk}\)</span> and <span class="math inline">\(T_{\text{MI},kk}\)</span> are the <span class="math inline">\(k\)</span>-th diagonal entries of the
-between-imputation covariance and the total <span class="citation">(Rubin 1987)</span>. The numerator is exactly the term
-EQ-TMI adds to <span class="math inline">\(\bar U_{kk}\)</span>, so
-<span class="math inline">\(\gamma_k\)</span> is the proportion of <span class="math inline">\(T_{\text{MI},kk}\)</span> that exists
-<em>because</em> the proficiency is imputed.</p>
-<p>FMI is what collapses the degrees of freedom at small <span class="math inline">\(M\)</span>. When <span class="math inline">\(\gamma_k\)</span> is near one almost all of a
-coefficient’s uncertainty is between-imputation, there is little
-information per coefficient, and the df fall toward their floor — which
-is why a small-<span class="math inline">\(M\)</span> design produces
-wide intervals and df near 1. Section 7 re-derives <span class="math inline">\(\gamma_k\)</span> from <span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> and confirms it against the
-stored <code>fmi</code>.</p>
-<div class="alert alert-warning">
-<p><strong>High FMI here is <span class="math inline">\(M = 2\)</span>
-mechanics, not a finding.</strong> The fixture’s FMI values run roughly
-0.84 to 0.99 because, with only <span class="math inline">\(M =
-2\)</span> plausible values, the <span class="math inline">\((1 + 1/M) =
-1.5\)</span> factor multiplies a between-imputation covariance estimated
-from a single pair of fits, so the between-share dominates and the df
-collapse toward 1. This is the MI machinery being honest about how
-little information two imputations carry. Real PISA reading uses <span class="math inline">\(M = 10\)</span>, where FMI is far smaller and the
-Barnard–Rubin correction operates in its intended regime. Do not read
-this fixture’s FMI as a substantive result.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="the-design-variance-coverage-result">6. The design-variance coverage result<a class="anchor" aria-label="anchor" href="#the-design-variance-coverage-result"></a>
-</h2>
-<p>Everything above is arithmetic on a target. The reason that
-arithmetic is built the way it is — design-based <span class="math inline">\(\hat U_m\)</span>, design-based <span class="math inline">\(T_{\text{MI}}\)</span> — is a
-<strong>coverage</strong> result, and that result is empirical rather
-than something this vignette can compute on a 12-student synthetic
-fixture.</p>
-<div class="alert alert-info">
-<p><strong>Design variance is not optional (companion paper, in
-preparation).</strong> A correct weighted point estimate paired with
-<strong>model-based</strong> standard errors can
-<strong>under-cover</strong> — its nominal-95% intervals capture the
-truth far less than 95% of the time — because the model’s covariance
-does not see the survey’s clustering and weighting. Substituting the
-<strong>design-based</strong> BRR–Fay <span class="math inline">\(T_{\text{MI}}\)</span> derived above
-<strong>restores nominal coverage</strong>. This is established by
-simulation in the companion methods paper (in preparation) and is
-reported there <em>qualitatively</em>; the package neither bundles that
-evidence nor reproduces its numbers. The lesson is about the
-<em>provenance</em> of the target — external and design-based — which is
-precisely what Section 1 said licenses a coverage claim, and what M5
-ties to the <code>coverage_claim_allowed</code> flag.</p>
-</div>
-<p>So the target’s value is not that its identities check to high
-precision (they do, in Section 7 — but that is algebra), but that its
-variance is built from the design. The precise statement of which fits
-may therefore carry a coverage claim is M5; the calibration that
-delivers this target’s variance to a stacked fit is M4.</p>
+<p>Rubin writes it as <span class="math inline">\((M - 1)(1 +
+1/\mathrm{riv}_\ell)^2\)</span>, with the relative increase in variance
+<span class="math inline">\(\mathrm{riv}_\ell = (1 +
+1/M)B_{\ell\ell}/\bar U_{\ell\ell}\)</span>; the two forms are equal
+because <span class="math inline">\(\lambda_\ell = \mathrm{riv}_\ell/(1
++ \mathrm{riv}_\ell)\)</span>. The rule is derived under the assumption
+that the complete-data degrees of freedom, those the analysis would have
+if no information were missing, are infinite <span class="citation">(Barnard and Rubin 1999, 948)</span>. Because <span class="math inline">\(\lambda_\ell \le 1\)</span>, <span class="math inline">\(\nu_\ell\)</span> is never smaller than <span class="math inline">\(M - 1\)</span>.</p>
+<p><code>df_method = "barnard_rubin"</code> is the rule of <span class="citation">Barnard and Rubin (1999, 948–49)</span>. It needs the
+complete-data degrees of freedom <span class="math inline">\(\nu_{\text{com}}\)</span>, which you give as
+<code>df_complete</code>, and combines the classic value with an
+estimate of the observed-data degrees of freedom:</p>
+<p><span class="math display">\[
+\nu_{\text{obs},\ell}=\frac{\nu_{\text{com}}+1}{\nu_{\text{com}}+3}\,
+  \nu_{\text{com}}\,(1-\lambda_\ell),
+\qquad
+\nu_{\text{BR},\ell}=\left(\frac{1}{\nu_\ell}+\frac{1}{\nu_{\text{obs},\ell}}\right)^{-1}
+.
+\]</span></p>
+<p>Barnard and Rubin derived this adjustment because the classic value
+can be many times larger than <span class="math inline">\(\nu_{\text{com}}\)</span> when <span class="math inline">\(\nu_{\text{com}}\)</span> is small and little
+information is missing. It corrects for small complete-data degrees of
+freedom, not for a small number of plausible values. <span class="math inline">\(\nu_{\text{BR},\ell}\)</span> is never larger than
+<span class="math inline">\(\nu_\ell\)</span> or <span class="math inline">\(\nu_{\text{com}}\)</span>, increases with <span class="math inline">\(\nu_{\text{com}}\)</span>, and equals <span class="math inline">\(\nu_\ell\)</span> when <span class="math inline">\(\nu_{\text{com}}\)</span> is infinite. Unlike
+<span class="math inline">\(\nu_\ell\)</span>, it can be smaller than
+<span class="math inline">\(M - 1\)</span>: when <span class="math inline">\(\lambda_\ell\)</span> is close to 1, <span class="math inline">\(\nu_{\text{obs},\ell}\)</span> and therefore <span class="math inline">\(\nu_{\text{BR},\ell}\)</span> are small.</p>
+<p><code>df_complete</code> is the complete-data degrees of freedom of
+the replicate-weight variance: the degrees of freedom the analysis would
+have if the outcome were observed directly instead of through plausible
+values. You state it, as one positive number or as one number per
+coefficient; pvstackr does not choose it and does not check it against
+the replicate weights. <code>df_complete = Inf</code> is accepted and
+gives the classic degrees of freedom. The adjustment matters when the
+number is small.</p>
+<p><code>df</code> holds the degrees of freedom of the chosen rule, and
+<code>df_classic</code> holds the classic values under both rules. With
+<code>"classic"</code>, the field <code>df_complete</code> of the target
+is <code>NULL</code>, and the estimate table of a fit shows
+<code>NA</code> in its column <code>df_complete</code>.
+<code>df_method</code> also sets the interval labels that a
+<code>stack_direct</code> fit copies: <code>"classic"</code> gives
+<code>interval_role = "descriptive_classic_rubin"</code> and
+<code>coverage_claim_allowed = FALSE</code>, and
+<code>"barnard_rubin"</code> gives <code>"coverage_barnard_rubin"</code>
+and <code>TRUE</code> for any positive <code>df_complete</code>,
+<code>Inf</code> included. These labels follow pvstackr’s reporting rule
+(see <a href="#sources">where the formulas and the interval labels come
+from</a>).</p>
+<p>The example target uses the classic rule and has no
+<code>df_complete</code>, so this article prints the formula but does
+not evaluate it.</p>
 </div>
 <div class="section level2">
-<h2 id="verify-rubin-pooling-on-the-cached-target">7. Verify Rubin pooling on the cached target<a class="anchor" aria-label="anchor" href="#verify-rubin-pooling-on-the-cached-target"></a>
+<h2 id="fmi">Fraction of missing information<a class="anchor" aria-label="anchor" href="#fmi"></a>
 </h2>
-<p>We now re-derive the entire Rubin pooling chain — EQ-TMI and EQ-FMI —
-from the stored per-PV pieces, and check each quantity against the value
-the package computed. This is a read-and-recompute exercise:
-<code>tg$per_pv</code> holds, for each plausible value <span class="math inline">\(m\)</span>, the estimate <span class="math inline">\(\hat\beta_m\)</span> (<code>beta</code>) and the
-assembled BRR–Fay covariance <span class="math inline">\(\hat
-U_m\)</span> (<code>U</code>); we rebuild <span class="math inline">\(\bar\beta\)</span>, <span class="math inline">\(\bar U\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(T_{\text{MI}}\)</span>, and the FMI from them.</p>
+<p>pvstackr stores <span class="math inline">\(\lambda_\ell\)</span> in
+the target as <code>fmi</code> and again as <code>lambda</code>; the two
+fields are identical, and the estimate table has no column for them.
+<span class="citation">Barnard and Rubin (1999, 948)</span> use this
+ratio as an approximation to the fraction of missing information (FMI)
+of coefficient <span class="math inline">\(\ell\)</span>. <span class="citation">Rubin (1987, 77)</span> estimates the fraction of
+missing information with an additional term that depends on the degrees
+of freedom:</p>
+<p><span class="math display">\[
+\gamma_\ell = \frac{\mathrm{riv}_\ell + 2/(\nu_\ell +
+3)}{\mathrm{riv}_\ell + 1} ,
+\]</span></p>
+<p>where <span class="math inline">\(\mathrm{riv}_\ell\)</span> is the
+relative increase in variance, stored as <code>riv</code>, and <span class="math inline">\(\nu_\ell\)</span> are the classic degrees of
+freedom. Since <span class="math inline">\(\lambda_\ell =
+\mathrm{riv}_\ell/(1 + \mathrm{riv}_\ell)\)</span>, <span class="math inline">\(\gamma_\ell\)</span> exceeds <span class="math inline">\(\lambda_\ell\)</span> by <span class="math inline">\(2/\{(\nu_\ell + 3)(\mathrm{riv}_\ell +
+1)\}\)</span>, and the two are close when <span class="math inline">\(\nu_\ell\)</span> is large. pvstackr computes only
+<span class="math inline">\(\lambda_\ell\)</span>, so an FMI reported
+from pvstackr is <span class="math inline">\(\lambda_\ell\)</span>.</p>
+<p><span class="math inline">\(\lambda_\ell\)</span> is close to 1 when
+the variation between plausible values is much larger than the
+replicate-weight variance, that is, when <span class="math inline">\(\mathrm{riv}_\ell\)</span> is large, whatever the
+number of plausible values. The classic degrees of freedom are then
+close to their smallest value, <span class="math inline">\(M -
+1\)</span>. This is the case in the example, where <span class="math inline">\(M - 1 = 1\)</span> and the relative increase in
+variance is large (<a href="#checks">the checks on the example
+target</a> show the values). The FMI of an analysis of real data depends
+on its data and model; the synthetic example says nothing about it.</p>
+</div>
+<div class="section level2">
+<h2 id="sources">Where the formulas and the interval labels come from<a class="anchor" aria-label="anchor" href="#sources"></a>
+</h2>
+<p>The replicate covariance is the variance estimator of Fay’s method
+for balanced repeated replication <span class="citation">(Judkins
+1990)</span>, and the combination is Rubin’s rules <span class="citation">(Rubin 1987)</span> with the degrees of freedom of
+<span class="citation">Rubin (1987)</span> or <span class="citation">Barnard and Rubin (1999)</span>. The PISA 2022
+Technical Report computes standard errors from plausible values and
+replicate weights in the same way, one statistic at a time <span class="citation">(OECD 2024, chs. 10–11)</span>. pvstackr applies these
+formulas to the coefficients of its survey-weighted linear
+regression.</p>
+<p>The companion preprint <span class="citation">(Lee et al.
+2026)</span> builds its default target from model-based fits of each
+plausible value and describes a target from replicate weights as an
+alternative (Appendix C of the preprint). Its simulation study compares
+estimators whose variances and targets come from model-based fits, on
+simulated data without replicate weights <span class="citation">(Lee et
+al. 2026, sec. 5)</span>. It therefore provides no evidence about a
+BRR–Fay target, and it does not compare model-based with design-based
+standard errors. <a href="a5-real-pisa-guidance.html#companion-preprint">Real PISA data:
+access, memory and reproducibility</a> summarizes what the preprint
+shows.</p>
+<p>The interval labels <code>interval_role</code> and
+<code>coverage_claim_allowed</code> are pvstackr’s reporting rule, not a
+result of any of these sources. Under this rule only a
+<code>stack_direct</code> fit whose target was made with
+<code>df_method = "barnard_rubin"</code> and a positive
+<code>df_complete</code> has intervals labeled coverage-claimable. <a href="m5-methods-and-coverage.html#interval-rule">Choosing a method and
+reading its intervals</a> gives the reason for the rule, and <a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a> explains how to read the labels.</p>
+</div>
+<div class="section level2">
+<h2 id="checks">Checks on the example target<a class="anchor" aria-label="anchor" href="#checks"></a>
+</h2>
+<p>The chunks below recompute the combined quantities of the example
+target from the estimates and covariances of its two plausible values,
+stored in <code>tg$per_pv</code>. These are arithmetic checks: they show
+that the stored <code>beta_bar</code>, <code>U_bar</code>,
+<code>B</code>, <code>T_MI</code> and <code>fmi</code> are Rubin’s rules
+applied to the stored pieces for each plausible value. They take those
+pieces as given and do not repeat the weighted least-squares fits.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">M</span>     <span class="op">&lt;-</span> <span class="va">tg</span><span class="op">$</span><span class="va">M</span>                                    <span class="co"># 2</span></span>
-<span><span class="va">betas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span>, <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="va">p</span><span class="op">$</span><span class="va">beta</span><span class="op">)</span>   <span class="co"># 3 x M : per-PV beta_hat_m</span></span>
-<span><span class="va">Us</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span>, <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="va">p</span><span class="op">$</span><span class="va">U</span><span class="op">)</span>      <span class="co"># list of per-PV U_hat_m (BRR–Fay)</span></span>
+<span><span class="va">betas</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span>, <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="va">p</span><span class="op">$</span><span class="va">beta</span><span class="op">)</span>   <span class="co"># 3 x M: one column per plausible value</span></span>
+<span><span class="va">Us</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">lapply</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">per_pv</span>, <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="va">p</span><span class="op">$</span><span class="va">U</span><span class="op">)</span>      <span class="co"># the replicate covariances U_m</span></span>
 <span></span>
-<span><span class="va">beta_bar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowMeans</a></span><span class="op">(</span><span class="va">betas</span><span class="op">)</span>                      <span class="co"># Rubin mean</span></span>
-<span><span class="va">U_bar</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Reduce</a></span><span class="op">(</span><span class="va">`+`</span>, <span class="va">Us</span><span class="op">)</span> <span class="op">/</span> <span class="va">M</span>                  <span class="co"># within-imputation covariance</span></span>
+<span><span class="va">beta_bar</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">rowMeans</a></span><span class="op">(</span><span class="va">betas</span><span class="op">)</span>                      <span class="co"># average of the estimates</span></span>
+<span><span class="va">U_bar</span>    <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Reduce</a></span><span class="op">(</span><span class="va">`+`</span>, <span class="va">Us</span><span class="op">)</span> <span class="op">/</span> <span class="va">M</span>                  <span class="co"># average replicate covariance</span></span>
 <span><span class="va">dev</span>      <span class="op">&lt;-</span> <span class="va">betas</span> <span class="op">-</span> <span class="va">beta_bar</span></span>
-<span><span class="va">B</span>        <span class="op">&lt;-</span> <span class="op">(</span><span class="va">dev</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">dev</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="op">(</span><span class="va">M</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span>           <span class="co"># between-imputation covariance</span></span>
-<span><span class="va">T_MI</span>     <span class="op">&lt;-</span> <span class="va">U_bar</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">/</span><span class="va">M</span><span class="op">)</span> <span class="op">*</span> <span class="va">B</span>                <span class="co"># EQ-TMI</span></span>
+<span><span class="va">B</span>        <span class="op">&lt;-</span> <span class="op">(</span><span class="va">dev</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">dev</span><span class="op">)</span><span class="op">)</span> <span class="op">/</span> <span class="op">(</span><span class="va">M</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span>           <span class="co"># covariance between plausible values</span></span>
+<span><span class="va">T_MI</span>     <span class="op">&lt;-</span> <span class="va">U_bar</span> <span class="op">+</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">/</span><span class="va">M</span><span class="op">)</span> <span class="op">*</span> <span class="va">B</span>                <span class="co"># total covariance</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">beta_bar</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">beta_bar</span><span class="op">)</span><span class="op">)</span> <span class="co"># TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">beta_bar</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">beta_bar</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">U_bar</span><span class="op">)</span>,    <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">U_bar</span><span class="op">)</span><span class="op">)</span>    <span class="co"># TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">U_bar</span><span class="op">)</span>,    <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">U_bar</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">B</span><span class="op">)</span>,        <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">B</span><span class="op">)</span><span class="op">)</span>        <span class="co"># TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">B</span><span class="op">)</span>,        <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">B</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">T_MI</span><span class="op">)</span>,     <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">T_MI</span><span class="op">)</span><span class="op">)</span>     <span class="co"># TRUE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">T_MI</span><span class="op">)</span>,     <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">T_MI</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>All four reconstructions reproduce the stored target — the package’s
-<code>beta_bar</code>, <code>U_bar</code>, <code>B</code>, and
-<code>T_MI</code> are exactly the Rubin combining rules applied to the
-per-PV pieces. The fraction of missing information follows the same way,
-from <span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span>:</p>
+<p>The four comparisons return <code>TRUE</code>: the recomputed and the
+stored values agree within the default tolerance of
+<code><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal()</a></code>, a relative difference of about <span class="math inline">\(1.5 \times 10^{-8}\)</span>. The ratio <span class="math inline">\(\lambda_\ell\)</span> follows from <span class="math inline">\(B\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> in the same way:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fmi</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">/</span><span class="va">M</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">B</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">T_MI</span><span class="op">)</span>          <span class="co"># EQ-FMI</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">fmi</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">fmi</span><span class="op">)</span><span class="op">)</span>           <span class="co"># TRUE</span></span>
+<code class="sourceCode R"><span><span class="va">fmi</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fl">1</span> <span class="op">+</span> <span class="fl">1</span><span class="op">/</span><span class="va">M</span><span class="op">)</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">B</span><span class="op">)</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">T_MI</span><span class="op">)</span>          <span class="co"># lambda for each coefficient</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">fmi</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">fmi</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>Finally, read the target’s FMI, relative increase in variance, and
-degrees of freedom together with the df method — exactly the regime
-block of Section 4:</p>
+<p>The target also stores the relative increase in variance and the
+degrees of freedom, with the rule that gave them:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
 <span>  term      <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">fe_names</span>,</span>
-<span>  fmi       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">fmi</span>, <span class="fl">3</span><span class="op">)</span>,</span>
-<span>  riv       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">riv</span>, <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  df        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">df</span>,  <span class="fl">2</span><span class="op">)</span>,</span>
-<span>  df_method <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">df_method</span></span>
+<span>  fmi       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">fmi</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span>,</span>
+<span>  riv       <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">riv</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  df        <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">df</span><span class="op">)</span>,  <span class="fl">2</span><span class="op">)</span>,</span>
+<span>  df_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="va">tg</span><span class="op">$</span><span class="va">df_method</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="co">#&gt;                    term   fmi    riv   df df_method</span></span>
-<span><span class="co">#&gt; b_Intercept b_Intercept 0.990  94.86 1.02   classic</span></span>
-<span><span class="co">#&gt; b_x                 b_x 0.844   5.43 1.40   classic</span></span>
-<span><span class="co">#&gt; b_female       b_female 0.993 146.17 1.01   classic</span></span></code></pre></div>
-<p>Two things to read off this table. First, the FMI values (~0.84–0.99)
-and the df (~1) are the small-<span class="math inline">\(M\)</span>
-mechanics of Section 5: little information per coefficient, df at the
-floor. Second — and this is the point of D-1 above —
-<code>df_method</code> is <code>"classic"</code> for every term. The
-<code>df</code> shown is the classic Rubin value; the Barnard–Rubin
-<span class="math inline">\(\nu_{\text{BR}}\)</span> of Section 4 is
-<strong>not</strong> what appears here, and the complete-data df it
-would need is absent:</p>
+<span><span class="co">#&gt;          term   fmi    riv   df df_method</span></span>
+<span><span class="co">#&gt; 1 b_Intercept 0.990  94.86 1.02   classic</span></span>
+<span><span class="co">#&gt; 2         b_x 0.844   5.43 1.40   classic</span></span>
+<span><span class="co">#&gt; 3    b_female 0.993 146.17 1.01   classic</span></span></code></pre></div>
+<p><code>df_method</code> is <code>"classic"</code> for every
+coefficient, so <code>df</code> holds <span class="math inline">\((M-1)/\lambda_\ell^2\)</span>: with the rounded
+values of <code>fmi</code>, <span class="math inline">\(1/0.990^2
+\approx 1.02\)</span>, <span class="math inline">\(1/0.844^2 \approx
+1.40\)</span> and <span class="math inline">\(1/0.993^2 \approx
+1.01\)</span>. The FMI is large because <code>riv</code> is large (about
+95, 5 and 146), so the degrees of freedom are near their smallest
+possible value, <span class="math inline">\(M - 1 = 1\)</span>, most
+closely for the intercept and <code>b_female</code>.</p>
+<p>The example target uses classic degrees of freedom, so it has no
+complete-data degrees of freedom:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tg</span><span class="op">$</span><span class="va">df_complete</span>   <span class="co"># NA for every term -&gt; the classic path, not Barnard–Rubin</span></span>
+<code class="sourceCode R"><span><span class="va">tg</span><span class="op">$</span><span class="va">df_complete</span>   <span class="co"># NULL for a classic target</span></span>
 <span><span class="co">#&gt; NULL</span></span></code></pre></div>
-<div class="alert alert-warning">
-<p><strong>This target is descriptive, not coverage-claimable.</strong>
-The agreements above are <em>algebraic</em> — the Rubin rules reproduced
-from their inputs — and confirm only that the pooling is internally
-consistent, not that the intervals cover. The fixture is
-<strong>descriptive-classic</strong>
-(<code>coverage_claim_allowed == FALSE</code>; A3 §4): classic df, no
-complete-data df, so no Barnard–Rubin small-sample correction. We make
-no “verified to machine precision” coverage claim and report no <span class="math inline">\(\nu_{\text{BR}}\)</span> number — both would
-over-read a synthetic fixture built to demonstrate the object surface,
-not to establish coverage.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="where-to-next">8. Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h2>
-<p>You now hold the external target in full — the BRR–Fay sandwich
-(EQ-BRRFAY) that builds each <span class="math inline">\(\hat
-U_m\)</span>, the Rubin rules (EQ-TMI) that combine them into <span class="math inline">\(T_{\text{MI}}\)</span>, the two degrees-of-freedom
-regimes (EQ-BARNARD vs classic), and the fraction of missing information
-(EQ-FMI) that drives the df. The target is the variance answer; the rest
-of the Method track is about <em>delivering</em> it from a single
-fit.</p>
-<ul>
-<li>
-<strong>M3 · The stacked fractional bridge</strong> — the natural
-next step: it shows that one model fit on the stacked <span class="math inline">\(N\cdot M\)</span> rows, each weighted <span class="math inline">\(1/M\)</span>, recovers the Rubin mean <span class="math inline">\(\bar\beta\)</span> derived here (Theorem 2.2), and
-is explicit that this is a fixed-effect <em>point</em> identity, not the
-variance answer — that answer is this page’s <span class="math inline">\(T_{\text{MI}}\)</span>.</li>
-<li>Then <strong>M4</strong> (the CCC calibration that makes the stacked
-draw cloud’s covariance equal this target’s <span class="math inline">\(T_{\text{MI}}\)</span>) and <strong>M5</strong>
-(why coverage-claimability rests on an external design-based BRR-Fay
-target with Barnard-Rubin degrees of freedom, plus validation evidence
-rather than CCC arithmetic alone) complete the chain.</li>
-</ul>
-<p>To see this target from the reporting side — how its fields surface
-in the estimate table, what the interval-metadata columns mean, and how
-FMI and the classic-vs-Barnard–Rubin df read in practice — return to
-<strong>A3 · Reading results</strong> (§5–§6).</p>
-<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="external-link uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
-<div class="section level3">
-<h3 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
-</h3>
+<p>The estimate table of the fit shows <code>NA</code> in its column
+<code>df_complete</code>, and by pvstackr’s reporting rule the intervals
+of the fit are labeled <code>descriptive_classic_rubin</code>, with
+<code>coverage_claim_allowed = FALSE</code>.</p>
+<p>For one weighted fit to the stacked data, in which every row has the
+weight <span class="math inline">\(\tilde w_i/M\)</span> (with <span class="math inline">\(\tilde w_i = W_i/\overline W\)</span>, the final
+weight divided by its mean), the stacked fixed-effect point identity,
+Theorem 4.1 of the preprint <span class="citation">(Lee et al.
+2026)</span>, gives the conditions under which the fixed-effect estimate
+equals <span class="math inline">\(\bar\beta\)</span>; <a href="m3-stacked-bridge.html#point-identity">One stacked fit and the
+Rubin point estimate</a> explains it. <a href="m4-ccc-calibration.html">Calibrating the fixed-effect draws
+(CCC)</a> shows how the stacked draws are given the covariance <span class="math inline">\(T_{\text{MI}}\)</span>.</p>
+<p>The numbers above were computed in this session:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.4 LTS</span></span>
+<span><span class="co">#&gt; Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Matrix products: default</span></span>
 <span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -527,17 +516,16 @@ FMI and the classic-vs-Barnard–Rubin df read in practice — return to
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
+<span><span class="co">#&gt; [1] pvstackr_0.2.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    </span></span>
-<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
-<span><span class="co">#&gt;  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
+<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.52        htmltools_0.5.9  </span></span>
+<span><span class="co">#&gt;  [9] rmarkdown_2.32    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
 <span><span class="co">#&gt; [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
 <span><span class="co">#&gt; [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
 <span><span class="co">#&gt; [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
 <span><span class="co">#&gt; [25] rlang_1.3.0       fs_2.1.0</span></span></code></pre></div>
-</div>
 </div>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
@@ -551,7 +539,18 @@ Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
 <div id="ref-judkins1990fay" class="csl-entry">
 Judkins, David R. 1990. <span>“Fay’s Method for Variance
 Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
-223–39.
+223–39. <a href="https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/fay39s-method-for-variance-estimation.pdf" class="external-link">https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/fay39s-method-for-variance-estimation.pdf</a>.
+</div>
+<div id="ref-lee2026onemcmc" class="csl-entry">
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026.
+<em>One <span>Markov</span> Chain <span>Monte</span> <span>Carlo</span>
+Fit for Many Plausible Values: A Calibrated Stacked Posterior Workflow
+for <span>Bayesian</span> Multilevel Models of Large-Scale Assessment
+Data</em>. Zenodo preprint, version 1. <a href="https://doi.org/10.5281/zenodo.22407935" class="external-link">https://doi.org/10.5281/zenodo.22407935</a>.
+</div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. PISA. OECD Publishing.
+<a href="https://doi.org/10.1787/01820d6d-en" class="external-link">https://doi.org/10.1787/01820d6d-en</a>.
 </div>
 <div id="ref-rubin1987multiple" class="csl-entry">
 Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in

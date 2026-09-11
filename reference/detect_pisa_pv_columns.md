@@ -1,17 +1,13 @@
-# Detect PISA-Style Plausible-Value Columns
+# Find PISA-style plausible-value columns
 
-Modern PISA plausible values are often subject-suffixed, for example
-`PV1MATH`, `PV2MATH`, or `PV1READ`, `PV2READ`. Pass the subject/domain
-suffix explicitly, such as `suffix = "MATH"` here or
-`pv_suffix = "MATH"` in
+`detect_pisa_pv_columns()` returns the names of the columns that hold
+the plausible values of one subject, such as `PV1READ`, `PV2READ`, ...,
+`PV10READ`. A column matches when its whole name is `prefix`, a number
+and `suffix`; the match is case-sensitive.
 [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
 and
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
-The default `suffix = ""` is reserved for data whose plausible values
-are intentionally named as bare `PV1`, `PV2`, and so on. Detection is
-anchored, so `suffix = ""` does not match `PV1MATH`. Use `expected_M` to
-guard against selecting the wrong subject or an incomplete
-plausible-value set.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+call this function when you do not give `pv_cols`.
 
 ## Usage
 
@@ -23,37 +19,52 @@ detect_pisa_pv_columns(data, prefix = "PV", suffix = "", expected_M = NULL)
 
 - data:
 
-  Data frame containing plausible-value columns.
+  A data frame. Only its column names are used.
 
 - prefix:
 
-  Character scalar. Column prefix before the numeric plausible-value
-  index. Default `"PV"`.
+  The text before the number. Default `"PV"`.
 
 - suffix:
 
-  Character scalar. Column suffix after the numeric plausible-value
-  index, such as `"MATH"` for columns named `PV1MATH`, `PV2MATH`, and so
-  on. Default `""` matches bare `PV1`, `PV2`, ... only; detection is
-  anchored, so the default does not match subject-suffixed columns.
+  The text after the number, such as `"MATH"` for `PV1MATH`, `PV2MATH`,
+  and so on. The default `""` matches only bare names such as `PV1`.
 
 - expected_M:
 
-  Optional integer scalar. Expected plausible-value count; if supplied,
-  detection errors unless exactly `expected_M` columns are found. If
-  `NULL` (default), the count is not checked.
+  The number of plausible-value columns you expect, a whole number. If a
+  different number is found, the function stops with an error, which
+  catches a wrong suffix or an incomplete set of columns. `NULL`
+  (default) skips the check.
 
 ## Value
 
-Character vector of column names in natural numeric order.
+A character vector of column names in numeric order: `PV2READ` comes
+before `PV10READ`, unlike in alphabetical order.
+
+## Details
+
+PISA files name the plausible values by subject, for example `PV1MATH`
+or `PV1READ`, so give the subject as the suffix: `suffix = "MATH"` here,
+or `pv_suffix = "MATH"` in
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
+The default `suffix = ""` matches only bare names such as `PV1` and
+`PV2`, never `PV1MATH`; if the data also contain subject-suffixed
+plausible values, the function warns.
+
+The numbers must run from 1 without gaps or repeats (`PV1` and `PV01`
+both count as 1); otherwise the function stops with an error. It also
+stops when no column matches, and the error message then lists any
+subject suffixes found in the data.
 
 ## See also
 
-[`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md);
-build a design with
 [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
-or a target with
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
+and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+which call this function.
 
 Other pvstackr-detection:
 [`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md)

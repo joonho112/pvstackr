@@ -2,105 +2,109 @@
 
 ## Package overview
 
-Orientation plus the formal object and interval contracts.
+What pvstackr computes, and the objects that its functions return.
 
 - [`pvstackr`](https://joonho112.github.io/pvstackr/reference/pvstackr-package.md)
   [`pvstackr-package`](https://joonho112.github.io/pvstackr/reference/pvstackr-package.md)
-  : pvstackr: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect
-  Targets for Plausible Values
+  : pvstackr: Bayesian Plausible-Value Analysis with One Calibrated
+  Stacked Fit
 - [`pvstackr_object_contracts`](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
-  : pvstackr Object Contracts
+  : Objects returned by pvstackr
 
-## Declare the design
+## Check the columns
 
-Describe a PISA-style PV design and detect PV / BRR replicate columns.
+Find and check the plausible-value, final-weight and replicate-weight
+columns of a PISA-style data set.
 
 - [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
   [`print(`*`<pvstackr_design>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
-  : Declare a PISA-Style Plausible-Value Design
+  : Declare the plausible-value and weight columns
 - [`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)
-  : Detect PISA-Style Plausible-Value Columns
+  : Find PISA-style plausible-value columns
 - [`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md)
-  : Detect PISA-Style BRR Replicate-Weight Columns
+  : Find PISA-style replicate-weight columns
 
-## Assemble the target
+## Compute the target
 
-Build the external Rubin / BRR-Fay fixed-effect target.
+Compute the design-based target for the fixed effects from the BRR-Fay
+replicate weights and Rubin’s rules, and check or rebuild a saved
+target.
 
 - [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
   [`print(`*`<pvstackr_brr_target>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
-  : Assemble a Rubin/BRR-Fay Fixed-Effect Target
+  : Compute the design-based target for the fixed effects
 - [`pv_revalidate_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_revalidate_brr_target.md)
-  : Revalidate a Legacy BRR-Fay Target Against Its Original Inputs
+  : Check a BRR-Fay target or rebuild it in the current format
 
-## Fit a method
+## Fit a model
 
-The dispatcher, the three method engines, and fitting controls.
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),
+the functions for the three methods, and their settings.
 
 - [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-  : Fit a pvstackr Method
+  : Fit a model to plausible-value data
 - [`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
-  : Fit the Direct Stacked Plausible-Value Model
+  : Fit a stacked model and calibrate it to a BRR-Fay target
 - [`pv_fit_reference()`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md)
-  : Fit the Per-PV Bayesian/Backend Reference Method
+  : Combine one fit per plausible value with Rubin's rules
 - [`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md)
-  : Fit the PSIS-Reweighted Stacked Method
+  : Reweight stacked draws toward each plausible value
 - [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
   [`print(`*`<pvstackr_control>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
-  : Construct pvstackr Fitting Controls
+  : Settings for the fitting functions
 
-## Attach a backend
+## Fitting engine
 
-The bundled brms adapter, exported so an injected adapter can reuse it
-or replace one piece of it.
+The fitting functions of the bundled brms engine, which you can reuse
+when you supply fitting functions of your own.
 
 - [`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
   [`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
   [`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
-  : Bundled brms adapter for the stacked fit
+  : Bundled brms engine for the stacked fit
 
 ## Compare methods
 
-Aligned fixed-effect comparison across methods with agreement
+Put fits made with different methods side by side, with agreement
 diagnostics.
 
 - [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
-  : Compare pvstackr Method Fits
+  : Compare fits made with different methods
 
 ## Read results
 
-Stable accessors for the reportable estimate table, target, draws, and
-diagnostics.
+Read the estimate table, the target, the draws and the diagnostics of a
+fit.
 
 - [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-  : Access pvstackr Estimates
+  : Get the estimate table of a fit
 - [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
-  : Access pvstackr Targets
+  : Get the target of a fit
 - [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
-  : Access pvstackr Draws
+  : Get the calibrated draws of a fit
 - [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
-  : Access pvstackr Diagnostics
+  : Get the diagnostics of a fit or comparison
 
-## Display methods
+## Print and summary
 
-Compact console displays for all object types; summary methods for fit
-and comparison objects.
+Print methods for all pvstackr objects, and summary methods for fits and
+comparisons.
 
 - [`print(`*`<pvstackr_fit>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_fit_summary.md)
   [`summary(`*`<pvstackr_fit>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_fit_summary.md)
   [`print(`*`<summary.pvstackr_fit>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_fit_summary.md)
-  : Display Methods for pvstackr Fits
+  : Print and summarize a fit
 - [`print(`*`<pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   [`summary(`*`<pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
   [`print(`*`<summary.pvstackr_method_comparison>`*`)`](https://joonho112.github.io/pvstackr/reference/pvstackr_method_comparison_summary.md)
-  : Display Methods for pvstackr Method Comparisons
+  : Print and summarize a method comparison
 
-## Migration
+## Earlier versions
 
-Reading objects written by an earlier release.
+Read `stack_psis` fits saved by an earlier version of pvstackr.
 
 - [`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
   [`print(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
   [`summary(`*`<pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
   [`print(`*`<summary.pvstackr_legacy_psis_inspection>`*`)`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
-  : Convert a Legacy PSIS Fit to a Safe Inspection Object
+  : Inspect a stack_psis fit saved by an earlier version of pvstackr

@@ -1,10 +1,18 @@
-# Revalidate a Legacy BRR-Fay Target Against Its Original Inputs
+# Check a BRR-Fay target or rebuild it in the current format
 
-`pv_revalidate_brr_target()` upgrades a schema-0.1 BRR-Fay target only
-after rebuilding its model, replicate-weight target, target content, and
-binding manifest from the complete original data and formula. Legacy
-objects without those inputs remain inspection-only and cannot be used
-for reportable fitting.
+`pv_revalidate_brr_target()` checks a target from
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+and returns it in the current format. A target in the current format
+(`schema_version` `"0.2.0"`) is returned unchanged; the function stops
+with an error if that target was changed after it was created. A target
+in the format of pvstackr 0.1.x (`schema_version` `"0.1.0"`) is computed
+again from `data` and `formula`, and the new target is returned if it
+matches the old one. In pvstackr 0.2.x no target saved by pvstackr 0.1.x
+matches, because pvstackr 0.2.0 computes the design checksum
+`design_hash` differently (see the package NEWS); compute such a target
+again with
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
+The target that you pass is not modified.
 
 ## Usage
 
@@ -21,27 +29,43 @@ pv_revalidate_brr_target(
 
 - target:
 
-  A `pvstackr_brr_target` object.
+  A BRR-Fay target (class `pvstackr_brr_target`).
 
 - data:
 
-  The complete original data frame used to create a schema-0.1 target.
+  For a target in the old format, the data frame from which it was
+  built; default `NULL`. Not used for a target in the current format.
 
 - formula:
 
-  The original model formula.
+  For a target in the old format, the formula from which it was built;
+  it must be the formula stored on the target. Default `NULL`; not used
+  for a target in the current format.
 
 - conf_level:
 
-  Confidence level used by the legacy target. This must be supplied when
-  it is not retained on the source object.
+  For a target in the old format, the confidence level to store in the
+  new target, a number between 0 and 1. It is required when the old
+  target does not store one (targets saved by pvstackr 0.1.x do not);
+  when it does, give `NULL` (default) or the same value. Not used for a
+  target in the current format.
 
 ## Value
 
-A separately allocated, validated schema-0.2 `pvstackr_brr_target`, or
-the unchanged schema-0.2 input.
+A target (class `pvstackr_brr_target`) in the current format: the input
+itself when it is already in that format, otherwise the new target.
 
 ## Details
 
-Already bound schema-0.2 targets are strictly validated and returned
-unchanged.
+The old target is computed again with
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+using the columns and settings stored on it. The new target must match
+the old one: the formula, the settings (such as the numbers of plausible
+values and replicate weights, the Fay coefficient and the
+degrees-of-freedom rule), the fixed-effect names and `design_hash`
+exactly, and the estimates, covariance matrices, standard errors and
+degrees of freedom up to a small numerical tolerance (absolute 1e-12
+plus relative 1e-10), because the last digits of least-squares results
+can differ between computers. Otherwise, and for a target in the old
+format without `data` and `formula`, the function stops with an error.
+The new target records the upgrade in `binding_manifest$migration`.

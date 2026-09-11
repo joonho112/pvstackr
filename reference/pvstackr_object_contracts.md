@@ -1,269 +1,350 @@
-# pvstackr Object Contracts
-
-This page records the package-level object contracts used by the current
-public API. These contracts are intentionally conservative while
-`pvstackr` is in its fixed-effect method stage.
-
-## Current Method Boundary
+# Objects returned by pvstackr
 
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-recognizes three public method IDs: `"stack_direct"`, `"stack_psis"`,
-and `"per_pv"`. All three are implemented in this package stage through
-injected or precomputed light paths. Only `stack_direct` carries a
-design-based external Rubin/BRR-Fay target. `per_pv` carries a
-`pvstackr_reference_pool` built from per-PV backend fixed-effect draws;
-its within-PV variance is the model-based covariance of the selected
-posterior draws. `stack_psis` carries no formal target; its estimates
-are diagnostic/reference Rubin pooling of PSIS-weighted stacked draw
-summaries using model-based weighted covariance.
-
-## `stack_direct` Boundary
-
-`stack_direct` requires an external `pvstackr_brr_target` from
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
-The wrapper checks formula RHS equality, fixed-effect name alignment,
-target provenance, and target policy before fitting. Group terms such as
-`(1 | school)` and `(1 || school)` are not accepted for the BRR-Fay
-target path because the current target engine is fixed-effect-only.
-
-## `pvstackr_ccc` Contract
-
-A `pvstackr_ccc` object stores deterministic fixed-effect CCC
-calibration from raw stacked draws to the external BRR-Fay/Rubin
-fixed-effect target. Its reportable fields include calibrated
-fixed-effect draws, raw and target centers, raw and target covariance
-matrices, the calibration matrix, target hash, and structured
-diagnostics. The diagnostic `delta_c_rel` is the RMS target-SE-scaled
-raw-center to target-center separation across fixed-effect terms;
-`delta_c_max` is the maximum absolute target-SE-scaled separation and is
-the NO-SEND gate metric. `a_matrix_fro_rel` is the relative Frobenius
-distance of the calibration matrix from identity and is descriptive
-rather than a NO-SEND gate. Calibration-matrix conditioning is gated by
-`kappa_A`: green for `kappa_A < 1e6`, yellow for `1e6 <= kappa_A < 1e8`,
-and red for `kappa_A >= 1e8`. Center separation bands are green for
-`delta_c_max < 1e-2`, yellow for `1e-2 <= delta_c_max < 5e-2`, and red
-for `delta_c_max >= 5e-2`. The diagnostics always compare the raw
-stacked fixed-effect center to the external target center, even when the
-lower-level `center = "posterior"` convention leaves the output draws
-centered at the raw posterior mean. That posterior-centered CCC
-convention is diagnostic/exploratory only; reportable `stack_direct`
-`pvstackr_fit` output requires `control$center = "target"`. Yellow
-center separation or conditioning becomes a top-level `pvstackr_fit`
-warning; red center separation or conditioning blocks reportable
-estimates.
-
-## `pvstackr_fit` Contract
-
-A reportable `stack_direct` `pvstackr_fit` with status `"ok"` or
-`"warning"` must contain non-null `design`, `target`, `stack_fit`, and
-`ccc` components; a non-empty fixed-effect estimate table; and
-calibrated fixed-effect draws when `control$return_draws = TRUE`.
-Reportable `stack_direct` fits must use `control$center = "target"` so
-fixed-effect estimates are the external Rubin/BRR-Fay target centers.
-Top-level calibrated fixed-effect draws are the only retained
-individual-draw matrix: nested raw stacked draws, nuisance draws, full
-calibrated draws, and duplicate calibrated fixed-effect matrices are
-removed for either retention setting. Blocked fits retain no individual
-draws and record effective `return_draws = FALSE`. Top-level `warnings`
-are reserved for interpretation-level diagnostics such as explicit
-priors or yellow center separation. Routine backend draw-column drops,
-such as sampler columns named `lp__`, are retained in nested stack-fit
-diagnostics instead of becoming top-level fit warnings.
-
-Every current `pvstackr_fit` also carries an exact `validation` record
-with a validation-schema ID, semantic-policy ID, canonicalizer ID,
-fast-path eligibility flag, and a domain-separated SHA-256 stamp. Deep
-validation evaluates the full method contract and then verifies this
-stamp. Cheap validation still re-hashes the current package-owned
-payload; it never trusts the stored stamp alone. Fits that retain opaque
-backend objects are not fast-path eligible and fall back to deep
-validation because backend implementation state is outside the portable
-stamp boundary. The stamp is tamper-evident for stale or uncoordinated
-mutations, not an external digital signature or proof of authorship.
-
-A reportable `per_pv` `pvstackr_fit` with status `"ok"` or `"warning"`
-must contain a non-null `pvstackr_reference_pool` target and a non-empty
-fixed-effect estimate table. `per_pv` fits do not carry `stack_fit` or
-`ccc` components. The within-PV variance component is the model-based
-posterior covariance of the selected per-PV fixed-effect draws, not a
-BRR/Fay replicate variance. `weight_col`, `rep_weight_cols`, `fay_k`,
-and `id_cols` are provenance/design metadata for this path; they are not
-automatically supplied to `fit_function` and do not affect Rubin
-pooling. Weighted backend fits must be handled by the backend adapter,
-data supplied to the backend, or backend-specific `additional_args`.
-Per-PV draws, when retained, remain fixed-effect-only matrices nested in
-diagnostics rather than top-level reportable draws because Rubin pooling
-does not synthesize a single calibrated top-level draw matrix.
-
-A reportable `stack_psis` `pvstackr_fit` with status `"ok"` or
-`"warning"` must contain PSIS diagnostics, pooling diagnostics, weighted
-per-PV summaries, and a non-empty fixed-effect estimate table. The
-pooling is diagnostic/reference Rubin pooling of PSIS-weighted
-fixed-effect summaries using model-based weighted covariance; this path
-does not construct an external BRR-Fay target. Group terms such as
-`(1 | school)` and `(1 || school)` are rejected for this
-fixed-effect-only path. Failed Pareto-k diagnostics cannot be reported
-as `status = "ok"`. With the default block fallback, failed PSIS
-diagnostics produce a blocked fit containing only the canonical
-scalar/vector Pareto-k decision record and its redaction manifest, with
-no reportable estimates, target, design, stack fit, CCC, or draws. All
-heavy-retention controls are recorded as effective `FALSE` for a blocked
-fit, irrespective of the original request. When `return_draws = TRUE` on
-a reportable fit, diagnostics retain the fixed-effect-only proposal
-matrix together with its normalized PV weight matrix; these two payloads
-are retained or removed as a pair. Package-owned nuisance draws and
-nested full stack draws are never retained in a final PSIS fit.
-Explicitly authorized opaque backend objects and log-likelihood matrices
-remain governed separately by `keep_backend_fit` and `keep_log_lik`.
-
-## `pvstackr_method_comparison` Contract
-
-A `pvstackr_method_comparison` object compares two or more
-already-created `pvstackr_fit` objects. It contains aligned fixed-effect
-rows in `estimate_table`, method-level fields in `diagnostic_table`,
-agreement diagnostics in `agreement`, and elapsed-time metadata in
-`timing`. Method IDs must remain one of `"stack_direct"`,
-`"stack_psis"`, or `"per_pv"`, while method labels are stable unique
-labels used to identify compared fits. Blocked methods are retained with
-reason codes and `NA` comparison statistics instead of being dropped.
-The aligned `estimate_table` also preserves interval metadata from each
-fit: `df_method`, `df_complete`, `conf_level`, `interval_role`, and
-`coverage_claim_allowed`. Method-level diagnostics summarize the
-interval role and count how many reportable rows are descriptive rather
-than coverage-claimable. They also preserve available target and pooling
-provenance (`target_source`, `target_hash`, `pooling_source`, and
-`pooling_hash`) and shared-provenance flags (`shared_target_hash`,
-`shared_pooling_hash`, and `shared_external_target`). The
-`shared_external_target` flag is narrow: it is true only when two or
-more methods share the same non-missing `external_brr_fay_rubin` target
-hash. Broader overlap, including shared target-source families or shared
-reference hashes, is summarized in `diagnostics$target_overlap`.
-Agreement diagnostics are descriptive and should not be read as
-automatic independent corroboration when compared methods share a target
-hash, pooling hash, target source, or estimand construction.
-
-## Accessor Contract
-
-Public accessors expose stable object fields without changing their
-semantics.
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-returns reportable fixed-effect estimate tables, including
-interval/provenance columns such as `df_method`, `df_complete`,
-`interval_role`, `coverage_claim_allowed`, `target_source`,
-`target_hash`, `pooling_source`, and `pooling_hash` when those columns
-are part of the fit contract.
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
-returns the formal fit target object when a method has one, and `NULL`
-for methods such as `stack_psis` that do not carry a formal target.
-Estimate-row `target_source` labels are provenance metadata; they are
-not a guarantee that
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
-returns a non-null object.
+and the method functions
+[`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md),
+[`pv_fit_reference()`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md)
+and
+[`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md)
+return a fit, a list of class `pvstackr_fit`;
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+returns a list of class `pvstackr_method_comparison`. A fit holds the
+estimate table, the target, the draws and the diagnostics of one method,
+and a `status` that says whether estimates are reported. Read these
+objects with
+[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
+[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
 [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
-returns retained top-level reportable draws only; per-PV reference draws
-and the PSIS fixed-effect proposal/weight pair remain diagnostic
-artifacts accessible through
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
-Current fit accessors and fit print/summary methods use the rehash
-validation tier: they rescan the current package-owned payload and
-compare its SHA-256 stamp without repeating method-specific semantic
-recomputation. This is linear in retained payload bytes rather than an
-O(1) cache lookup. Opaque-backend fits remain ineligible and fall back
-to deep validation.
+and
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+rather than with `$`.
 
-Historical `stack_psis` fits that do not satisfy the current fit
-envelope must be passed to
-[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md).
-The migrator never promotes saved estimates, pooling summaries, weights,
-or draws. It returns an explicit inspection-only object containing
-bounded Pareto-k decision evidence and a redaction manifest;
+## Methods
+
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+has three methods, and all of them report only the fixed effects
+([`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+gives the scope and the interval rule). Only `stack_direct` has a
+bundled engine and a design-based target.
+
+- `"stack_direct"` fits one model to the stacked data, with the bundled
+  brms engine (`pv_control(backend = "brms")`) or with fitting functions
+  that you supply, and calibrates its fixed-effect draws to the target
+  from
+  [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+  (BRR-Fay replicate weights and Rubin's rules). All `stack_direct` fits
+  must use `control$center = "target"` (the default), so the estimates,
+  standard errors and degrees of freedom are those of the target. The
+  other value, `"posterior"`, is accepted by
+  [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
+  but used by no fitting function:
+  [`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
+  stops with an error when it is set.
+
+- `"per_pv"` takes the draws of one fit per plausible value, made by
+  your fitting functions or computed elsewhere, and combines them with
+  Rubin's rules. The variance within each plausible value comes from the
+  posterior draws, not from the replicate weights. The survey weights
+  are not automatically passed to your `fit_function`; a weighted fit
+  must take them from the data inside that function or through
+  `additional_args`. See
+  [`pv_fit_reference()`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md).
+
+- `"stack_psis"` reweights one set of stacked draws, which you supply or
+  which your fitting functions produce, toward each plausible value with
+  importance weights that you supply, then combines the weighted results
+  with Rubin's rules. See
+  [`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md).
+
+## The fit object (`pvstackr_fit`)
+
+A fit is a list with these components:
+
+- `method`: `"stack_direct"`, `"per_pv"` or `"stack_psis"`.
+
+- `status`, `reason_codes`, `warnings`: the status of the fit, the codes
+  that explain a `"warning"` or `"blocked"` status, and the matching
+  messages (see "Status and checks"). An `"ok"` fit has no reason codes
+  and no warnings.
+
+- `estimates`: the estimate table (see "Estimate table"); empty when the
+  fit is blocked.
+
+- `target`: for `stack_direct`, the `pvstackr_brr_target` object from
+  [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md);
+  for `per_pv`, a `pvstackr_reference_pool` object that holds the
+  Rubin's-rules combination of the per-plausible-value draws; `NULL` for
+  `stack_psis`.
+
+- `draws`: for `stack_direct` with `return_draws = TRUE` (the default of
+  [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)),
+  the matrix of calibrated fixed-effect draws; otherwise `NULL`. With
+  `return_draws = TRUE`, `per_pv` keeps its draws in
+  `get_diagnostics(fit)$reference$per_pv_draws`, and `stack_psis` keeps
+  the stacked fixed-effect draws and the normalized weights in
+  `get_diagnostics(fit)$weighted`.
+
+- `design`: the design record (the plausible-value and weight columns,
+  the numbers of plausible values and replicate weights, and checksums).
+  It holds the data only when `keep_data = TRUE`, and it is `NULL` for a
+  blocked fit and when `data` and `formula` were not both supplied.
+
+- `stack_fit`: a record of the stacked fit (engine, settings and sampler
+  diagnostics) for `stack_direct`, and for `stack_psis` when it fitted
+  or received a stacked fit. It holds the engine's fitted model only
+  when `keep_backend_fit = TRUE` and log-likelihood draws only when
+  `keep_log_lik = TRUE`; the stacked draws are not kept.
+
+- `ccc`: the calibration record of a `stack_direct` fit (see
+  "Calibration record").
+
+- `diagnostics`: a list whose names depend on the method. For
+  `stack_direct`: `preflight` (the record of the check that the formula,
+  the data and the target match), `sampler` and `sampler_gate` (the
+  sampler diagnostics and their check), `stack_fit`,
+  `stack_fit_warnings` and `ccc`. Messages from the stacked fit, such as
+  a note that the engine's `lp__` column was dropped, go to
+  `stack_fit_warnings`, not to `warnings`. For `per_pv`: `reference` and
+  `pooling`. For `stack_psis`: `psis`, `pooling` and `weighted`.
+
+- `control`: the
+  [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
+  settings.
+
+- `schema_version`, `provenance`, `validation`: see "Technical details".
+
+## Status and checks
+
+`status` is `"ok"` when no check gave a warning or a block; it is not a
+statement that the sampler converged. With `"warning"`, estimates are
+returned and `reason_codes` and `warnings` say which checks gave the
+warning. With `"blocked"`, the estimate table is empty and
+`reason_codes` says why. The most severe result of all checks sets the
+status. The checks and their thresholds are pvstackr's rules:
+
+- Sampler diagnostics (`stack_direct`, checked before calibration; a fit
+  blocked here is not calibrated). The six values `rhat_max`,
+  `ess_bulk_min`, `ess_tail_min`, `divergences`, `chains` and
+  `post_warmup_draws_per_chain`, from the bundled engine or from your
+  `diagnose_function`, must all be available, and the last two must
+  equal `chains` and `iter - warmup` in `control`; otherwise the fit is
+  blocked. The largest R-hat gives a warning above 1.01 and a block
+  above 1.05. For the bulk and the tail effective sample size (ESS),
+  pvstackr takes the smallest ESS over the parameters (a total over all
+  chains) and divides it by the number of chains: a total below 100 or a
+  per-chain value below 25 blocks, and a per-chain value below 100 gives
+  a warning. Any divergent transition blocks. These reason codes start
+  with `sampler_`.
+
+- Center separation (`stack_direct`). `delta_c_max` is the largest
+  absolute difference, over the fixed effects, between the target
+  estimate and the mean of the stacked draws before calibration, divided
+  by the target standard error. It gives a warning from 0.01
+  (`center_separation_yellow`) and a block from 0.05
+  (`center_separation_red`). `delta_c_rel`, the root mean square (RMS)
+  of the same ratios, is recorded but does not change the status.
+
+- Conditioning (`stack_direct`). `kappa_A`, the condition number of the
+  calibration matrix (see "Calibration record"), gives a warning from
+  1e6 (`ccc_conditioning_yellow`) and a block from 1e8
+  (`ccc_conditioning_red`).
+
+- Priors (`stack_direct`). Any explicit prior, even a flat one, gives a
+  warning (`explicit_prior_warning`).
+
+- Pareto k-hat (`stack_psis`). The fit is blocked (`psis_k_too_high` or
+  `psis_k_not_evaluated`) unless every plausible value has a finite
+  Pareto k-hat below `control$psis_k_threshold` (default 0.7, also the
+  maximum), and blocked (`psis_weight_provenance_incomplete`) unless the
+  weights come with `psis_producer` and `psis_producer_version`. Weights
+  that pvstackr makes from `log_ratios` are not smoothed and are always
+  blocked (`psis_smoothing_not_applied`). A `stack_psis` fit never has
+  status `"warning"`.
+
+- `per_pv` has no checks; its status is always `"ok"`.
+
+A blocked fit keeps only what explains the block, and its `control`
+records `return_draws`, `keep_data`, `keep_backend_fit` and
+`keep_log_lik` as `FALSE`. A blocked `stack_direct` fit keeps the
+target, the diagnostics `preflight`, `sampler` and `sampler_gate` (and
+`ccc`, reduced to single values grouped as `center`, `conditioning`,
+`residual` and `prior`, when the calibration check blocked it) and a
+`redaction` list that names what was removed; it has no data, stacked
+fit, calibration matrices, estimates or draws. The diagnostics of a
+blocked `stack_psis` fit hold only `psis` and `redaction`; it has no
+target, design, stacked fit, estimates, weights or draws.
+
+## Calibration record (`pvstackr_ccc`)
+
+The `ccc` component of a `stack_direct` fit, of class `pvstackr_ccc`,
+records the Cholesky calibration correction (CCC). `psi_raw` and
+`Sigma_raw` are the mean and covariance of the stacked fixed-effect
+draws before calibration; `psi_target` and `Sigma_target` are the target
+estimates and the target covariance (`T_MI`). With \\L\_{raw}\\ and
+\\L\_{tgt}\\ the lower Cholesky factors of `Sigma_raw` and
+`Sigma_target`, the calibration matrix is \\A = L\_{tgt} L\_{raw}^{-1}\\
+(`A`). Each stacked draw is centered at `psi_raw`, multiplied by `A` and
+shifted to `psi_target`, so the calibrated draws have mean `psi_target`
+and covariance `Sigma_target`; they are kept only in the fit's `draws`.
+
+`ccc$diagnostics`, which
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+also returns as `ccc`, holds `delta_c_max`, `delta_c_rel` and `kappa_A`
+(see "Status and checks") and values that are recorded for inspection
+and do not change the status: `a_matrix_fro_rel` (how far `A` is from
+the identity matrix) and `rho1`, `rho2` and `empirical_fro_rel` (how far
+the covariance of the calibrated draws is from `Sigma_target`).
+
+## Estimate table
+
+[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
+returns one row per fixed effect. All methods give these columns:
+
+- `term`: the coefficient name with the prefix `b_`, such as
+  `b_Intercept`.
+
+- `estimate`, `se` and `df`: the estimate, its standard error and its
+  degrees of freedom. `std.error` repeats `se`.
+
+- `df_method`: `"classic"` or `"barnard_rubin"`. `df_complete`: the
+  complete-data degrees of freedom that you gave for the Barnard-Rubin
+  rule; `NA` with classic degrees of freedom (a `stack_psis` fit copies
+  a value given with `"classic"` into this column without using it).
+
+- `conf_level`, `conf_low` and `conf_high`: the interval level (from
+  [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md),
+  default 0.95) and the interval, `estimate` plus or minus a t quantile
+  with `df` degrees of freedom times `se`. `conf.low` and `conf.high`
+  repeat the interval.
+
+- `interval_role` and `coverage_claim_allowed`: how the interval can be
+  read (see below).
+
+- `parameter_scope`: always `"fixed_effect"`.
+
+- `target_source` and `target_hash`: see "Source labels".
+
+`per_pv` and `stack_psis` tables add `pooling_source` and
+`pooling_hash`; `stack_psis` tables also add `psis_status`,
+`pareto_k_max`, `psis_k_threshold`, `psis_source`, `pareto_k_source`,
+`weight_method`, `psis_producer` and `psis_producer_version`. There is
+no column for the fraction of missing information; for `stack_direct`
+and `per_pv` fits it is `get_target(fit)$fmi`. For `stack_direct`,
+`estimate`, `se` and `df` are the target's (see "Methods"); for `per_pv`
+and `stack_psis` they come from the Rubin's-rules combination of the
+per-plausible-value results.
+
+`coverage_claim_allowed` is `TRUE` when pvstackr's reporting rule lets
+you read the interval as a confidence interval with nominal coverage and
+`FALSE` when the interval is descriptive; the label records how the
+interval was built and does not certify its coverage. pvstackr sets
+`interval_role` and `coverage_claim_allowed` by the rule in
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md):
+
+- `coverage_barnard_rubin`: `stack_direct` with a target built with
+  `df_method = "barnard_rubin"` and `df_complete`;
+  `coverage_claim_allowed = TRUE`.
+
+- `descriptive_classic_rubin`: `stack_direct` with the classic degrees
+  of freedom; `coverage_claim_allowed = FALSE`.
+
+- `reference_classic_rubin` and `reference_barnard_rubin`: `per_pv`;
+  always `coverage_claim_allowed = FALSE`.
+
+- `psis_classic_rubin` and `psis_barnard_rubin`: `stack_psis`; always
+  `coverage_claim_allowed = FALSE`.
+
+The labels do not depend on the status: a fit with status `"warning"`
+keeps them.
+
+When some or all intervals are descriptive,
+[`print()`](https://rdrr.io/r/base/print.html) of a fit or a comparison
+adds a line beginning "interval note:".
+
+## Source labels
+
+`target_source` names where the estimates come from:
+
+- `"external_brr_fay_rubin"` (`stack_direct`): the target that
+  [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+  builds from the BRR-Fay replicate weights and Rubin's rules.
+  [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
+  returns it, and `target_hash` is its checksum.
+
+- `"per_pv_rubin_draws"` (`per_pv`): Rubin's rules applied to the draws
+  of the per-plausible-value fits; the result is the fit's `target`.
+
+- `"stack_psis_rubin_pooling"` (`stack_psis`): Rubin's rules applied to
+  the weighted results. This is only a label: a `stack_psis` fit has no
+  target object, and
+  [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
+  returns `NULL`.
+
+For `per_pv` and `stack_psis`, `pooling_source` repeats this label, and
+both `pooling_hash` and `target_hash` hold a checksum of the combined
+result.
+
+A `stack_psis` fit records how its weights were obtained, in the
+estimate table and in `get_diagnostics(fit)$psis`:
+
+- `psis_source`: `"supplied_psis_weights"` (you passed `psis_weights`
+  and `pareto_k`), `"injected_psis_function"` (your `psis_function`
+  computed the weights and the Pareto k-hat values from `log_ratios`) or
+  `"self_normalized_log_ratios"` (you passed `log_ratios` and
+  `pareto_k`, and pvstackr turned the ratios into normalized weights
+  without smoothing).
+
+- `pareto_k_source`: `"supplied"` or `"injected_function_output"`.
+
+- `weight_method`: `"caller_declared_external_psis"` when you named the
+  program that produced the weights (`psis_producer` and
+  `psis_producer_version`), `"unspecified_external"` when you did not,
+  and `"self_normalized_raw_importance"` for weights made from
+  `log_ratios`. Only the first can give estimates; pvstackr records the
+  program that you name but does not check it.
+
+`get_diagnostics(fit)$psis` also records how concentrated the normalized
+weights `w` of each plausible value are: `weight_ess_iid`
+(`1 / sum(w^2)`, a Kish-type effective sample size),
+`weight_ess_fraction` (that value divided by the number of draws) and
+`max_normalized_weight`. These are not MCMC effective sample sizes and
+do not change the Pareto k-hat check. `weight_diagnostic_authority` is
+`"retained_weights_recomputed"` when the weights are kept
+(`return_draws = TRUE` on a fit with estimates), so that pvstackr can
+recompute the three values, and `"owned_stamp_bounded_projection"` when
+the weights were removed: the values are then covered by the fit's
+checksum but cannot be recomputed.
+
+## Method comparisons
+
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+returns a list of class `pvstackr_method_comparison` and describes its
+tables; read it with
 [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
 and
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
-refuse that object, while
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
-remains available. Current comparisons and fit or comparison summaries
-carry source and owned-payload validation stamps. Pre-marker serialized
-comparisons/summaries containing `stack_psis` are refused and must be
-rebuilt, closing derived-table paths that no longer carry their source
-fit.
-
-Current live `stack_direct` fits expose normalized sampler diagnostics
-and a frozen reportability gate through
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
-A sampler- or CCC-blocked fit retains only its independently valid
-external BRR-Fay target plus the exact slim gate evidence required to
-reproduce the blocked status; CCC evidence is scalar-only. Design data,
-stack/backend fit, full CCC matrices, estimates, and draws are absent,
-and every heavy-retention control is recorded as effective `FALSE`. The
-target is rebuilt from an exact recursive allowlist with empty warnings
-and a safe formula environment; the slim preflight snapshot does not
-retain a formula object. A recursive fail-closed validator rejects
-result-like fields, matrices/arrays/data frames, raw or complex
-payloads, executable/external objects, hidden leaf attributes, and
-noncanonical diagnostic variants anywhere outside that independent
-target. Current `per_pv` fits have no typed blocked-object path, so a
-reportable reference fit cannot be relabeled as blocked. Legacy cached
-schema-0.1 stack fits remain readable without the newer sampler gate.
+Agreement between methods is descriptive.
 
-## Reporting Scope
+## Reading results
 
-Calibrated reporting is fixed-effect-only. Variance-component or
-sampler-diagnostic columns may be retained inside backend or stack-fit
-components, but they are not calibrated to the Rubin/BRR-Fay target and
-are not included in the reportable estimate table.
+Read a fit with
+[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
+[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
+[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
+and
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md);
+they stop with an error if the fit was changed after it was created (see
+"Technical details"). A `stack_psis` fit saved by an earlier version of
+pvstackr that does not pass the current checks must go through
+[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md),
+which returns an object for inspection only.
 
-## Interval Metadata
+## Technical details
 
-The interval-role vocabulary is method-specific:
-
-- `descriptive_classic_rubin`: `stack_direct` rows backed by an external
-  `external_brr_fay_rubin` target using classic Rubin imputation df.
-  These intervals are descriptive, and `coverage_claim_allowed = FALSE`.
-
-- `coverage_barnard_rubin`: `stack_direct` rows backed by an external
-  `external_brr_fay_rubin` target using Barnard-Rubin df with explicit
-  `df_complete`. These rows set `coverage_claim_allowed = TRUE`.
-
-- `reference_classic_rubin` and `reference_barnard_rubin`: `per_pv`
-  reference-pooling rows based on model-based posterior-draw covariance.
-  These rows always set `coverage_claim_allowed = FALSE`, even when
-  Barnard-Rubin df and `df_complete` are supplied.
-
-- `psis_classic_rubin` and `psis_barnard_rubin`: `stack_psis` diagnostic
-  pooling rows based on PSIS-weighted model-based covariance. These rows
-  always set `coverage_claim_allowed = FALSE`, even when Barnard-Rubin
-  df and `df_complete` are supplied.
-
-Thus `df_method = "barnard_rubin"` does not by itself create a
-coverage-claimable interval. In this package stage, coverage claims are
-enabled only for `stack_direct` rows backed by the external BRR-Fay
-target with `interval_role = "coverage_barnard_rubin"`. Default fit and
-method-comparison print methods emit a one-line interval note whenever
-reportable rows are descriptive rather than coverage-claimable.
-
-## Source Vocabulary
-
-`target_source = "external_brr_fay_rubin"` denotes a formal external
-design-based target object. `target_source = "per_pv_rubin_draws"`
-denotes a `per_pv` reference pool built from per-PV backend draw
-summaries. `stack_psis` fits do not carry a formal target object; their
-estimate rows use `target_source = "stack_psis_rubin_pooling"` and
-`pooling_source = "stack_psis_rubin_pooling"` to record diagnostic
-pooling provenance. PSIS input-source diagnostics use a separate
-vocabulary: `supplied_psis_weights`, `injected_psis_function`, and
-`self_normalized_log_ratios`. `pareto_k_source` distinguishes supplied
-diagnostics from injected-function output, while `weight_method`
-distinguishes caller-declared external PSIS from unspecified external
-weights and self-normalized raw importance weights. Only the
-caller-declared path can expose estimates; the declaration records
-producer/version but is not package verification. Each path records
-bounded per-PV Kish-style iid weight ESS (`weight_ess_iid`), its
-draw-count fraction (`weight_ess_fraction`), and
-`max_normalized_weight`. These concentration diagnostics are not MCMC
-ESS and never replace the immutable Pareto-k gate. If normalized weights
-are retained, deep validation recomputes these diagnostics. A compact or
-blocked object instead records
-`weight_diagnostic_authority = "owned_stamp_bounded_projection"`:
-feasibility and the owned payload stamp remain checkable, but the
-redacted original weights cannot be independently reconstructed.
+`validation` holds a SHA-256 checksum of the fit, which the four reading
+functions, [`print()`](https://rdrr.io/r/base/print.html) and
+[`summary()`](https://rdrr.io/r/base/summary.html) recompute; it detects
+changes but is not a digital signature. A model kept with
+`keep_backend_fit = TRUE` is not covered by the checksum, so changes
+inside that model are not detected. `schema_version` is the format
+version of the object and `provenance` a record of how it was built.

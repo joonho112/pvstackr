@@ -1,98 +1,119 @@
-# A4: Comparing methods — choosing stack_direct, per_pv, or stack_psis
+# Comparing the three fitting methods
 
 Abstract
 
-pvstackr ships three fitting methods. This vignette uses
-[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
-to align `stack_direct`, `per_pv`, and `stack_psis` on the same data and
-shows how to read the agreement diagnostics. It states the two cautions
-plainly — design variance is not optional, and a small Pareto-k does not
-imply a correct `stack_psis` variance — and gives the rule of thumb: use
-`stack_direct`, keep `stack_psis` as a cross-check, and treat `per_pv`
-as the reference.
+pvstackr has three fitting methods, `stack_direct`, `per_pv` and
+`stack_psis`. This article describes how they differ, lines up three
+example fits with
+[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md),
+and reads the estimates and the agreement diagnostics of the comparison.
+It ends with two cautions, on the standard errors and on the Pareto
+k-hat values of `stack_psis`, and with pvstackr’s recommendation for
+choosing a method.
 
 ``` r
 
 library(pvstackr)
 ```
 
-Vignettes A1–A3 lived entirely inside one method: load a `stack_direct`
-fit, read its estimate table, and decide what is safe to report. This
-vignette steps back to the choice *between* methods. pvstackr ships
-three — `stack_direct`, `per_pv`, and `stack_psis` — and
+pvstackr fits a model to plausible-value data with one of three methods:
+`stack_direct` (the default), `per_pv` and `stack_psis`.
+
+The example compares three fits of the small synthetic data set bundled
+with pvstackr. The `stack_direct` fit is the example fit that ships with
+the package; [Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html#example-fit)
+describes how it was made. The `per_pv` fit is made from random numbers
+near the example estimates instead of posterior draws, because a real
+`per_pv` fit needs one Bayesian fit per plausible value. The
+`stack_psis` fit gets placeholder importance weights and Pareto \\\hat
+k\\ values, both explained in [the three methods](#methods-table), that
+no program computed; since no program is named, pvstackr blocks the fit
+(PSIS status `provenance_incomplete`). The numbers therefore show the
+layout of the output and say nothing about how the methods compare on
+real data.
+
+## The three methods
+
+All three methods report only the fixed effects, and all three combine
+the results for the \\M\\ plausible values with Rubin’s rules (Rubin
+1987), so their standard errors include the variation between plausible
+values. They differ in the number of Bayesian fits they need and in
+where the variance within a plausible value comes from:
+
+| Method | Bayesian fits | Variance within a plausible value | Intervals | Bundled engine |
+|:---|:---|:---|:---|:---|
+| `stack_direct` (default) | 1 | BRR–Fay replicate weights, through the target | coverage-claimable only with an external Barnard–Rubin target, otherwise descriptive | brms, with `pv_control(backend = "brms")` |
+| `per_pv` | \\M\\ | posterior draws of each fit | always descriptive | none |
+| `stack_psis` | 1 | posterior draws of the stacked fit, reweighted | always descriptive | none |
+
+A coverage-claimable interval is one that pvstackr’s reporting rule lets
+you read as a confidence interval with nominal coverage
+(`coverage_claim_allowed = TRUE`); [Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+gives the rule and the `interval_role` label of each case.
+
+`stack_direct` fits one model to the stacked data (\\M\\ copies of the
+data, one per plausible value) and calibrates its fixed-effect draws to
+the target from
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md);
+its estimate table reports the target’s estimates, standard errors and
+degrees of freedom. The target itself takes \\M(R + 1)\\ weighted
+least-squares fits, which need no sampler. [The full analysis
+workflow](https://joonho112.github.io/pvstackr/articles/a2-the-workflow.html#fitting)
+describes both steps.
+
+`per_pv` combines one Bayesian fit per plausible value. You supply the
+fits, either as their posterior draws (`per_pv_draws`) or as your own
+fitting functions, which pvstackr calls once per plausible value.
+pvstackr does not pass the survey weights to these functions, so a
+weighted fit has to take them from the data. Scale them as pvstackr
+scales the weights of the stacked fit, by dividing the final weight by
+its mean: with flat priors on the coefficients, the posterior means do
+not depend on the scale of the weights, but the posterior standard
+deviations do. PISA final weights count the students that each sampled
+student represents (OECD 2024), so fits that use them unscaled give
+posterior standard deviations that are far too small, and `per_pv`
+standard errors that are too small.
+[`?pv_fit_reference`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md)
+lists what these functions receive and return. pvstackr also collects no
+sampler diagnostics from them: a `per_pv` fit always has status `"ok"`,
+so check the convergence of each fit yourself.
+
+`stack_psis` reweights the draws of one fit to the stacked data toward
+each plausible value. For each plausible value you supply importance
+weights and a Pareto \\\hat k\\ value, computed outside pvstackr, for
+example by Pareto smoothed importance sampling (PSIS) with the loo
+package (Vehtari et al. 2017, 2024); \\\hat k\\ shows how reliable the
+reweighted estimates are. pvstackr computes no part of PSIS: it divides
+each column of weights by its sum, reweights the draws and combines the
+results with Rubin’s rules. It blocks the fit unless every \\\hat k\\ is
+below `psis_k_threshold` in
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
+(0.7 by default) and the program that made the weights is named with
+`psis_producer` and `psis_producer_version`.
+[`?pv_fit_stack_psis`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md)
+lists the inputs.
+
+The number of Bayesian fits says how many samplers run, not how long the
+analysis takes.
+
+## Running a comparison
+
 [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
-aligns them on the same fixed-effect terms so you can read them side by
-side. The point of the article is not to crown a winner on a toy
-dataset; it is to show the **comparison machinery** and the **interval
-semantics** that separate the methods, and to state the two cautions
-that govern when agreement means something.
-
-A note on the worked example below. We feed `per_pv` **synthetic,
-injected** posterior draws (random noise centred near the fixture’s
-coefficients), because the package ships only one cached fit and runs no
-live MCMC. For `stack_psis`, the example deliberately supplies equal
-placeholder weights and arbitrary Pareto-\\\hat k\\ values **without**
-claiming that PSIS ran. The fit therefore fails closed and remains
-visible as a blocked comparison row. Read this article for the
-**structure** of a comparison and the **interval semantics**, not as a
-substantive agreement result.
-
-## 1. The three methods in one table
-
-The three methods answer the same question — *what is the fixed-effect
-block \\\beta\_{\text{FE}}\\?* — but they get their **variance** from
-different places, and that difference is the whole story of when a row
-may carry a coverage claim.
-
-| Method | Covariance basis | Interval status | Fit count |
-|----|----|----|----|
-| `stack_direct` *(default)* | design-based external \\T\_{\text{MI}}\\ (Rubin / BRR–Fay) | **conditional** — coverage-claimable only with an external Barnard–Rubin BRR–Fay target; descriptive under classic df | **1** |
-| `per_pv` | model-based posterior | descriptive / reference | **\\M\\** |
-| `stack_psis` | model-based posterior **+ PSIS** reweighting | descriptive / reference | **1** (+ PSIS) |
-
-In one sentence each:
-
-- **`stack_direct`** fits one stacked model and calibrates it (via CCC)
-  to an **external, design-based** Rubin / BRR–Fay target. Because that
-  target’s covariance is design-based, `stack_direct` rows are the only
-  ones the package ever marks `coverage_claim_allowed = TRUE` (Judkins
-  1990; Rubin 1987).
-- **`per_pv`** is the orthodox path: fit the model once per plausible
-  value and pool the \\M\\ model-based results with Rubin’s rules. It is
-  the natural **reference**, but its covariance is *model-based*, so its
-  intervals stay descriptive.
-- **`stack_psis`** reweights a single stacked draw cloud with per-PV
-  Pareto-smoothed importance sampling (Vehtari et al. 2017, 2024),
-  pooling the PSIS-weighted summaries. One fit, model-based covariance —
-  a **cross-check**, never the deliverable.
-
-The **“fit count” column is topology, not speed.** It records how many
-model fits a method’s architecture requires — one stacked fit versus
-\\M\\ separate ones — not a benchmarked runtime. The current package
-makes no “faster” claim; see the honesty triad in Section 7.
-
-Two scope reminders carried over from A1–A3, because they bound this
-whole comparison: the reportable surface is **fixed effects only**, and
-**coverage lives on exactly one path** (`stack_direct` against an
-external Barnard–Rubin BRR–Fay target). Everything below respects both.
-
-## 2. Run a comparison — `pv_compare_methods()`
-
-[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
-takes two or more already-built `pvstackr_fit` objects and aligns their
-fixed-effect estimate tables. It does **not** fit anything — you hand it
-finished fits — so the only setup is building three fits that share the
-same fixed-effect names (`b_Intercept`, `b_x`, `b_female`).
-
-The first fit is the cached `stack_direct` fixture you already met in
-A1. The other two use injected synthetic inputs:
-[`pv_fit_reference()`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md)
-accepts a list of per-PV posterior draw matrices, and
-[`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md)
-accepts a stacked draw matrix plus weight diagnostics. No live MCMC or
-PSIS routine runs below. Consequently, the PSIS example intentionally
-omits producer/version and must remain blocked; a string label is not
-evidence that smoothing occurred.
+takes two or more finished fits and lines up their estimate tables by
+fixed-effect name; it fits no model itself. The three fits below have
+the same fixed effects, `b_Intercept`, `b_x` and `b_female`. The
+`stack_direct` fit is read from the package. The other two are made from
+draws passed in directly:
+[`pv_fit_reference()`](https://joonho112.github.io/pvstackr/reference/pv_fit_reference.md),
+which runs the `per_pv` method, takes a list of draw matrices, one per
+plausible value, and
+[`pv_fit_stack_psis()`](https://joonho112.github.io/pvstackr/reference/pv_fit_stack_psis.md),
+which runs `stack_psis`, takes a matrix of stacked draws with the
+weights and the \\\hat k\\ values. No sampler runs and no PSIS is
+computed. The `stack_psis` call names no program, because no program
+made its weights.
 
 ``` r
 
@@ -103,8 +124,9 @@ fit_direct <- readRDS(
               package = "pvstackr")
 )$fit
 
-# Synthetic per-PV draw clouds, centred near the fixture's coefficients
-# (~458 / 47 / 2). These are random noise for illustration, NOT real posteriors.
+# Made-up draws for the per_pv fit: for each plausible value, 300 random values
+# per fixed effect, with standard deviation 2, around 458, 47 and 2, near the
+# example estimates. They stand in for posterior draws; no model was fitted.
 set.seed(1)
 mk <- function(mu) {
   d <- matrix(rnorm(300 * 3, sd = 2), ncol = 3, dimnames = list(NULL, fe))
@@ -117,9 +139,9 @@ fit_per_pv <- pv_fit_reference(
   control      = pv_control(method = "per_pv")
 )
 
-# Synthetic stacked draw cloud + equal placeholder weights and arbitrary
-# Pareto-k. Nothing is importance-sampled live, so producer/version are omitted
-# and the fit must fail closed as provenance_incomplete.
+# Made-up stacked draws with equal placeholder weights and Pareto k-hat values
+# of 0.2. No PSIS was run, so no program is named, and pvstackr blocks the fit
+# (its PSIS status is provenance_incomplete).
 sd_mat <- mk(c(458, 47, 2))
 fit_psis <- pv_fit_stack_psis(
   stacked_draws = sd_mat,
@@ -130,8 +152,7 @@ fit_psis <- pv_fit_stack_psis(
 )
 ```
 
-With two reportable fits and one intentionally blocked fit in hand, the
-comparison is one call:
+The comparison is one call:
 
 ``` r
 
@@ -151,30 +172,33 @@ cmp
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 ```
 
-The [`print()`](https://rdrr.io/r/base/print.html) box names the
-**reference method** (here `per_pv`, the default when a non-blocked
-`per_pv` fit is present), lists the three labelled methods, and confirms
-the comparison aligned on **3 shared fixed-effect terms**. It then
-prints two honest one-liners that recur throughout this article:
+The print first names the reference fit, `per_pv`, from which the
+differences in the comparison are taken. By default it is the first
+`per_pv` fit that is not blocked, or, without one, the first fit that is
+not blocked; choose another with the argument `reference_method`. It
+then lists the label and the method of each fit, the number of fixed
+effects (3) and the blocked fit, `stack_psis`. The line
+`provenance note:` appears in every comparison; [the agreement
+diagnostics](#agreement) explain it. The line `interval note:` says that
+the compared intervals are descriptive.
 
-- a **provenance note** — agreement bands are *descriptive* and shared
-  target/pooling/source metadata is not independent corroboration
-  (Section 4); and
-- an **interval note** — at least one compared interval is *descriptive
-  rather than coverage-claimable* (Sections 3, 5–7).
+The comparison has a row for each fit and each fixed effect that appears
+in any of the fits. A blocked fit keeps its rows, with `NA` values and
+its reason code, so that it stays visible in the comparison.
 
-Comparison aligns methods on their **shared** fixed-effect terms. The
-two reportable methods supply `b_Intercept`, `b_x`, and `b_female`; the
-blocked `stack_psis` fit still gets one row for each term, with numeric
-fields left `NA` rather than silently disappearing.
-
-## 3. The three methods side by side
+## The estimates side by side
 
 [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-on a comparison returns the **aligned** table: one row per (method,
-term) pair — here \\3 \times 3 = 9\\ rows. The slice that matters for
-choosing a method puts the point estimate next to its interval and the
-interval’s licensing metadata:
+on a comparison returns one row per fit and fixed effect, here \\3
+\times 3 = 9\\ rows. For each row it gives the fit’s estimate, standard
+error, degrees of freedom, interval and interval labels, the method,
+status and reason codes of the fit, and the estimate and standard error
+of the reference fit with the differences from them (see [the agreement
+diagnostics](#agreement)); the source labels and checksums of the fits
+are in
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
+The columns below put each estimate next to its interval and the two
+columns that say how the interval can be read:
 
 ``` r
 
@@ -205,37 +229,26 @@ est[, c("method_label", "term", "estimate", "se",
 #> 9                      <NA>                     NA
 ```
 
-Read this table on two axes.
+The `stack_direct` rows hold the numbers of the example fit, which are
+those of its target. The `per_pv` estimates are close to them only
+because the made-up draws were placed around 458, 47 and 2, and their
+standard errors, about 2, come from the standard deviation of those
+draws. The `stack_psis` rows are `NA` because that fit is blocked.
 
-**The available points do not match here — and that is the synthetic
-setup, not a finding.** The `per_pv` rows were built from independent
-random noise, not from the same data as `stack_direct`; the blocked
-`stack_psis` rows correctly contain no estimates. In a **real**
-comparison, `stack_direct` and `per_pv` points agree closely: this is
-the **stacked-MLE point identity** — one stacked, \\1/M\\-weighted fit
-recovers the Rubin-pooled per-PV point estimate. That identity is
-*exact* only under its regularity conditions (flat prior,
-linear-Gaussian, common design, a common plug-in covariance) and holds
-**approximately, not exactly**, in production with REML variance
-components and real PISA data. The precise statement and its caveat are
-Theorem 2.2 in the **Method track, M3**.
+Two columns say how each interval can be read:
 
-**The interval semantics are the real teaching point.** Even where
-points agree, two columns separate the methods and never collapse:
+- `interval_role` is `descriptive_classic_rubin` for `stack_direct`,
+  because the example target uses the classic Rubin degrees of freedom,
+  and `reference_classic_rubin` for `per_pv`. It is `NA` for the blocked
+  `stack_psis` rows; a `stack_psis` fit with estimates has
+  `psis_classic_rubin` or `psis_barnard_rubin`.
+- `coverage_claim_allowed` is `FALSE` for the two fits with estimates
+  and `NA` for the blocked one. With a target made with Barnard–Rubin
+  degrees of freedom, the `stack_direct` rows would have `TRUE`; the
+  `per_pv` and `stack_psis` rows have `FALSE` whatever their degrees of
+  freedom.
 
-- **`interval_role`** records the *kind* of available interval —
-  `descriptive_classic_rubin` for `stack_direct` (this classic-df
-  fixture) and `reference_classic_rubin` for `per_pv`. It is `NA` for
-  the blocked PSIS rows; a valid reportable PSIS path would use
-  `psis_classic_rubin` here.
-- **`coverage_claim_allowed`** is `FALSE` for the two available methods
-  and `NA` for the blocked one. The fixture’s `stack_direct` target uses
-  *classic* Rubin df (so it is descriptive by design, as in A2/A3), and
-  `per_pv` / `stack_psis` intervals are always descriptive regardless of
-  their df.
-
-Interval **width** also differs sharply, and width is where the methods
-genuinely diverge. Look at the slope on `x`:
+The intervals also differ in width. For the slope of `x`:
 
 ``` r
 
@@ -249,17 +262,17 @@ bx
 #> 8   stack_psis        NA       NA        NA       NA
 ```
 
-The two available widths are not interchangeable; the blocked PSIS row
-has no width at all. Do not read the available ordering as a general
-result: it is an artifact of the injected `per_pv` draw clouds. The
-durable lesson is that **width, availability, and the coverage flag are
-method-specific** — exactly what `interval_role`, `status`, and
-`coverage_claim_allowed` are there to flag.
+The width of an interval depends on the standard error and on the
+degrees of freedom. The `stack_direct` interval is 4.9 points wide
+although its standard error is 0.37, because the example target has only
+1.40 classic degrees of freedom for `b_x`. The `per_pv` interval is 8.1
+points wide, about four times its standard error of 2.06, which comes
+from the made-up draws. Neither width says anything about real data. The
+blocked `stack_psis` row has no interval.
 
-A figure makes the per-term overlay easy to read. We plot the two slope
-coefficients (dropping the intercept, whose ~458 scale would flatten the
-axis) and overlay the two available methods. The blocked PSIS method
-remains in the table but is correctly absent from the interval geometry:
+The figure shows the estimates and intervals of the two slopes; the
+intercept, about 458, is left out because its scale would compress the
+axis. The blocked `stack_psis` fit has nothing to draw.
 
 ``` r
 
@@ -288,39 +301,66 @@ for (mlab in methods) {
   points(sub$estimate, yy, pch = 19, cex = 1.3, col = cols[[mlab]])
 }
 axis(2, at = seq_along(terms), labels = terms, las = 1)
-legend("topright", legend = methods, col = cols, pch = 19, lwd = 2,
+legend("topleft", legend = methods, col = cols, pch = 19, lwd = 2,
        bty = "n", cex = 0.9)
 ```
 
-![A horizontal dot-and-interval plot with two rows, one for the
-coefficient on x and one for the coefficient on female. Within each row
-the reportable stack_direct and per_pv methods are drawn at slightly
-offset heights with 95 percent intervals. The blocked stack_psis method
-has no plotted point or interval. A dashed vertical reference line is
-drawn at
-zero.](a4-comparing-methods_files/figure-html/overlay-figure-1.png)
+![Dot-and-interval plot with one row for b_female, at the bottom, and
+one for b_x, at the top. In each row the stack_direct estimate, in blue,
+is drawn slightly below the per_pv estimate, in yellow, each with its 95
+percent interval. The stack_direct interval for b_female runs from about
+−42 to 46 and covers most of the horizontal axis; the per_pv interval
+for b_female, from about −2 to 6, and the two intervals for b_x, between
+about 43 and 51, are short. A dashed vertical line marks zero. There is
+no point or interval for
+stack_psis.](a4-comparing-methods_files/figure-html/overlay-figure-1.png)
 
-The two slope coefficients (b_x, b_female) under the two reportable
-methods, with their 95% intervals overlaid. The blocked stack_psis rows
-remain in the comparison table but have no interval to draw. The dashed
-line marks zero; the synthetic per_pv points and widths are illustrative
-only.
+Estimates and 95% intervals of the two slopes, b_x and b_female, from
+the stack_direct and per_pv fits. The blocked stack_psis fit has no
+estimates to draw. The dashed line marks zero. The per_pv values come
+from made-up draws.
 
 ``` r
 
 par(op)
 ```
 
-The available intervals comfortably span zero for `b_female` and sit
-clear of zero for `b_x` — but their *widths* differ by method, and only
-the `stack_direct` row could ever (with a Barnard–Rubin target) carry a
-coverage claim. The absent PSIS interval is itself part of the honesty
-contract. That is the bridge to the cautions.
+Both intervals for `b_x` lie well above zero, and both intervals for
+`b_female` include it. The `stack_direct` interval for `b_female`, from
+about −42 to 46, is much wider than the `per_pv` one, from about −2 to
+6, for the reasons given above.
 
-## 4. Agreement diagnostics
+On real data, the estimates of the three methods are close when they all
+fit the same survey-weighted model. A `stack_direct` fit reports the
+target’s \\\bar\beta\\, the average over the plausible values of the
+survey-weighted least-squares estimates. A `per_pv` fit reports the
+average of the posterior means of your fits. If each of these fits is
+the same survey-weighted regression, with the weights taken from the
+data and flat priors on the fixed effects (in brms, write the intercept
+as `0 + Intercept`, because its default prior on the intercept is not
+flat), its posterior mean is the weighted least-squares estimate for its
+plausible value, apart from Monte Carlo error; the `per_pv` estimates
+then differ from \\\bar\beta\\ only by that error.
+
+The same holds for a stacked fit, which `stack_direct` calibrates and
+`stack_psis` reweights. When its rows are weighted by \\\tilde w_i/M\\,
+where \\\tilde w_i\\ is the final survey weight divided by its mean, the
+weighted least-squares estimate from the stacked data equals
+\\\bar\beta\\ exactly in pvstackr’s model, a weighted linear regression
+without random effects. The stacked fixed-effect point identity, Theorem
+4.1 of the companion preprint (Lee et al. 2026), states the conditions
+for this equality, and [One stacked fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.md)
+explains it. The reweighted means of `stack_psis` approximate the
+posterior means for the separate plausible values, and the Pareto \\\hat
+k\\ values show how reliable these approximations are (Vehtari et al.
+2024). The standard errors are another matter, which the first of [the
+cautions](#cautions) explains.
+
+## Agreement diagnostics
 
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
-on a comparison returns a named list. Its keys:
+on a comparison returns a list:
 
 ``` r
 
@@ -331,13 +371,21 @@ names(dg)
 #> [7] "method_diagnostics" "timing"             "target_overlap"
 ```
 
-Two of these carry the interpretive weight.
+`reference_method` and `methods` repeat what
+[`print()`](https://rdrr.io/r/base/print.html) shows, `statuses` gives
+the status of each fit, and `blocked_methods` and `warning_methods` list
+the fits with status `"blocked"` or `"warning"`. `timing` gives the
+number of model fits of each method and, when you pass times that you
+measured with the argument `timings`, the elapsed seconds; pvstackr does
+not time the fits itself. The other three elements describe how the fits
+agree.
 
-**`agreement`** summarises, per method, how far each method’s rows sit
-from the reference (`per_pv` here). The two columns to read are
-`max_abs_z_diff` (the largest standardised point gap from the reference,
-across terms) and `max_abs_log_se_ratio` (the largest log standard-error
-ratio — i.e. how differently the method spreads its intervals):
+`agreement` has one row per fit. `max_abs_z_diff` is the largest, over
+the fixed effects, of the absolute difference between the fit’s estimate
+and the reference estimate, divided by \\\sqrt{\mathrm{se}^2 +
+\mathrm{se}\_{\text{ref}}^2}\\. `max_abs_log_se_ratio` is the largest
+absolute log of the ratio of the fit’s standard error to the reference
+standard error:
 
 ``` r
 
@@ -352,18 +400,24 @@ dg$agreement
 #> 3           0
 ```
 
-The reference compares to itself, so its `max_abs_z_diff` and
-`max_abs_log_se_ratio` are exactly zero. The `stack_direct` point gap is
-large here only because the injected `per_pv` draws are synthetic. The
-blocked `stack_psis` row has no available comparison statistics. In a
-real comparison the informative pattern is **agree on points, disagree
-on variance** — methods that share a target tend to match on the point
-while differing on variance.
+The reference fit, `per_pv`, has zeros. For `stack_direct`,
+`max_abs_z_diff` is 0.07: the estimates are close because the made-up
+`per_pv` draws were placed near them. `max_abs_log_se_ratio` is 1.71 and
+comes from `b_x`, whose `stack_direct` standard error, 0.37, is 0.18
+times the `per_pv` one, 2.06. The blocked `stack_psis` fit has no
+estimates (`n_available` is 0) and therefore no values.
 
-**`target_overlap`** is the honesty gate on reading agreement as
-corroboration. It flags whether the compared methods share provenance —
-an external target, a target hash, a pooling hash, or a target-source
-family:
+The estimate table of the comparison gives the same measures for each
+row (`estimate_diff`, `se_ratio` and `abs_z_diff`), and `agreement_band`
+groups `abs_z_diff` by pvstackr’s cut-offs: `"close"` below 0.1,
+`"moderate"` from 0.1, `"different"` from 0.5, and `"not_available"` for
+a blocked fit. These values describe how far apart the fits are; they
+are not a statistical test. In a real comparison, `max_abs_z_diff` shows
+whether the fits agree on the estimates and `max_abs_log_se_ratio` how
+far their standard errors differ; [the cautions](#cautions) explain why
+the two need not go together.
+
+`target_overlap` records whether fits share their numbers:
 
 ``` r
 
@@ -379,18 +433,29 @@ str(dg$target_overlap)
 #>  $ independence_caveat         : chr "Agreement bands are descriptive; shared target, pooling, or source metadata should not be read as independent corroboration."
 ```
 
-In this synthetic run `independence_caveat_required` is `FALSE`, because
-the available fits carry distinct hashes and only `stack_direct` holds
-the `external_brr_fay_rubin` source. But the field exists precisely for
-the common case where it flips to `TRUE`: when two methods are
-calibrated to the *same* external target (or pool the same draws), close
-agreement is **mechanically guaranteed** and tells you nothing about
-correctness. The `independence_caveat` string spells this out, and it is
-the same message the [`print()`](https://rdrr.io/r/base/print.html) box
-surfaces.
+Every flag is `FALSE` here: the `stack_direct` fit has the target made
+by
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+the `per_pv` fit has its own combination of its draws, and the blocked
+fit has neither. The flags become `TRUE` when two or more fits have the
+same target (`shared_target_hash`, and `shared_external_target` when
+they are `stack_direct` fits calibrated to the same target) or the same
+combined result (`shared_pooling_hash`), or when a fit has the target or
+the combined result of the reference fit (`shares_reference_target`,
+`shares_reference_pooling`). `shared_target_sources` lists the source
+labels that two or more fits have, and `independence_caveat_required` is
+`TRUE` when any flag is `TRUE` or that list is not empty.
+`independence_caveat` holds the text of the `provenance note:` line.
 
-The per-method diagnostic table carries the rest, including the PSIS
-row’s Pareto-\\\hat k\\:
+Agreement between fits that share their numbers follows by construction:
+two `stack_direct` fits calibrated to the same target report the same
+estimates and standard errors, whatever their draws. Even without shared
+numbers, fits of the same data and plausible values are not independent,
+so their agreement does not confirm a result.
+
+`method_diagnostics` has one row per fit and many columns, which
+[`?pv_compare_methods`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+lists; the chunk shows some of them:
 
 ``` r
 
@@ -407,184 +472,127 @@ dg$method_diagnostics[, c("method_label", "interval_role",
 #> stack_psis                     <NA> provenance_incomplete          0.2      1
 ```
 
-A few reads from this table. `target_source` is **provenance vocabulary,
-not a formal target object**. It is withheld for the blocked PSIS row; a
-reportable PSIS fit would use `stack_psis_rubin_pooling`, while
+`target_source` labels where the numbers of a fit come from:
+`external_brr_fay_rubin` for the target from
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+and `per_pv_rubin_draws` for Rubin’s rules applied to the `per_pv`
+draws. It is `NA` for the blocked fit. A `stack_psis` fit with estimates
+has the label `stack_psis_rubin_pooling` but no target object:
 [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md)
-would still return `NULL`. The `n_fits` column is the topology count
-from Section 1 (`stack_direct` = 1, `per_pv` = \\M\\ = 2, `stack_psis` =
-1). For `stack_psis`, `psis_status = "provenance_incomplete"`: the
-arbitrary `pareto_k_max = 0.2` is retained as a bounded diagnostic, but
-it cannot establish that smoothing ran. For a genuine PSIS run, the
-**Vehtari et al. thresholds** (Vehtari et al. 2024) are —
+returns `NULL` for it. `n_fits` is the number of model fits: 1 for
+`stack_direct`, \\M = 2\\ for `per_pv` and 1 for `stack_psis`. For the
+blocked fit, `psis_status` is `"provenance_incomplete"` because no
+program was named, and `pareto_k_max`, the largest of the \\\hat k\\
+values supplied, is the 0.2 typed into the example; pvstackr records it
+but cannot tell how it was obtained.
 
-- \\\hat k \< 0.5\\: **good**;
-- \\0.5 \le \hat k \< 0.7\\: **borderline**;
-- \\\hat k \ge 0.7\\: **unreliable**.
+pvstackr checks the \\\hat k\\ values against one cut-off,
+`psis_k_threshold` in
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md):
+0.7 by default, which is also the largest value allowed. A `stack_psis`
+fit is blocked unless the \\\hat k\\ of every plausible value is below
+it. [Choosing a method and reading its
+intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.html#psis)
+gives the cut-offs of the literature and how to set `psis_k_threshold`
+to one of them.
 
-**Agreement is descriptive, never independent corroboration when methods
-share a target, pooling, or source.** Three methods reading the *same*
-information are expected to agree; their concordance is then
-uninformative about whether the shared answer is right. Read
-`target_overlap` before you read any agreement band as reassurance.
-Section 6 shows how this bites `stack_psis` specifically.
+## Cautions in reading a comparison
 
-## 5. Caution 1 — design variance is not optional
+### Standard errors from the model and from the replicate weights
 
-The first caution is why `per_pv` and `stack_psis` are *descriptive*
-while only `stack_direct` is coverage-claimable. It is a statement about
-**variance**, not about points.
+Fits that agree on the estimates can still differ in their standard
+errors, because the methods take the variance within a plausible value
+from different sources. The target of `stack_direct` takes it from the
+BRR–Fay replicate weights, which PISA provides for estimating the
+sampling variance under its design. In such a design, clustering
+(students sampled within schools) and unequal weights usually increase
+the sampling variance, while stratification reduces it (OECD 2024).
+`per_pv` and `stack_psis` take the variance from the posterior draws of
+a model. The draws reflect the clustering only as far as the model
+includes it (a single-level regression treats the students as
+independent), and weighting the likelihood by the survey weights does
+not by itself make their variance design-based (Williams and Savitsky
+2021). The two variances can therefore differ even when the estimates
+agree. The example cannot show this, because its `per_pv` standard
+errors come from the made-up draws.
 
-A weighted analysis can get the **point** estimate exactly right and
-still report intervals that are far too narrow, because **model-based
-standard errors ignore the survey design**. Complex PISA sampling —
-stratification, clustering, unequal selection — inflates the true
-sampling variance above what an i.i.d.-style model-based posterior
-assumes. The fix is to take the variance from the design, not the model:
-the **BRR–Fay** replicate-weight sandwich, pooled across plausible
-values into the Rubin total \\T\_{\text{MI}} = \bar U + (1 + 1/M)\\B\\,
-restores nominal coverage (Judkins 1990; Rubin 1987). That is exactly
-the external target `stack_direct` calibrates to.
+This difference is the reason for pvstackr’s reporting rule in [the
+three methods](#methods-table). Close agreement between the estimates of
+two methods does not tell you which standard errors to report.
 
-The illustrative evidence for “model-based SEs under-cover; design-based
-BRR–Fay \\T\_{\text{MI}}\\ restores nominal coverage” comes from the
-**companion methods paper (in preparation)**. It is described here
-qualitatively and deliberately carries **no hard-coded numbers** — the
-package neither bundles real PISA nor presents simulation results as its
-own output.
+### Pareto \\\hat k\\ values check only the importance weights
 
-This is the whole reason the package draws the line where it does.
-`per_pv` and `stack_psis` produce *model-based* covariances, so however
-sensible their points, their intervals cannot bear a design-coverage
-claim — the package marks them descriptive. Only a `stack_direct` fit
-calibrated to the **external Barnard–Rubin** BRR–Fay target earns
-`coverage_claim_allowed = TRUE`. (And, as A2/A3 stressed, even
-`stack_direct` stays descriptive under *classic* df — as on this
-fixture.)
+For a `stack_psis` fit, a \\\hat k\\ below the cut-off of Vehtari et al.
+(2024), \\\min(1 - 1/\log\_{10} S, 0.7)\\ for \\S\\ draws, indicates
+that the importance ratios for that plausible value pass this
+diagnostic; the reliability of a weighted mean or covariance depends on
+the Pareto \\\hat k\\ of that quantity, which can be larger (Vehtari et
+al. 2024, 7, 14). With fewer than about 2,000 draws this cut-off is
+below pvstackr’s default of 0.7. It does not change where the variance
+comes from: the standard errors of a `stack_psis` fit still come from
+the posterior draws of the stacked model, as in the previous caution.
 
-## 6. Caution 2 — small Pareto-\\\hat k\\ ≠ correct variance
+pvstackr cannot check the \\\hat k\\ values either. It computes neither
+them nor the weights, so it asks you to name the program that produced
+them, with `psis_producer` and `psis_producer_version`, and records the
+name without checking it: a producer name alone is not evidence that
+PSIS was run. In the example the value 0.2 was typed in and no program
+is named, so the fit stays blocked.
 
-The second caution is the trap specific to `stack_psis`, and it is
-subtle because the diagnostic that looks reassuring can be reassuring
-about the *wrong thing*.
+\\\hat k\\ also depends on the data, the model and the posteriors that
+the weights aim at, so check it in every analysis. In the application of
+the companion preprint to PISA 2022, one stacked fit per country was
+reweighted, in the same way in both countries, toward the posteriors of
+a model with a school random intercept, with the survey weights placed
+in two stages; every \\\hat k\\ was below 0.7 in the United States and
+above it in Korea (Lee et al. 2026, sec. 6.4 and app. D.1). pvstackr
+0.2.x does not fit that model, so these values are not direct evidence
+about `stack_psis` fits of the single-level model that pvstackr fits
+([Choosing a method and reading its
+intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.md)
+gives the details).
 
-A small Pareto-\\\hat k\\ tells you the **importance-sampling step is
-stable** — the weights are well-behaved. It does **not** tell you the
-resulting **variance** is right. The reason is structural: `stack_psis`
-reweights **one** stacked draw cloud to stand in for all \\M\\ plausible
-values, so the per-PV “imputations” are drawn from the *same* cloud and
-are therefore **correlated**. Rubin’s between-imputation variance \\B\\
-assumes independent imputations; correlated ones shrink \\B\\, and the
-pooled `stack_psis` interval can run **narrow even when \\\hat k\\ is
-small**.
+## Choosing a method
 
-Worse, \\\hat k\\ is **specification-dependent**. It can sit comfortably
-below \\0.5\\ in a simplified, low-dimensional reading demo and climb
-**above \\1\\** in a full production specification — the regime where
-PSIS is formally unreliable. A green \\\hat k\\ on a toy model is no
-guarantee of a green \\\hat k\\ on the model you actually report.
+pvstackr recommends the following (a package rule, not a result of the
+companion preprint):
 
-Treat `stack_psis` as a **cross-check, never the deliverable.** A small
-Pareto-\\\hat k\\ is necessary but **not sufficient** for a trustworthy
-interval; the correlated-imputation narrowing and the specification
-dependence of \\\hat k\\ are described qualitatively in the **companion
-methods paper (in preparation)**. The package hard-codes **no** \\\hat
-k\\ values as facts — the `pareto_k = 0.2` used above is an arbitrary
-injected diagnostic and remains blocked, nothing more (Vehtari et al.
-2017, 2024).
+- Report a `stack_direct` fit. Its estimate table holds the numbers of
+  the design-based target, its intervals are the only ones that can be
+  coverage-claimable (with a Barnard–Rubin target), and it needs one
+  Bayesian fit.
+- Use `per_pv` to compare the `stack_direct` estimates with one Bayesian
+  fit per plausible value. Its intervals are descriptive, and pvstackr
+  does not check the convergence of its fits.
+- Use `stack_psis` only as a check on a stacked fit, with importance
+  weights and \\\hat k\\ values from a PSIS program. Its intervals are
+  descriptive as well.
 
-## 7. Which to use (rule of thumb)
+The companion preprint notes that for a single, final, high-stakes model
+one fit per plausible value remains a sound default (Lee et al. 2026,
+sec. 7).
 
-The choice collapses to one sentence per method:
-
-- **Report `stack_direct`.** It is the only path that is
-  coverage-claimable (when calibrated to an external Barnard–Rubin
-  BRR–Fay target), from **one** stacked fit. This is the deliverable.
-- **Use `stack_psis` as a one-fit cross-check.** Watch the Pareto-\\\hat
-  k\\, and — per Caution 2 — *do not trust a small \\\hat k\\ alone*.
-  Never report it as the headline.
-- **Use `per_pv` as the orthodox reference.** The classic
-  fit-it-\\M\\-times-and-pool answer is the natural sanity check on
-  `stack_direct`’s point estimate; its intervals stay descriptive.
-
-And the **honesty triad** that governs every claim in this article:
-
-1.  **Fixed effects only.** The current package calibrates and reports
-    \\\beta\_{\text{FE}}\\; variance components are out of scope.
-2.  **Coverage on one path only.** `coverage_claim_allowed = TRUE`
-    requires `stack_direct` **and** an external Barnard–Rubin BRR–Fay
-    target; `per_pv` and `stack_psis` are always descriptive.
-3.  **No speed claims.** “One fit” is *topology* — an architecture
-    statement, not a benchmarked runtime. The current package makes no
-    efficiency claim.
-
-## 8. Where to next
-
-You can now align three methods and read their agreement honestly. From
-here:
-
-- **A3 · Reading results & what to report** — the interval-metadata
-  columns (`interval_role`, `coverage_claim_allowed`, `df_method`,
-  `df_complete`) read here across methods, treated in depth for a single
-  fit, plus the fraction of missing information and a reporting
-  checklist.
-- **A5 · Real PISA data guidance** — running these comparisons on
-  genuine PISA files: licensing and non-affiliation, the design
-  declaration, and the memory/runtime cost of \\M(R+1)\\ replicate fits.
-
-For the underlying theory, the **Method track** carries the proofs this
-article gestures at: **M5 · Methods, PSIS, and coverage** states the
-precise method contrast, the PSIS weights and Pareto-\\\hat k\\
-thresholds, and *why only `stack_direct` is coverage-claimable*; **M3 ·
-The stacked fractional bridge** proves the stacked-MLE point identity
-(and where it stops). Start the track at **M1 · Foundations and
-notation**.
-
-Bug reports and feature requests:
-<https://github.com/joonho112/pvstackr/issues>.
-
-### Session info
-
-``` r
-
-sessionInfo()
-#> R version 4.6.1 (2026-06-24)
-#> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.4 LTS
-#> 
-#> Matrix products: default
-#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
-#> 
-#> locale:
-#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
-#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
-#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
-#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
-#> 
-#> time zone: UTC
-#> tzcode source: system (glibc)
-#> 
-#> attached base packages:
-#> [1] stats     graphics  grDevices utils     datasets  methods   base     
-#> 
-#> other attached packages:
-#> [1] pvstackr_0.2.0
-#> 
-#> loaded via a namespace (and not attached):
-#>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
-#>  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  
-#>  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      
-#> [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2
-#> [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     
-#> [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   
-#> [25] rlang_1.3.0       fs_2.1.0
-```
+[Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+explains the interval labels of every method and what to report for a
+fit. Among the Method articles, [Choosing a method and reading its
+intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.md)
+compares the methods and their intervals in more detail, and [One
+stacked fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.md)
+explains the stacked fixed-effect point identity, whose proof is in the
+preprint.
 
 ## References
 
-Judkins, David R. 1990. “Fay’s Method for Variance Estimation.” *Journal
-of Official Statistics* 6 (3): 223–39.
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026. *One
+Markov Chain Monte Carlo Fit for Many Plausible Values: A Calibrated
+Stacked Posterior Workflow for Bayesian Multilevel Models of Large-Scale
+Assessment Data*. Zenodo preprint, version 1.
+<https://doi.org/10.5281/zenodo.22407935>.
+
+OECD. 2024. *PISA 2022 Technical Report*. PISA. OECD Publishing.
+<https://doi.org/10.1787/01820d6d-en>.
 
 Rubin, Donald B. 1987. *Multiple Imputation for Nonresponse in Surveys*.
 John Wiley & Sons. <https://doi.org/10.1002/9780470316696>.
@@ -597,3 +605,9 @@ Model Evaluation Using Leave-One-Out Cross-Validation and WAIC.”
 Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah
 Gabry. 2024. “Pareto Smoothed Importance Sampling.” *Journal of Machine
 Learning Research* 25 (72): 1–58.
+<https://www.jmlr.org/papers/v25/19-556.html>.
+
+Williams, Matthew R., and Terrance D. Savitsky. 2021. “Uncertainty
+Estimation for Pseudo-Bayesian Inference Under Complex Sampling.”
+*International Statistical Review* 89 (1): 72–107.
+<https://doi.org/10.1111/insr.12376>.

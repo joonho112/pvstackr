@@ -1,13 +1,14 @@
-# Detect PISA-Style BRR Replicate-Weight Columns
+# Find PISA-style replicate-weight columns
 
-PISA balanced-repeated-replication (BRR) replicate weights are named as
-a prefix followed by a numeric replicate index, for example
-`W_FSTURWT1`, `W_FSTURWT2`, and so on. This finds the `<prefix><r>`
-columns and returns them in natural numeric order using the default
-prefix `"W_FSTURWT"`. It is the replicate-weight companion to
-[`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md).
-Use `expected_R` to guard against an incomplete replicate set or the
-wrong prefix.
+`detect_pisa_brr_replicate_weights()` returns the names of the
+replicate-weight columns, such as `W_FSTURWT1`, ..., `W_FSTURWT80` in
+PISA 2022 files, where they are balanced repeated replication (BRR)
+weights made with Fay's method. A column matches when its whole name is
+`prefix` followed by a number; the match is case-sensitive.
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+call this function when you do not give `rep_weight_cols`.
 
 ## Usage
 
@@ -23,30 +24,39 @@ detect_pisa_brr_replicate_weights(
 
 - data:
 
-  Data frame containing replicate-weight columns.
+  A data frame. Only its column names are used.
 
 - prefix:
 
-  Character scalar. Column prefix before the numeric replicate index.
-  Default `"W_FSTURWT"`.
+  The text before the number. Default `"W_FSTURWT"`, the PISA name.
 
 - expected_R:
 
-  Optional integer scalar. Expected replicate-weight count; if supplied,
-  detection errors unless exactly `expected_R` columns are found. If
-  `NULL` (default), the count is not checked.
+  The number of replicate-weight columns you expect, a whole number, for
+  example `80` for PISA 2022. If a different number is found, the
+  function stops with an error. `NULL` (default) skips the check.
 
 ## Value
 
-Character vector of column names in natural numeric order.
+A character vector of column names in numeric order (`W_FSTURWT1`,
+`W_FSTURWT2`, ..., `W_FSTURWT80`).
+
+## Details
+
+The numbers must run from 1 without gaps or repeats; otherwise, or when
+no column matches, the function stops with an error. Only the names are
+checked:
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+check the weights themselves.
 
 ## See also
 
-[`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md);
-build a design with
 [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
-or a target with
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
+and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+which call this function.
 
 Other pvstackr-detection:
 [`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)

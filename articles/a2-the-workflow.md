@@ -1,62 +1,64 @@
-# A2: The end-to-end workflow — design, target, fit, report
+# The full analysis workflow
 
 Abstract
 
-The full pipeline on synthetic data, end to end. You declare a
-plausible-value design with
+This article goes through an analysis with pvstackr in order: checking
+the plausible-value and weight columns with
 [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md),
-assemble the external fixed-effect target with
+computing the design-based target with
 [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
-fit with `pv_fit(method = "stack_direct")`, and report on the bundled
-`pisa_tiny` fixture. A conceptual sketch shows how the same call shape
-reaches a live Bayesian backend on real data, and the vignette explains
-why reportable fits require `center = "target"`.
+fitting the model with
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),
+and reading the estimate table. The first two steps run on the bundled
+synthetic data; the fit is shown as code and read from the example fit
+that ships with the package. The article also explains why
+`stack_direct` requires `center = "target"` and what your own fitting
+functions receive and must return.
 
 ``` r
 
 library(pvstackr)
 ```
 
-## 1. The workflow at a glance
+To analyze your own data with pvstackr, go through these steps in order:
 
-Vignette A1 handed you a fit that had already been run and showed you
-how to read it. This vignette builds that fit from scratch. The pipeline
-is four stages, and each stage is exactly one function:
+| Step | Function | Result |
+|:---|:---|:---|
+| Check the plausible-value and weight columns (optional) | [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md) | the column names, the numbers of plausible values (\\M\\) and replicate weights (\\R\\), and the Fay coefficient |
+| Compute the design-based target | [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md) | the estimates of the fixed effects, their covariance matrix, standard errors and degrees of freedom |
+| Fit the model | [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md) with settings from [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md) | a fit whose estimate table holds the target’s numbers, with calibrated draws and diagnostics |
+| Compare with fits made by other methods (optional) | [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md) | the estimates of two or more fits side by side |
+| Read the result | [`summary()`](https://rdrr.io/r/base/summary.html), [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md) | the estimate table |
 
-| Stage | What it produces | Function |
-|----|----|----|
-| 1\. Declare the design | a `pvstackr_design` recording PVs, weights, replicate weights, Fay \\k\\ | [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md) |
-| 2\. Assemble the target | a `pvstackr_brr_target` — the external Rubin / BRR–Fay variance target | [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md) |
-| 3\. Fit | a `pvstackr_fit` from **one** stacked, calibrated model | `pv_fit(method = "stack_direct")` |
-| 4\. Read / report | the reportable estimate table and diagnostics | [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md) / [`summary()`](https://rdrr.io/r/base/summary.html) |
+The comparison is the subject of [Comparing the three fitting
+methods](https://joonho112.github.io/pvstackr/articles/a4-comparing-methods.md).
+The target and the fit use the same model, a linear regression of the
+plausible values on the covariates, weighted by the survey weights, and
+only its fixed effects are reported. pvstackr fits no school-level
+variance, and the only other parameter of the stacked fit, the residual
+standard deviation `sigma`, is neither calibrated nor reported.
 
-The first two stages are pure bookkeeping and run live here. The third
-needs a modelling backend, so on this synthetic fixture we load a
-**cached** fit and show the live call only by its *shape* (Section 4);
-Section 7 sketches how that shape reaches a real backend, and vignette
-**A5** covers genuine PISA files.
+The examples use `pisa_tiny`, a small synthetic data set included in the
+package. The first two steps run below. Fitting needs a Bayesian
+sampler, so the article shows the fitting calls without running them and
+reads the example fit that comes with pvstackr. The example fit and its
+synthetic data are described in [Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html#example-fit).
 
-Everything below runs on the package’s bundled **synthetic** `pisa_tiny`
-fixture, so the whole article is offline and deterministic. Two scope
-reminders carried over from A1, because they govern what you may report:
+## Checking the columns with `pv_design()`
 
-- **Fixed effects only.** The package calibrates and reports the
-  fixed-effect block \\\beta\_{\text{FE}}\\ (intercept and slopes).
-  Variance components are estimated but not calibrated and are not part
-  of the reportable output.
-- **Coverage lives on one path.** A row’s interval is coverage-claimable
-  only under `stack_direct` backed by an external design-based BRR-Fay
-  target with Barnard-Rubin degrees of freedom. The bundled cached fit
-  uses *classic* Rubin degrees of freedom, so its intervals are honestly
-  **descriptive** — a faithful demonstration of the object surface, not
-  a coverage-claimable result.
-
-## 2. Declare the design — `pv_design()`
-
-The design object records *what your data are* — which columns hold
-plausible values, the final survey weight, the BRR replicate weights,
-and the Fay coefficient — without running a model or touching the
-response. Load the fixture and declare it:
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+finds and checks the columns that hold the plausible values, the final
+survey weight and the replicate weights, and records the Fay coefficient
+\\k\\ that was used to make the replicate weights. It fits no model. The
+step is optional:
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+takes the same column arguments and finds PISA-style plausible-value and
+replicate-weight columns itself; there too, give `pv_suffix` for names
+such as `PV1READ`, and name the final weight, which has no default. A
+design object is a quick check that a new file has the columns you
+expect before anything is computed. Read the bundled data and check its
+columns:
 
 ``` r
 
@@ -66,11 +68,11 @@ pisa_tiny <- read.csv(
 
 design <- pv_design(
   pisa_tiny,
-  formula     = OUTCOME ~ x + female,   # OUTCOME is a placeholder (see below)
-  pv_suffix   = "READ",                 # matches PV1READ / PV2READ
-  expected_M  = 2L,                     # assert exactly 2 plausible values
-  expected_R  = 4L,                     # assert exactly 4 replicate weights
-  id_cols     = "CNTSTUID"             # column(s) that identify a unique row
+  formula     = OUTCOME ~ x + female,   # OUTCOME stands for each plausible value
+  pv_suffix   = "READ",                 # finds PV1READ and PV2READ
+  expected_M  = 2L,                     # stop unless 2 plausible values are found
+  expected_R  = 4L,                     # stop unless 4 replicate weights are found
+  id_cols     = "CNTSTUID"             # the column that identifies each row
 )
 
 design
@@ -84,29 +86,42 @@ design
 #>   design hash: fa78c04b
 ```
 
-The compact print confirms what was detected: 12 rows, the formula
-`OUTCOME ~ x + female`, \\M = 2\\ plausible values, the final weight
-`W_FSTUWT`, \\R = 4\\ replicate weights, the Fay coefficient
-`fay_k = 0.5`, and a stable content hash (`fa78c04b`) you can use to
-detect silent design changes.
+The print shows what was found: 12 rows, the formula
+`OUTCOME ~ x + female`, 2 plausible values (\\M = 2\\), the final weight
+`W_FSTUWT`, 4 replicate weights (\\R = 4\\), the Fay coefficient
+`fay_k = 0.5`, and `design hash`, a checksum of the formula, the
+declared columns and their values.
 
-Three points about the call shape:
+The formula has the placeholder `OUTCOME` on the left-hand side. You
+write the model once, and pvstackr replaces `OUTCOME` by each
+plausible-value column in turn (`PV1READ`, then `PV2READ`). The survey
+weights do not go into the formula: a
+[`weights()`](https://rdrr.io/r/stats/weights.html) term is an error.
+Name the weight columns in `weight_col` and `rep_weight_cols`; the
+defaults of
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+match the PISA names `W_FSTUWT` and `W_FSTURWT1`, `W_FSTURWT2`, and so
+on.
 
-- **`OUTCOME` is a placeholder, not a column.** You write the model once
-  with `OUTCOME` on the left-hand side; pvstackr substitutes each
-  plausible-value column (`PV1READ`, `PV2READ`) in turn, so you never
-  spell out the model \\M\\ times (Mislevy 1991; Davier et al. 2009).
-- **`pv_suffix = "READ"` drives detection.** Modern PISA files suffix
-  plausible values by subject (`PV1READ`, `PV1MATH`, …), so the bare
-  `PV1`/`PV2` default would be ambiguous. Setting the suffix selects the
-  reading block.
-- **No [`weights()`](https://rdrr.io/r/stats/weights.html) in the
-  formula.** Survey weights are *design* information, not model terms;
-  they are passed as columns (here auto-detected) and never embedded in
-  the formula.
+PISA 2022 files name the plausible values by subject, such as `PV1READ`,
+`PV2READ`, … for reading, so `pv_suffix = "READ"` selects the reading
+values; the default suffix `""` matches only bare names such as `PV1`.
+`expected_M` and `expected_R` are optional: they stop the function when
+a different number of columns is found, for example because the suffix
+is wrong. `id_cols` names the column that identifies each row (here the
+student ID); its values must be unique. [Real PISA data: access, memory
+and
+reproducibility](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.html#design)
+shows the call for a PISA 2022 file.
 
-The resolved column sets are available as fields, and you pass them
-straight to the target builder in the next section:
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+checks only the form of the formula; the covariates are checked by
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+which stops with an error if one of them has missing values, so remove
+incomplete rows first. No other pvstackr function takes the design
+object itself. Its fields hold the columns that were found, and you pass
+them on to
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md):
 
 ``` r
 
@@ -118,8 +133,9 @@ design$rep_weight_cols
 #> [1] "W_FSTURWT1" "W_FSTURWT2" "W_FSTURWT3" "W_FSTURWT4"
 ```
 
-Detection is backed by two small helpers you can also call directly —
-handy for checking a new file before committing to a design:
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+finds the columns with two functions that you can also call on their
+own, for example to look at a new file:
 
 ``` r
 
@@ -129,13 +145,18 @@ detect_pisa_brr_replicate_weights(pisa_tiny)
 #> [1] "W_FSTURWT1" "W_FSTURWT2" "W_FSTURWT3" "W_FSTURWT4"
 ```
 
-## 3. Assemble the target — `pv_brr_target()`
+## Computing the target with `pv_brr_target()`
 
-The **target** is the external, design-based variance answer that the
-fit will be calibrated against. It is computed without any Bayesian
-machinery: for each plausible value \\m\\ it forms a BRR–Fay sandwich
-covariance \\\hat U_m\\ from the replicate weights, then pools the \\M\\
-per-PV results with Rubin’s rules. Build it from the design fields:
+The target is the design-based estimate that the fit is calibrated to
+and whose numbers it reports.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+computes it without a Bayesian model. For each plausible value it fits
+the regression by weighted least squares, once with the final weight and
+once with each of the \\R\\ replicate weights, and estimates the
+covariance matrix of the coefficients from the spread of the replicate
+estimates. It then combines the \\M\\ results with Rubin’s rules. That
+makes \\M(R + 1)\\ weighted least-squares fits, 10 here. Pass the data,
+the formula and the columns from the design:
 
 ``` r
 
@@ -160,33 +181,62 @@ target
 #>   source: external_brr_fay_rubin
 ```
 
-Reading the print: 3 fixed effects, \\M = 2\\ plausible values, \\R =
-4\\ replicate weights, `fay_k = 0.5`, `df method: classic`, the interval
-role `descriptive_classic_rubin`, and the provenance tag
-`external_brr_fay_rubin`. That last tag is the seal that marks this
-covariance as *external and design-based* — the property that later
-licenses a coverage claim.
+The print shows 3 fixed effects, 2 plausible values, 4 replicate
+weights, `fay_k = 0.5`, the degrees-of-freedom rule
+(`df method: classic`), the interval label `descriptive_classic_rubin`
+and the source label `external_brr_fay_rubin`. A `stack_direct` fit
+copies the interval label into its estimate table and repeats the source
+label in the column `target_source`.
 
-What the numbers mean, in one breath. The per-PV design covariance is
-the BRR–Fay sandwich
+For plausible value \\m\\, let \\\hat\beta_m\\ be the estimates with the
+final weight and \\\hat\beta_m^{(r)}\\ those with replicate weight
+\\r\\. The BRR–Fay replicate covariance of \\\hat\beta_m\\ is
 
-\\ \hat U_m^{\text{BRR-Fay}} = a_d
-\sum\_{r=1}^{R}\big(\hat\beta_m^{(r)} -
-\hat\beta_m\big)\big(\hat\beta_m^{(r)} - \hat\beta_m\big)^\top, \qquad
-a_d = \frac{1}{R(1-k)^2}, \\
+\\ \hat U_m = \frac{1}{R(1-k)^2} \sum\_{r=1}^{R}
+\big(\hat\beta_m^{(r)} - \hat\beta_m\big)\big(\hat\beta_m^{(r)} -
+\hat\beta_m\big)^\top , \\
 
-and the \\M\\ of those are pooled with Rubin’s rules into the total
-target covariance
+where \\k\\ is the Fay coefficient `fay_k`. In each replicate, Fay’s
+method multiplies the weights of one half-sample by \\2 - k\\ and those
+of the other by \\k\\, where plain BRR uses 2 and 0; the factor
+\\1/(1-k)^2\\ corrects the variance for this smaller change of the
+weights (Judkins 1990). Rubin’s rules then combine the \\M\\ results
+(Rubin 1987): the estimate \\\bar\beta\\ is the average of the
+\\\hat\beta_m\\, and its covariance matrix is
 
-\\ T\_{\text{MI}} = \bar U + \Big(1 + \tfrac{1}{M}\Big) B, \\
+\\ T\_{\text{MI}} = \bar U + \Big(1 + \frac{1}{M}\Big) B , \\
 
-where \\\bar U = \tfrac1M\sum_m \hat U_m\\ is the within-imputation
-(design) covariance and \\B\\ is the between-imputation covariance. The
-target carries all of these pieces explicitly — the pooled point `beta`,
-the components `U_bar` / `B`, the total `T_MI`, the standard errors
-`se`, the degrees of freedom `df`, the fraction of missing information
-`fmi`, the Fay multiplier `fay_variance_multiplier`, and a content hash
-`target_hash`:
+where \\\bar U\\, the average of the \\\hat U_m\\, is the sampling
+covariance within a plausible value, and \\B\\, the covariance matrix of
+the \\M\\ estimates \\\hat\beta_m\\, is the variation between plausible
+values. The standard errors are the square roots of the diagonal of
+\\T\_{\text{MI}}\\.
+
+The degrees of freedom of each coefficient \\\ell\\ follow the rule
+chosen with `df_method`:
+
+- `"classic"` (the default) is the rule of Rubin (1987), \\\nu\_\ell =
+  (M - 1)/\lambda\_\ell^2\\, where \\\lambda\_\ell = (1 +
+  1/M)\\B\_{\ell\ell}/T\_{\text{MI},\ell\ell}\\ is the share of the
+  coefficient’s total variance that comes from the variation between
+  plausible values (stored in the target as `fmi` and as `lambda`).
+- `"barnard_rubin"` is the rule of Barnard and Rubin (1999), which
+  corrects the classic value when the complete-data degrees of freedom
+  are small. It needs `df_complete`, the complete-data degrees of
+  freedom of the replicate-weight variance, which you state.
+
+The rule also sets the interval labels that the fit copies. A target
+made with `"classic"`, like this one, gives descriptive intervals; only
+a target made with `"barnard_rubin"` gives
+`interval_role = "coverage_barnard_rubin"` and
+`coverage_claim_allowed = TRUE`. [Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+explains these columns.
+
+The target keeps each piece as a field: `beta` (\\\bar\beta\\), `U_bar`
+(\\\bar U\\), `B`, `T_MI`, `se`, `df`, `fmi` (\\\lambda\_\ell\\),
+`fay_variance_multiplier` (the factor \\1/\\R(1-k)^2\\\\, which is 1
+here) and `target_hash`, a checksum of its contents:
 
 ``` r
 
@@ -203,16 +253,15 @@ sqrt(diag(target$T_MI))   # these become the reported standard errors
 #>   1.2873118   0.3717929   3.5550309
 ```
 
-The reported standard errors are exactly
-\\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\. The full derivation of
-the BRR–Fay sandwich, Rubin pooling, the Barnard–Rubin degrees of
-freedom, and the design-variance coverage result lives in the **Method
-track, M2**.
+These are the standard errors that a `stack_direct` fit reports. [The
+design-based target: BRR–Fay replicate weights and Rubin’s
+rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.md)
+derives the formulas above.
 
-**The target is fixed-effect-only.** The target engine builds a target
-for the fixed-effect block and rejects random-effect (group) terms
-outright. Asking for `(1 | CNTSCHID)` is an error by design, not an
-oversight:
+The target has fixed effects only.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+stops with an error when the formula has a random-effect term such as
+`(1 | CNTSCHID)`, and so do `stack_direct` and `stack_psis` fits:
 
 ``` r
 
@@ -228,21 +277,40 @@ pv_brr_target(
 #> ! pvstackr: Random-effect formula terms are not supported by the base WLS BRR-Fay target engine yet.
 ```
 
-## 4. Fit — `pv_fit(method = "stack_direct")`
+The message means that in pvstackr 0.2.x a target, and therefore a
+`stack_direct` fit, can have fixed effects only.
 
-With a design and a target in hand, a single dispatcher does the fit.
-The `stack_direct` method fits **one** model on the \\N\cdot M\\ stacked
-rows (each plausible value contributing a copy of the data at weight
-\\1/M\\), then applies the CCC calibration so the fixed-effect estimates
-and covariance match the external `target`. The stacked-bridge identity
-behind “one fit recovers the \\M\\-times-pooled answer” is the subject
-of **M3**.
+## Fitting the model with `pv_fit()`
 
-### 4.1 The path we run here — load the cached fit
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+with `method = "stack_direct"`, the default, fits one Bayesian model to
+the stacked data: \\M\\ copies of the data, one for each plausible
+value, with that plausible value as the outcome, so \\N \cdot M\\ rows
+for \\N\\ students. Row \\i\\ of each copy has the weight \\\tilde
+w_i/M\\, where \\\tilde w_i = W_i/\overline W\\ is the student’s final
+weight \\W_i\\ divided by the mean final weight \\\overline W\\, so the
+stacked log-likelihood is the average of the \\M\\ survey-weighted
+log-likelihoods, one for each plausible value. With these weights, the
+weighted least-squares estimate from the stacked data equals the
+target’s \\\bar\beta\\, the average of the estimates for the separate
+plausible values. The stacked fixed-effect point identity, Theorem 4.1
+of the companion preprint (Lee et al. 2026), states the conditions for
+this equality; [One stacked fit and the Rubin point
+estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.md)
+explains it.
 
-A live `stack_direct` fit needs a modelling backend, which this offline
-vignette does not run. The package therefore ships a cached fit so the
-example is fast and MCMC-free. Load it:
+The identity concerns the point estimate only. The covariance of the
+stacked draws does not contain the variation between plausible values,
+\\B\\ (Lee et al. 2026), and its part within a plausible value comes
+from the model, not from the replicate weights. pvstackr therefore
+calibrates the stacked fit to the target. The Cholesky calibration
+correction (CCC) transforms the fixed-effect draws so that their mean
+and covariance equal the target’s \\\bar\beta\\ and \\T\_{\text{MI}}\\.
+
+### Loading the example fit
+
+The example fit that comes with pvstackr was made from the same data and
+target:
 
 ``` r
 
@@ -262,41 +330,60 @@ fit
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 ```
 
-The print box leads with the answer and the trust-relevant facts: the
-method (`stack_direct`), that it converged (`status: ok`), 3 fixed
-effects, the target it was calibrated against
-(`external_brr_fay_rubin`), that draws were not retained, the attached
-diagnostics, and an honest interval note — for this fixture, *intervals
-are descriptive rather than coverage-claimable*. Section 6 explains
-exactly why, and what would change it.
+The print shows the method, the status, the number of fixed effects, the
+source label of the target, that the calibrated draws were not kept, the
+names of the diagnostics, and a note that the intervals are descriptive;
+the note appears because the target uses the classic rule for the
+degrees of freedom (see the degrees-of-freedom rules in [Computing the
+target](#target)). `status: ok` means that none of pvstackr’s checks
+gave a warning or a block, not that a sampler converged; “Status and
+checks” in
+[`?pvstackr_object_contracts`](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md)
+lists the checks and their thresholds.
 
-### 4.2 The live call — its shape
+### The call for your own data
 
-On real data you would call
+On your own data, call
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-directly and hand it a backend. The simplest route asks for the bundled
-one, which needs no adapter of your own:
+with the same data and formula that built the target;
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+stops with an error when they differ. The fit also needs an engine. The
+bundled one, selected with `pv_control(backend = "brms")`, fits the
+stacked model with the brms function `brm()`:
 
 ``` r
 
 fit <- pv_fit(
   data    = pisa_tiny,
   formula = OUTCOME ~ x + female,
-  target  = target,                                         # from Section 3
+  target  = target,              # from pv_brr_target() above
   method  = "stack_direct",
   control = pv_control(method = "stack_direct", backend = "brms")
 )
 ```
 
-`brms` is in Suggests, so it is needed only when you actually ask for
-this backend. It samples through `cmdstanr` when that package is
-installed and CmdStan is configured, and through `rstan` when `cmdstanr`
-is not installed. An installed `cmdstanr` without a working CmdStan
-raises an error rather than falling back silently.
+The bundled engine needs the brms and posterior packages, which pvstackr
+suggests but does not require. If cmdstanr is installed, CmdStan must be
+configured, otherwise the fit stops with an error instead of switching
+to rstan; if cmdstanr is not installed, brms uses rstan.
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
+also sets the sampler: by default 4 chains of 2000 iterations each, of
+which 1000 are warm-up. `cache_dir`, an argument of
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+that is passed on to
+[`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md),
+defaults to `"cache"`: the bundled engine saves the brms fit in a folder
+`cache` in the working directory, which it creates. brms reuses that
+file as long as the model and the data are unchanged, even when
+`chains`, `iter`, `warmup` or `seed` change: a fit with another number
+of chains or of draws per chain is then blocked, and a new seed returns
+the old draws without a warning. Set `cache_dir = NULL`, or give a new
+`cache_stem`, when you change these settings (see
+[`?pv_fit_direct`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)).
 
-To drive a different engine, inject three functions instead. The chunk
-below shows that **shape**; it is **not run** here, because no live
-backend is assembled in this vignette:
+To use another engine, pass three functions of your own instead; [Using
+your own fitting functions](#own-engine) describes what each one
+receives and returns:
 
 ``` r
 
@@ -305,40 +392,19 @@ fit <- pv_fit(
   formula           = OUTCOME ~ x + female,
   target            = target,
   method            = "stack_direct",
-  control           = pv_control(
-                        method  = "stack_direct",
-                        backend = "cmdstanr"                # passed to your engine
-                      ),
-  fit_function      = your_fit_function,      # estimates the stacked model
-  draws_function    = your_draws_function,    # extracts posterior draws
-  diagnose_function = your_diagnose_function, # reports sampler diagnostics
-  cache_dir         = NULL                    # an injected adapter owns its cache
+  control           = pv_control(method = "stack_direct"),
+  fit_function      = your_fit_function,      # fits the stacked model
+  draws_function    = your_draws_function,    # returns the draws of that fit
+  diagnose_function = your_diagnose_function, # returns its sampler diagnostics
+  cache_dir         = NULL                    # no cache file for your function
 )
 ```
 
-All three slots matter. `fit_function` is the engine that estimates the
-stacked model, `draws_function` pulls posterior draws so CCC can
-calibrate them, and `diagnose_function` reports the sampler evidence. A
-fit that arrives without that evidence is **blocked rather than
-reported**, so the third slot is not optional for a reportable analysis.
+## Reading the result
 
-You do not have to write all three from scratch: the bundled adapter’s
-own functions are exported as
-[`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
-[`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
-and
-[`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
-so you can pass those and replace only the piece that differs for your
-engine. Their contracts — and how a real Bayesian backend slots in — are
-sketched in Section 7 and detailed for real data in **A5**.
-
-## 5. Inspect and report
-
-Two accessors cover almost all reporting.
-[`summary()`](https://rdrr.io/r/base/summary.html) gives the
-human-readable report block;
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-gives the tidy, machine-readable table.
+[`summary()`](https://rdrr.io/r/base/summary.html) repeats the overview
+of [`print()`](https://rdrr.io/r/base/print.html) and adds the main
+columns of the estimate table:
 
 ``` r
 
@@ -358,10 +424,8 @@ summary(fit)
 ```
 
 [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-returns one row per fixed-effect term with the estimate, its standard
-error, the interval, and the metadata that says how far the interval may
-be trusted. The full table is wide; here is the compact view most
-analyses start from:
+returns the estimate table as a data frame with one row per fixed effect
+and 17 columns, of which the chunk below shows eight:
 
 ``` r
 
@@ -380,157 +444,101 @@ est[, c("term", "estimate", "se", "df",
 #> 3 descriptive_classic_rubin                  FALSE
 ```
 
-The three terms are `b_Intercept`, `b_x`, and `b_female`. On this
-synthetic fixture the intercept sits near 458 score points, the slope on
-`x` near 47 points per unit, and the `female` coefficient near 2 points
-with a very wide interval. The estimates and standard errors are
-precisely the target’s pooled coefficients and
-\\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\ from Section 3 — the
-calibration makes the one stacked fit *report the external answer*.
+These are the rows that [Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.md)
+reads. The estimates and standard errors are the target’s \\\bar\beta\\
+and \\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\ computed above, for
+the reason given in [the next section](#center-target), and `df` holds
+the target’s classic degrees of freedom, between 1.0 and 1.4 here, which
+is why the intervals are so wide. [Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+explains the last two columns.
 
-A dot-and-interval plot makes the slopes easy to read. We plot only the
-slope coefficients and drop the intercept, whose scale (~458) would
-otherwise flatten everything else; a reference line at zero marks the
-no-effect value:
+## Why `stack_direct` requires `center = "target"`
 
-``` r
+The setting `center` of
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
+says where the calibrated draws are centered. `stack_direct` requires
+the default, `center = "target"`: CCC gives the fixed-effect draws the
+target’s mean \\\bar\beta\\ and covariance \\T\_{\text{MI}}\\, and the
+estimate table copies the target’s numbers. `estimate` is \\\bar\beta\\,
+`se` is \\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\, and `df`,
+`df_method`, `df_complete`, `interval_role` and `coverage_claim_allowed`
+come from the target; none of them is computed from the stacked fit. The
+stacked fit supplies the calibrated draws, which you can use for
+quantities derived from the coefficients, and the diagnostics that
+compare the fit with the target.
 
-slopes <- est[est$term != "b_Intercept", ]
-slopes <- slopes[order(slopes$term), ]
-
-y    <- seq_len(nrow(slopes))
-xlim <- range(c(slopes$conf_low, slopes$conf_high, 0))
-
-op <- par(mar = c(4.5, 7, 1, 1))
-plot(
-  slopes$estimate, y,
-  xlim = xlim, ylim = c(0.5, nrow(slopes) + 0.5),
-  yaxt = "n", ylab = "",
-  xlab = "Coefficient (synthetic reading-score points)",
-  pch = 19, cex = 1.4, col = "#1f6f9c"
-)
-abline(v = 0, lty = 2, col = "grey50")
-segments(slopes$conf_low, y, slopes$conf_high, y, lwd = 2, col = "#1f6f9c")
-points(slopes$estimate, y, pch = 19, cex = 1.4, col = "#1f6f9c")
-axis(2, at = y, labels = slopes$term, las = 1)
-```
-
-![A horizontal dot-and-interval plot of two slope coefficients from the
-synthetic fixture fit. The coefficient on x is about 47 score points
-with a narrow interval well to the right of zero. The coefficient on
-female is about 2 score points with a wide interval spanning zero from
-roughly minus 42 to plus 46. A dashed vertical reference line is drawn
-at zero.](a2-the-workflow_files/figure-html/coef-figure-1.png)
-
-Slope coefficients from the cached synthetic stack_direct fit, with 95%
-descriptive intervals. The intercept is omitted because its scale (~458
-score points) would dominate the axis. The dashed line marks zero (no
-effect). These are illustrative synthetic values, not real PISA
-estimates.
-
-``` r
-
-par(op)
-```
-
-The slope on `x` is clearly separated from zero; the `female`
-coefficient is small and its interval comfortably spans zero —
-unsurprising in a 12-row synthetic toy with only \\M = 2\\ plausible
-values. The complete accessor family
-([`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)),
-every column of the estimate table, and the interval metadata in depth
-are the subject of **vignette A3**.
-
-## 6. Why reportable fits require `center = "target"`
+This is pvstackr’s rule. It makes every number in a row of the estimate
+table come from one design-based calculation: the estimate, its standard
+error, the degrees of freedom and the interval label are all the
+target’s. The mean of the stacked draws differs from \\\bar\beta\\ by
+Monte Carlo error, and further when the prior is not flat, so pvstackr
+does not report it. It uses it in a check instead: before the
+calibration, `delta_c_max` measures the largest difference between a
+target estimate and the mean of the stacked draws, in target standard
+errors, and a value of 0.01 or more gives the fit the status
+`"warning"`, 0.05 or more the status `"blocked"`. [Calibrating the
+fixed-effect draws
+(CCC)](https://joonho112.github.io/pvstackr/articles/m4-ccc-calibration.md)
+describes the calibration and its diagnostics.
 
 [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)
-has a `center` argument, and its value decides whether a fit is
-*reportable* or merely *diagnostic*. This is the single most important
-control to understand, so it gets its own section.
-
-**`center = "target"` (the default) is the reportable convention.** The
-reported estimate for each coefficient is the external **target**
-coefficient after CCC centering; the standard error is
-\\\sqrt{\operatorname{diag}(T\_{\text{MI}})}\\; and the degrees of
-freedom and interval metadata (`df_method`, `interval_role`,
-`coverage_claim_allowed`) are inherited from the target. In other words,
-the headline numbers come from the design-based external target, and the
-stacked fit supplies the draw cloud that CCC calibrates plus the
-agreement diagnostics — it is not itself the source of the reportable
-variance.
-
-**`center = "posterior"` is diagnostic only.** It leaves the
-fixed-effect center at the raw stacked *posterior* mean while still
-computing target-covariance diagnostics. That hybrid is useful as a CCC
-sanity check, but it is **not** a reportable `stack_direct` result, and
-[`pv_fit_direct()`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
-refuses to emit a reportable estimate table from it. Treat `"posterior"`
-as a diagnostic, never a deliverable.
-
-**Where coverage actually comes from.** A row is
-`coverage_claim_allowed = TRUE` **only** when the fit is `stack_direct`
-*and* it was calibrated against an external **Barnard–Rubin** BRR–Fay
-target (Barnard and Rubin 1999; Rubin 1987; Judkins 1990). The `per_pv`
-and `stack_psis` methods are always descriptive. Read the answer off the
-table rather than relying on a remembered rule:
-
-``` r
-
-est[, c("term", "interval_role", "coverage_claim_allowed")]
-#>          term             interval_role coverage_claim_allowed
-#> 1 b_Intercept descriptive_classic_rubin                  FALSE
-#> 2         b_x descriptive_classic_rubin                  FALSE
-#> 3    b_female descriptive_classic_rubin                  FALSE
-```
-
-For this fixture every row is `descriptive_classic_rubin` with
-`coverage_claim_allowed == FALSE` — because the bundled target uses
-**classic** Rubin df (`df_method == "classic"`), not the Barnard–Rubin
-small-sample df. The fixture is a faithful demonstration of the object
-surface, deliberately descriptive.
-
-One conceptual guardrail to retire a tempting misreading: **CCC is an
-affine moment match, not a coverage theorem.** Calibration guarantees
-that the calibrated draws’ mean and covariance equal the target’s — by
-construction, to machine precision — but that algebraic identity does
-*not* by itself confer coverage. Coverage comes from the **provenance**
-of the target covariance \\T\_{\text{MI}}\\ (external, design-based,
-Barnard–Rubin) and the supporting simulation evidence, not from the
-calibration step. The full treatment — the CCC map and its centering
-conventions in **M4**, and the precise statement of why only
-`stack_direct` is coverage-claimable in **M5** — is in the Method track.
-
-## 7. The live backend, conceptually
-
-The same
+also accepts `center = "posterior"`, which would keep the mean of the
+stacked draws and calibrate only their covariance. No fitting function
+uses it:
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-shape from Section 4.2 reaches a real Bayesian backend through the three
-adapter slots, with no change to the rest of the call. The sketch below
-is **not run** — no live backend executes in any vignette — and is
-purely illustrative of how an adapter conforms to the package’s object
-contracts:
+with `method = "stack_direct"` stops with an error when it is set, and
+`per_pv` and `stack_psis` ignore `center`.
+
+The interval labels come from the target as well, and the calibration
+does not change them. The example target uses the classic rule, so every
+row of the estimate table above is descriptive. [Reading and reporting
+the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+gives the rule that sets these labels for every method.
+
+## Using your own fitting functions
+
+Instead of the bundled engine, `stack_direct` can use three functions
+that you pass to
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md):
+`fit_function` fits the stacked model, `draws_function` returns its
+draws, and `diagnose_function` returns its sampler diagnostics. When you
+pass `fit_function`, pvstackr uses it whatever the `backend` value
+(leave the default; the value is passed to your function and recorded in
+the fit), `draws_function` is required as well, and without
+`diagnose_function` the fit is blocked. Without `fit_function`,
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+stops with an error unless `backend = "brms"` selects the bundled
+engine. The skeleton below is not run; its comments say what each
+function receives and must return:
 
 ``` r
 
-# fit_function: fit the stacked model on the prepared (N * M)-row data and return
-# whatever the backend produces (e.g. a brms or cmdstanr fit object).
-my_fit_function <- function(formula, data, weights, ...) {
+# fit_function: fit the stacked model and return the fitted object. pvstackr
+# calls it with the named arguments formula, data, family, prior, chains, iter,
+# warmup, cores, seed, backend, file and file_refit, plus the elements of
+# additional_args. There is no weights argument: the weights are in the
+# formula term weights(.pvstackr_weight) and in the data column
+# .pvstackr_weight.
+my_fit_function <- function(formula, data, ...) {
   # ... call your Bayesian engine here ...
 }
 
-# draws_function: return a posterior draws matrix whose columns are the
-# fixed-effect parameters CCC will calibrate (b_* naming, or supply param_map).
+# draws_function: return the draws of that fit as a numeric matrix with one
+# row per draw. Name the fixed-effect columns as in target$fe_names
+# (b_Intercept, b_x, ...) or after the stacked formula (b_pvstackrMM001, ...),
+# or pass param_map.
 my_draws_function <- function(backend_fit, ...) {
   # ... extract a draws matrix from backend_fit ...
 }
 
-# diagnose_function: report the sampler diagnostics. Without it the sampler
-# evidence is incomplete and the fit is blocked rather than reported.
+# diagnose_function: return the sampler diagnostics as a named list with six
+# values. If it is missing, fails or leaves out a value, the fit is blocked.
 my_diagnose_function <- function(backend_fit, ...) {
-  # ... return R-hat, ESS, and divergences from backend_fit ...
+  # ... return list(rhat_max = , ess_bulk_min = , ess_tail_min = ,
+  #                 divergences = , chains = , post_warmup_draws_per_chain = )
 }
 
 fit <- pv_fit(
@@ -538,7 +546,7 @@ fit <- pv_fit(
   formula           = OUTCOME ~ x + female,
   target            = your_target,
   method            = "stack_direct",
-  control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+  control           = pv_control(method = "stack_direct"),
   fit_function      = my_fit_function,
   draws_function    = my_draws_function,
   diagnose_function = my_diagnose_function,
@@ -546,92 +554,75 @@ fit <- pv_fit(
 )
 ```
 
-The adapters must conform to pvstackr’s fixed-effect draw contract — the
-formal object and interval contracts are documented at
+`fit_function` receives the stacked data: one copy of your data per
+plausible value, with the outcome in `.pvstackr_y`, the row weight
+\\\tilde w_i/M\\ in `.pvstackr_weight`, and the columns of the design
+matrix, the intercept included, as `pvstackrMM001`, `pvstackrMM002`, and
+so on. For the model of this article its formula, in brms syntax, is
+`.pvstackr_y | weights(.pvstackr_weight) ~ 0 + pvstackrMM001 + pvstackrMM002 + pvstackrMM003`.
+A function that ignores the weights fits an unweighted model. It may
+return any object that your other two functions accept.
+
+`draws_function` takes that object and returns the draws as a numeric
+matrix or data frame with one row per draw (at least two). The columns
+whose names start with `b_` are the fixed effects; a `sigma` column is
+taken as the residual standard deviation, which is not reported, and
+other columns such as `lp__` are dropped. When your fixed effects have
+other names, say which columns they are with `param_map`.
+
+`diagnose_function` takes the same object and returns a named list with
+six values: `rhat_max` (the largest R-hat), `ess_bulk_min` and
+`ess_tail_min` (the smallest bulk and tail effective sample sizes,
+totals over all chains), `divergences` (the number of divergent
+transitions), `chains` and `post_warmup_draws_per_chain`. If the
+function is missing or fails, or any of the six values is missing, the
+last two included, the fit is blocked (`sampler_diagnostics_incomplete`)
+and has no estimates. The last two must also equal `chains` and
+`iter - warmup` in
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md),
+or the fit is blocked as well. pvstackr then checks R-hat, the effective
+sample sizes and the divergences by the thresholds under “Status and
+checks” in
 [`?pvstackr_object_contracts`](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md).
-Memory and runtime considerations for real files (the stacked design
-grows the row count to \\N\cdot M\\, and the target requires \\M(R+1)\\
-replicate fits), plus PISA licensing and non-affiliation, are covered in
-**vignette A5**.
 
-## 8. Recap
+The other arguments of `fit_function` carry settings: `chains`, `iter`,
+`warmup`, `cores`, `seed` and `backend` come from
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md),
+`family` is always
+[`stats::gaussian()`](https://rdrr.io/r/stats/family.html), `prior` is
+`NULL` unless you give one (see
+[`?pv_fit_direct`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)),
+and `additional_args`, a named list in the
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+call, adds arguments of your own. With the default
+`cache_dir = "cache"`, your function receives
+`file = "cache/pvstackr-stack-direct"` and `file_refit = "on_change"`,
+but pvstackr does not create the folder; with `cache_dir = NULL` it
+receives `file = NULL` and `file_refit = "never"`.
 
-You ran the full pipeline on the synthetic fixture:
+You do not have to write all three functions. The functions of the
+bundled engine are exported as
+[`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+[`pv_backend_brms_draws_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+and
+[`pv_backend_brms_sampler_diagnostics()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md),
+so you can pass them and replace only the one that differs for your
+engine.
+[`?pv_fit_direct`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
+gives the full lists of arguments and return values (see `fit_function`,
+`draws_function`, `param_map`, `diagnose_function`, `cache_dir` and
+`additional_args`), and
+[`?pv_backend_brms_fit_function`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
+describes the bundled functions.
 
-1.  **[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)**
-    — declared the PV design (columns, weights, Fay \\k\\).
-2.  **[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)**
-    — assembled the external, design-based Rubin / BRR–Fay target
-    \\T\_{\text{MI}} = \bar U + (1 + 1/M)B\\, fixed-effect-only.
-3.  **`pv_fit(method = "stack_direct")`** — one stacked, CCC-calibrated
-    fit (loaded here from cache; the live call shape and a backend
-    sketch shown for real data).
-4.  **[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md)
-    / [`summary()`](https://rdrr.io/r/base/summary.html)** — read the
-    reportable table and diagnostics.
-
-And the one rule to carry forward: **reportable fits use
-`center = "target"`**; `center = "posterior"` is diagnostic only, and a
-coverage claim is reserved for `stack_direct` calibrated against an
-external **Barnard–Rubin** BRR–Fay target — which is why this classic-df
-fixture is honestly descriptive.
-
-Where to next:
-
-- **A3 · Reading results & what to report** — the full accessor family,
-  every estimate-table column, the interval metadata in depth, the
-  fraction of missing information, and a reporting checklist.
-- **A4 · Comparing methods** —
-  [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
-  across `stack_direct`, `per_pv`, and `stack_psis`, with agreement
-  diagnostics and the two cautions.
-- **A5 · Real PISA data guidance** — connecting to genuine PISA files:
-  licensing and non-affiliation, the design declaration, memory/runtime,
-  and reproducibility.
-
-For the mathematics referenced above — the BRR–Fay target (**M2**), the
-stacked fractional bridge (**M3**), and CCC plus the coverage argument
-(**M4**, **M5**) — start the Method track at **M1 · Foundations and
-notation**.
-
-### Session info
-
-``` r
-
-sessionInfo()
-#> R version 4.6.1 (2026-06-24)
-#> Platform: x86_64-pc-linux-gnu
-#> Running under: Ubuntu 24.04.4 LTS
-#> 
-#> Matrix products: default
-#> BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 
-#> LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0
-#> 
-#> locale:
-#>  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
-#>  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
-#>  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
-#> [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
-#> 
-#> time zone: UTC
-#> tzcode source: system (glibc)
-#> 
-#> attached base packages:
-#> [1] stats     graphics  grDevices utils     datasets  methods   base     
-#> 
-#> other attached packages:
-#> [1] pvstackr_0.2.0
-#> 
-#> loaded via a namespace (and not attached):
-#>  [1] vctrs_0.7.3       cli_3.6.6         knitr_1.51        rlang_1.3.0      
-#>  [5] xfun_0.60         otel_0.2.0        textshaping_1.0.5 jsonlite_2.0.0   
-#>  [9] glue_1.8.1        htmltools_0.5.9   ragg_1.5.2        sass_0.4.10      
-#> [13] rmarkdown_2.31    evaluate_1.0.5    jquerylib_0.1.4   fastmap_1.2.0    
-#> [17] yaml_2.3.12       lifecycle_1.0.5   compiler_4.6.1    fs_2.1.0         
-#> [21] systemfonts_1.3.2 digest_0.6.39     R6_2.6.1          pillar_1.11.1    
-#> [25] bslib_0.12.0      tools_4.6.1       pkgdown_2.2.1     cachem_1.1.0     
-#> [29] desc_1.4.3
-```
+Once you have a fit, [Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.md)
+describes everything it contains and what to report. For real PISA
+files, [Real PISA data: access, memory and
+reproducibility](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.md)
+covers data access, memory and running time: the stacked data have \\N
+\cdot M\\ rows, and the target takes \\M(R + 1)\\ weighted least-squares
+fits.
 
 ## References
 
@@ -639,16 +630,15 @@ Barnard, John, and Donald B. Rubin. 1999. “Small-Sample Degrees of
 Freedom with Multiple Imputation.” *Biometrika* 86 (4): 948–55.
 <https://doi.org/10.1093/biomet/86.4.948>.
 
-Davier, Matthias von, Eugenio Gonzalez, and Robert J. Mislevy. 2009.
-“What Are Plausible Values and Why Are They Useful?” *IERI Monograph
-Series* 2: 9–36.
-
 Judkins, David R. 1990. “Fay’s Method for Variance Estimation.” *Journal
 of Official Statistics* 6 (3): 223–39.
+<https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/fay39s-method-for-variance-estimation.pdf>.
 
-Mislevy, Robert J. 1991. “Randomization-Based Inference about Latent
-Variables from Complex Samples.” *Psychometrika* 56 (2): 177–96.
-<https://doi.org/10.1007/BF02294457>.
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026. *One
+Markov Chain Monte Carlo Fit for Many Plausible Values: A Calibrated
+Stacked Posterior Workflow for Bayesian Multilevel Models of Large-Scale
+Assessment Data*. Zenodo preprint, version 1.
+<https://doi.org/10.5281/zenodo.22407935>.
 
 Rubin, Donald B. 1987. *Multiple Imputation for Nonresponse in Surveys*.
 John Wiley & Sons. <https://doi.org/10.1002/9780470316696>.

@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics • pvstackr</title>
+<title>Calibrating the fixed-effect draws (CCC) • pvstackr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -21,7 +21,8 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Calibrating the fixed-effect draws (CCC)">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -31,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,23 +41,24 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/a1-getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><h6 class="dropdown-header" data-toc-skip>Applied Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">A1 · Getting started</a></li>
-    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">A2 · The end-to-end workflow</a></li>
-    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">A3 · Reading results &amp; what to report</a></li>
-    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">A4 · Comparing methods</a></li>
-    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">A5 · Real PISA data guidance</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Applied articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">Getting started with pvstackr</a></li>
+    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">The full analysis workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">Reading and reporting the results</a></li>
+    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">Comparing the three fitting methods</a></li>
+    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">Real PISA data: access, memory and reproducibility</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Method Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">M1 · Foundations and notation</a></li>
-    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">M2 · The BRR–Fay fixed-effect target</a></li>
-    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">M3 · The stacked fractional bridge</a></li>
-    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">M4 · CCC: Cholesky Calibration Correction</a></li>
-    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">M5 · Methods, PSIS, and coverage</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Method articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">Plausible values, survey weights and notation</a></li>
+    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">The design-based target: BRR–Fay replicate weights and Rubin's rules</a></li>
+    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">One stacked fit and the Rubin point estimate</a></li>
+    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">Calibrating the fixed-effect draws (CCC)</a></li>
+    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">Choosing a method and reading its intervals</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -78,390 +80,450 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Calibrating the fixed-effect draws (CCC)</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee</h4>
             
-            <h4 data-toc-skip class="date">2026-08-14</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/v0.2.0/vignettes/m4-ccc-calibration.Rmd" class="external-link"><code>vignettes/m4-ccc-calibration.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/vignettes/m4-ccc-calibration.Rmd" class="external-link"><code>vignettes/m4-ccc-calibration.Rmd</code></a></small>
       <div class="d-none name"><code>m4-ccc-calibration.Rmd</code></div>
     </div>
 
     
         <div class="abstract">
       <p class="abstract">Abstract</p>
-      <p>The fourth page of the Method track derives the calibration map
-      that makes a single stacked fit report the external variance
-      answer. M3 matched the point — the stacked fixed-effect estimate
-      equals the Rubin mean; M4 matches the variance, forcing the first
-      two moments of the raw stacked draw cloud to equal the external
-      target’s center and covariance through an affine Cholesky map. It
-      states the map in full, distinguishes the reportable
-      target-centering convention from the diagnostic posterior one,
-      describes the deterministic algorithm and its conditioning
-      diagnostic, and defines the center-separation diagnostic with both
-      summaries the package tracks. A self-contained synthetic panel
-      verifies the moment-match invariant to machine precision.
-      Throughout it is explicit that CCC is an affine moment match, not
-      a coverage theorem: the invariants are algebraic by construction,
-      and coverage comes from the provenance of the target, never from
-      the calibration itself.</p>
+      <p>In a <code>stack_direct</code> fit, the Cholesky calibration
+      correction (CCC) transforms the fixed-effect draws of one Bayesian
+      fit to the stacked plausible-value data so that their mean and
+      covariance equal the estimates and the covariance matrix of the
+      design-based target. This article gives the map, its exact moment
+      properties and their source, the algorithm that pvstackr uses and
+      when it stops with an error, and the diagnostics
+      <code>delta_c_max</code>, <code>delta_c_rel</code> and
+      <code>kappa_A</code> with pvstackr’s thresholds. A check on
+      simulated draws confirms the moment properties; neither the check
+      nor the calibration says anything about the coverage of
+      intervals.</p>
     </div>
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://joonho112.github.io/pvstackr/">pvstackr</a></span><span class="op">)</span></span></code></pre></div>
-<p>M3 settled the <strong>point</strong>. Its stacked fractional bridge
-showed that one model fit on the <span class="math inline">\(N\cdot
-M\)</span> stacked rows, each weighted <span class="math inline">\(1/M\)</span>, recovers the Rubin mean <span class="math inline">\(\bar\beta\)</span> under the regularity conditions
-of Theorem 2.2 (EQ-THM22) — but it was emphatic that this is a
-fixed-effect <em>point</em> identity and says <strong>nothing</strong>
-about the variance. The variance answer is a separate object: M2’s
-external Rubin / BRR–Fay total <span class="math inline">\(T_{\text{MI}}\)</span> (EQ-TMI), built from the
-<em>design</em>, not from the fit <span class="citation">(Rubin
-1987)</span>. This page closes the gap. CCC — the <strong>Cholesky
-Calibration Correction</strong> — is the deterministic affine map that
-takes the raw stacked draw cloud and forces its first two moments to
-equal that external target’s. Where Theorem 2.2 matched the point, CCC
-matches the <strong>variance</strong>.</p>
-<p>The shared light-path load — the same one used across the Method
-track — gives us the cached fit and its external target to point at. As
-in A3 §6.2, this fit was produced with
-<code>return_draws = FALSE</code>, so it retains <strong>no</strong>
-posterior draws and <code>get_draws(fit)</code> is
-<code>NULL</code>:</p>
+<p>A <code>stack_direct</code> fit rests on two calculations. The
+target, computed by <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code>, fits a survey-weighted
+linear regression by weighted least squares to each of the <span class="math inline">\(M\)</span> plausible values, estimates the
+covariance of each estimate from the BRR–Fay replicate weights, and
+combines the results with Rubin’s rules into the estimate <span class="math inline">\(\bar\beta\)</span> of the <span class="math inline">\(p\)</span> fixed effects and its total covariance
+matrix <span class="math inline">\(T_{\text{MI}} = \bar U + (1 +
+1/M)B\)</span>. Here <span class="math inline">\(\bar U\)</span> is the
+average of the <span class="math inline">\(M\)</span> replicate
+covariances and <span class="math inline">\(B\)</span> the covariance
+between the <span class="math inline">\(M\)</span> estimates (<a href="m2-brr-fay-target.html#rubin">The design-based target: BRR–Fay
+replicate weights and Rubin’s rules</a>). The stacked fit is one
+Bayesian fit of the same regression to the stacked data: <span class="math inline">\(M\)</span> copies of the <span class="math inline">\(N\)</span> rows, one for each plausible value, in
+which row <span class="math inline">\(i\)</span> has the weight <span class="math inline">\(\tilde w_i/M\)</span>, where <span class="math inline">\(\tilde w_i = W_i/\overline W\)</span> is the final
+weight <span class="math inline">\(W_i\)</span> divided by the mean
+final weight <span class="math inline">\(\overline W\)</span>.</p>
+<p>The Cholesky calibration correction (CCC) connects the two. It
+transforms the fixed-effect draws of the stacked fit so that their mean
+is <span class="math inline">\(\bar\beta\)</span> and their covariance
+is <span class="math inline">\(T_{\text{MI}}\)</span>, and before it
+does so it records how far the stacked fit was from the target. The code
+below reads the example fit that ships with pvstackr and its target:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"examples"</span>, <span class="st">"pisa_tiny_stack_direct.rds"</span>,</span>
 <span>              package <span class="op">=</span> <span class="st">"pvstackr"</span><span class="op">)</span></span>
 <span><span class="op">)</span><span class="op">$</span><span class="va">fit</span></span>
-<span><span class="va">tg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_target.html">get_target</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>   <span class="co"># external Rubin / BRR–Fay target (M2's object); Sigma_tgt = T_MI</span></span>
+<span><span class="va">tg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_target.html">get_target</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>   <span class="co"># the target of the fit, made by pv_brr_target()</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>M <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">M</span>, R <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">R</span>, fay_k <span class="op">=</span> <span class="va">tg</span><span class="op">$</span><span class="va">fay_k</span><span class="op">)</span>   <span class="co"># 2, 4, 0.5</span></span>
-<span><span class="co">#&gt;     M     R fay_k </span></span>
-<span><span class="co">#&gt;   2.0   4.0   0.5</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="../reference/get_draws.html">get_draws</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span>                   <span class="co"># TRUE -- no retained draws to calibrate</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/NULL.html" class="external-link">is.null</a></span><span class="op">(</span><span class="fu"><a href="../reference/get_draws.html">get_draws</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>The design is the tiny synthetic one M1 introduced: <span class="math inline">\(M = 2\)</span> plausible values, <span class="math inline">\(R = 4\)</span> replicate weights, Fay coefficient
-<span class="math inline">\(k = 0.5\)</span>. The empty draw matrix is
-the reason Section 6’s invariant must be <strong>self-contained
-synthetic</strong> — there are no real draws on this fixture to run the
-map on. We can still read the <em>realized</em> calibration diagnostics
-off the fit, and we do so in Section 6.</p>
-<div class="alert alert-info">
-<p><strong>Scope of this page.</strong> M4 derives the calibration map
-(EQ-CCC) and the center-separation diagnostic (EQ-DELTAC), and verifies
-the moment-match invariant on a self-contained synthetic draw cloud. It
-estimates nothing — there is no MCMC below, only base-R linear algebra
-and read-only accessor calls against the bundled synthetic fixture. M4
-is the only Method vignette with any randomness, and that is confined to
-the synthetic cloud of Section 6 (with a fixed <code>set.seed</code>).
-The <em>point</em> side is <strong>M3</strong> (EQ-THM22); the
-provenance of <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> is
-<strong>M2</strong>; which fits may carry a coverage claim is
-<strong>M5</strong>.</p>
+<p>The example fit and its synthetic data are described in <a href="a1-getting-started.html#example-fit">Getting started with
+pvstackr</a>. The fit was saved without its calibrated draws, so <a href="#checks">the check of the map</a> uses simulated draws, and the
+diagnostics that the calibration recorded are read from the fit.</p>
+<div class="section level2">
+<h2 id="why-calibrate">Why the stacked draws are calibrated<a class="anchor" aria-label="anchor" href="#why-calibrate"></a>
+</h2>
+<p>The stacked fit is built to agree with the target in its point
+estimate. Its log likelihood is the average of the <span class="math inline">\(M\)</span> survey-weighted log-likelihoods, one
+for each plausible value, and the stacked fixed-effect point identity,
+Theorem 4.1 of the companion preprint <span class="citation">(Lee et al.
+2026)</span>, gives conditions under which the value of <span class="math inline">\(\beta\)</span> that maximizes this average equals
+<span class="math inline">\(\bar\beta\)</span>. In pvstackr’s model the
+weighted least-squares estimate from the stacked data equals <span class="math inline">\(\bar\beta\)</span> exactly, so with a flat prior
+on the fixed effects the mean of the draws differs from <span class="math inline">\(\bar\beta\)</span> only by Monte Carlo error (<a href="m3-stacked-bridge.html#point-identity">One stacked fit and the
+Rubin point estimate</a> explains the identity and its conditions).</p>
+<p>The identity concerns the point estimate only and gives no variance.
+The between-imputation covariance <span class="math inline">\(B\)</span>
+is the covariance of estimates from separate analyses of the <span class="math inline">\(M\)</span> plausible values and exists only across
+such analyses, so the draws of one stacked fit do not contain it. The
+preprint notes that the covariance of the stacked fixed-effect draws
+approximates a one-sample quantity that corresponds to the
+within-imputation part <span class="math inline">\(\bar U\)</span> only,
+and so lacks the term <span class="math inline">\((1 + 1/M)B\)</span> of
+<span class="math inline">\(T_{\text{MI}}\)</span> <span class="citation">(Lee et al. 2026, 11–12, 40)</span>. In pvstackr the
+target’s <span class="math inline">\(\bar U\)</span> comes from the
+replicate weights, whereas the spread of the stacked draws comes from
+the model: the likelihood of the stacked fit carries the survey weights,
+but not the clustering of the sample or the replicate weights.</p>
+<p>pvstackr therefore takes the numbers it reports from the target (<a href="a2-the-workflow.html#center-target">The full analysis
+workflow</a>), and CCC transforms the draws to agree with these numbers.
+The calibrated draws, returned by <code>get_draws(fit)</code>, have the
+mean <span class="math inline">\(\bar\beta\)</span> and the covariance
+<span class="math inline">\(T_{\text{MI}}\)</span>, so a linear
+combination of the coefficients computed from them has the target’s
+estimate and variance. They do not carry the target’s degrees of
+freedom: quantiles of the draws give roughly a normal-reference
+interval, which is narrower than the <span class="math inline">\(t\)</span> interval of the estimate table when the
+degrees of freedom are small (see <a href="#map">the calibration
+map</a>). Before the draws are moved, the calibration compares the
+stacked fit with the target (see <a href="#diagnostics">the
+diagnostics</a>).</p>
 </div>
 <div class="section level2">
-<h2 id="what-ccc-is-for">1. What CCC is for<a class="anchor" aria-label="anchor" href="#what-ccc-is-for"></a>
+<h2 id="map">The calibration map<a class="anchor" aria-label="anchor" href="#map"></a>
 </h2>
-<p>The raw stacked fit hands you a posterior draw cloud for the fixed
-effects — call its draws <span class="math inline">\(\beta_1,\dots,\beta_S\)</span>. That cloud has
-<em>some</em> mean <span class="math inline">\(\bar\beta^{\text{raw}}\)</span> and <em>some</em>
-covariance <span class="math inline">\(\Sigma_{\text{raw}}\)</span>, but
-neither is the answer you want to report. Its mean is the raw stacked
-posterior center — close to <span class="math inline">\(\bar\beta\)</span> under the bridge (M3), but not
-the external object — and its covariance is the model’s nominal
-posterior spread, which M2 §6 warned can <strong>under-cover</strong>
-because it never sees the survey’s clustering and weighting. The
-variance you are entitled to report lives outside the fit: the
-design-based <span class="math inline">\(T_{\text{MI}}\)</span> from M2
-<span class="citation">(Rubin 1987)</span>.</p>
-<p>CCC reconciles the two. It is the map that takes the raw cloud and
-<strong>moves its first two moments onto the external target’s</strong>:
-it shifts the mean to a target center <span class="math inline">\(c\)</span> and stretches the covariance to <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. After
-CCC, the calibrated draw cloud has — by construction — exactly the
-center and covariance of the external target, so a fit that reports the
-calibrated cloud’s moments <em>reports the external answer</em>. That is
-the whole purpose: M3’s bridge makes one stacked fit recover the right
-<strong>point</strong>; CCC makes that same fit carry the right
-<strong>variance</strong>. Together they are the “one fit instead of
-<span class="math inline">\(M\)</span>” machinery the package’s honest
-headline rests on (facts §5) — an algebraic equivalence, never a speed
-claim.</p>
-<p>Two pieces of the division of labour are worth stating now, because
-the rest of the page keeps returning to them. First, CCC supplies an
-<em>algebraic</em> match of moments; the <em>coverage</em> that match is
-useful for comes entirely from the <strong>provenance</strong> of <span class="math inline">\(\Sigma_{\text{tgt}}\)</span> (Section 5, and the
-central caveat). Second, the match is of the <strong>first two moments
-only</strong> — center and covariance — not of the full distributional
-shape; CCC is an affine map, and affine maps preserve, they do not
-create, higher-order structure.</p>
-</div>
-<div class="section level2">
-<h2 id="the-map">2. The map<a class="anchor" aria-label="anchor" href="#the-map"></a>
-</h2>
-<p>The map itself is one line. Writing <span class="math inline">\(\beta_s\)</span> for the <span class="math inline">\(s\)</span>-th raw posterior draw and <span class="math inline">\(\beta_s^{\text{cal}}\)</span> for its calibrated
-image, <strong>CCC — tag EQ-CCC — is</strong></p>
+<p>Let <span class="math inline">\(\beta_1, \dots, \beta_S\)</span> be
+the <span class="math inline">\(S\)</span> draws of the <span class="math inline">\(p\)</span> fixed effects from the stacked fit,
+with mean and covariance</p>
 <p><span class="math display">\[
-\beta_s^{\text{cal}}=c+L_{\text{tgt}}L_{\text{raw}}^{-1}\big(\beta_s-\bar\beta^{\text{raw}}\big),\qquad
-L L^\top=\Sigma\ \text{(lower-triangular)},
+\bar\beta^{\text{raw}} = \frac{1}{S}\sum_{s=1}^{S} \beta_s, \qquad
+\Sigma_{\text{raw}} = \frac{1}{S-1}\sum_{s=1}^{S}
+  \big(\beta_s - \bar\beta^{\text{raw}}\big)\big(\beta_s -
+\bar\beta^{\text{raw}}\big)^\top ,
 \]</span></p>
-<p>so by construction <span class="math inline">\(\operatorname{mean}\{\beta_s^{\text{cal}}\}=c\)</span>
-and <span class="math inline">\(\operatorname{Cov}\{\beta_s^{\text{cal}}\}=\Sigma_{\text{tgt}}\)</span>
-(to machine precision, when <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is positive
-definite).</p>
-<p>Read it as three moves applied to every draw, right to left:</p>
+<p>and let <span class="math inline">\(L_{\text{raw}}\)</span> and <span class="math inline">\(L_{\text{tgt}}\)</span> be the lower-triangular
+Cholesky factors of <span class="math inline">\(\Sigma_{\text{raw}}\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span>, so that <span class="math inline">\(L_{\text{raw}} L_{\text{raw}}^\top =
+\Sigma_{\text{raw}}\)</span> and <span class="math inline">\(L_{\text{tgt}} L_{\text{tgt}}^\top =
+T_{\text{MI}}\)</span>. CCC maps each draw to</p>
+<p><span class="math display">\[
+\beta^{\text{cal}}_s = \bar\beta + A\big(\beta_s -
+\bar\beta^{\text{raw}}\big),
+\qquad A = L_{\text{tgt}} L_{\text{raw}}^{-1} .
+\]</span></p>
+<p>The preprint gives this map as its Eq. (5) <span class="citation">(Lee et al. 2026, 12)</span>; in pvstackr, <span class="math inline">\(\bar\beta\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> are those of the target
+from <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code>. The map centers each draw at the mean
+of the stacked draws, multiplies it by the calibration matrix <span class="math inline">\(A\)</span>, and adds the target estimate <span class="math inline">\(\bar\beta\)</span>. Multiplying the centered draws
+by <span class="math inline">\(L_{\text{raw}}^{-1}\)</span> gives them
+the identity matrix as covariance, and multiplying them by <span class="math inline">\(L_{\text{tgt}}\)</span> then gives them the
+covariance <span class="math inline">\(T_{\text{MI}}\)</span>.</p>
+<p>The calibrated draws have three properties, which make up exact
+moment calibration, Proposition B.1 of the preprint <span class="citation">(Lee et al. 2026, 37)</span>:</p>
 <ul>
-<li>
-<strong>Recenter.</strong> <span class="math inline">\(\big(\beta_s-\bar\beta^{\text{raw}}\big)\)</span>
-subtracts the raw cloud’s own mean, so the recentered draws are centered
-at the origin. This strips off whatever the raw center happened to be,
-leaving only the cloud’s <em>shape</em> about its mean.</li>
-<li>
-<strong>Linear map.</strong> <span class="math inline">\(L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span> is the
-affine transform that converts the raw covariance into the target
-covariance. Here <span class="math inline">\(L_{\text{raw}}\)</span> and
-<span class="math inline">\(L_{\text{tgt}}\)</span> are the
-<strong>lower-triangular Cholesky factors</strong> of, respectively, the
-raw covariance <span class="math inline">\(\Sigma_{\text{raw}}\)</span>
-and the target <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> — each
-satisfies <span class="math inline">\(L L^\top=\Sigma\)</span>. Applying
-<span class="math inline">\(L_{\text{raw}}^{-1}\)</span> “whitens” the
-recentered draws (turns their covariance into the identity), and
-applying <span class="math inline">\(L_{\text{tgt}}\)</span> then
-“colours” them to have exactly the target covariance.</li>
-<li>
-<strong>Shift to <span class="math inline">\(c\)</span>.</strong>
-Adding <span class="math inline">\(c\)</span> relocates the
-now-correctly-shaped cloud so its mean is the target center <span class="math inline">\(c\)</span> (the reportable choice <span class="math inline">\(c=\bar\beta\)</span> is Section 3).</li>
+<li>their mean is <span class="math inline">\(\bar\beta\)</span>;</li>
+<li>their covariance, computed like <span class="math inline">\(\Sigma_{\text{raw}}\)</span>, is <span class="math inline">\(T_{\text{MI}}\)</span>;</li>
+<li>the draws of parameters other than the fixed effects are
+unchanged.</li>
 </ul>
-<p>The covariance claim is a one-line consequence of how covariance
-transforms under a linear map. For a linear transform <span class="math inline">\(\beta\mapsto A\beta\)</span>, the covariance
-becomes <span class="math inline">\(A\,\Sigma_{\text{raw}}\,A^\top\)</span>. With
-<span class="math inline">\(A=L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span>
-and <span class="math inline">\(\Sigma_{\text{raw}}=L_{\text{raw}}L_{\text{raw}}^\top\)</span>,</p>
+<p>The first holds because the centered draws have mean zero and <span class="math inline">\(A\)</span> maps zero to zero. The second follows
+from the way a covariance matrix changes under a linear map:</p>
 <p><span class="math display">\[
 A\,\Sigma_{\text{raw}}\,A^\top
-=
-L_{\text{tgt}}L_{\text{raw}}^{-1}\,\big(L_{\text{raw}}L_{\text{raw}}^\top\big)\,L_{\text{raw}}^{-\top}L_{\text{tgt}}^\top
-= L_{\text{tgt}}L_{\text{tgt}}^\top
-= \Sigma_{\text{tgt}},
+= L_{\text{tgt}} L_{\text{raw}}^{-1}
+  \big(L_{\text{raw}} L_{\text{raw}}^\top\big)
+  L_{\text{raw}}^{-\top} L_{\text{tgt}}^\top
+= L_{\text{tgt}} L_{\text{tgt}}^\top
+= T_{\text{MI}} .
 \]</span></p>
-<p>the internal <span class="math inline">\(L_{\text{raw}}^{-1}L_{\text{raw}}\)</span> and
-<span class="math inline">\(L_{\text{raw}}^\top
-L_{\text{raw}}^{-\top}\)</span> collapsing to identities. The mean claim
-is even simpler: the recenter makes the pre-shift mean zero, the linear
-map sends zero to zero, and the shift sets the mean to <span class="math inline">\(c\)</span>. Both invariants are therefore
-<em>exact by construction</em> — which is precisely the fact Section 6
-checks numerically and the central caveat insists must
-<strong>not</strong> be over-read as coverage.</p>
+<p>The third holds because the map acts on the fixed-effect columns
+only. In pvstackr’s model the only other parameter of the stacked fit is
+the residual standard deviation <span class="math inline">\(\sigma\)</span>, whose draws pass through
+unchanged; pvstackr neither calibrates nor reports it, and
+<code>get_draws(fit)</code> returns the calibrated fixed-effect draws
+only.</p>
+<p>These properties are algebraic. They hold for any draws whose
+covariance matrix is positive definite, apart from the rounding error of
+floating-point arithmetic, and they do not depend on how well the
+stacked fit was sampled: because the map uses the mean and covariance of
+the draws at hand, Monte Carlo error changes <span class="math inline">\(A\)</span> but not the mean and covariance of the
+calibrated draws <span class="citation">(Lee et al. 2026,
+37)</span>.</p>
+<p>The preprint describes CCC as the scale-and-shape correction that
+<span class="citation">Williams and Savitsky (2021)</span> developed for
+pseudo-posteriors under complex sampling, specialized to the
+fixed-effect block of the model and to a covariance target from the
+combining rules <span class="citation">(Lee et al. 2026, 7,
+13)</span>.</p>
+<p>CCC sets the mean and the covariance of the draws and nothing else.
+The calibrated draws are an affine transformation of the stacked draws,
+so they are normal only when the stacked draws are, and their other
+features follow from those of the stacked draws through the same
+transformation. The interval of a <code>stack_direct</code> fit does not
+use the draws: it is the estimate plus or minus a <span class="math inline">\(t\)</span> quantile times the standard error, all
+taken from the target (<a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a>). Quantiles of the calibrated draws therefore do not
+reproduce this interval. In the example, whose classic degrees of
+freedom are between 1.0 and 1.4, the 95% <span class="math inline">\(t\)</span> intervals are three to six times as
+wide as normal-reference intervals with the same standard errors; with
+<span class="math inline">\(M = 10\)</span> the classic degrees of
+freedom are at least 9, so the <span class="math inline">\(t\)</span>
+quantile is at most 2.26 against 1.96; Barnard–Rubin degrees of freedom
+can be smaller, and the gap then larger.</p>
 </div>
 <div class="section level2">
-<h2 id="centering-conventions">3. Centering conventions<a class="anchor" aria-label="anchor" href="#centering-conventions"></a>
+<h2 id="the-center-of-the-calibrated-draws">The center of the calibrated draws<a class="anchor" aria-label="anchor" href="#the-center-of-the-calibrated-draws"></a>
 </h2>
-<p>EQ-CCC leaves one quantity to choose: the center <span class="math inline">\(c\)</span> the calibrated draws are shifted to.
-The choice is what separates a <strong>reportable</strong> fit from a
-merely <strong>diagnostic</strong> one, and it is the single most
-important control in this whole chapter — exactly the point A2 §6 makes
-from the workflow side.</p>
-<p><strong><code>center = "target"</code> is the reportable
-convention.</strong> It sets <span class="math inline">\(c=\bar\beta\)</span> — the external target’s
-pooled point from EQ-TMI, the same <span class="math inline">\(\bar\beta\)</span> M3’s Theorem 2.2 recovers. With
-<span class="math inline">\(c=\bar\beta\)</span> the calibrated cloud’s
-mean is the external point and its covariance is the external <span class="math inline">\(T_{\text{MI}}\)</span>, so the fit reports the
-external answer in full. This is the convention the bundled fixture
-uses, recorded in <code>fit$control$center</code>, and the one A2 §6 and
-A3 §3 both insist on for any reportable result.</p>
+<p>The map above centers the calibrated draws at the target estimate
+<span class="math inline">\(\bar\beta\)</span>. This is the setting
+<code>center = "target"</code> of <code><a href="../reference/pv_control.html">pv_control()</a></code>, the
+default, and a <code>stack_direct</code> fit requires it:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit</span><span class="op">$</span><span class="va">control</span><span class="op">$</span><span class="va">center</span>   <span class="co"># "target" -- the reportable convention (c = beta_bar)</span></span>
+<code class="sourceCode R"><span><span class="va">fit</span><span class="op">$</span><span class="va">control</span><span class="op">$</span><span class="va">center</span>   <span class="co"># "target": the calibrated draws are centered at beta_bar</span></span>
 <span><span class="co">#&gt; [1] "target"</span></span></code></pre></div>
-<p><strong><code>center = "posterior"</code> is diagnostic
-only.</strong> It leaves the fixed-effect center at the raw stacked
-<em>posterior</em> mean <span class="math inline">\(\bar\beta^{\text{raw}}\)</span> while still
-applying the covariance calibration and computing the center-separation
-diagnostics. That hybrid is a useful CCC sanity check — it lets you
-<em>see</em> how far the raw center sat from <span class="math inline">\(\bar\beta\)</span> — but it is
-<strong>not</strong> a reportable <code>stack_direct</code> result;
-<code><a href="../reference/pv_fit_direct.html">pv_fit_direct()</a></code> refuses to emit a reportable estimate table
-from it (A2 §6). Treat <code>"posterior"</code> as a diagnostic, never a
-deliverable.</p>
-<p>The reportable choice <span class="math inline">\(c=\bar\beta\)</span> is exactly why M3’s
-verification panel found the stacked estimate term-by-term equal to
-<span class="math inline">\(\bar\beta\)</span> and A3 §6.1 found the
-estimate column equal to the target’s pooled <code>beta</code>: under
-target centering the reported point <em>is</em> the external point by
-construction. M4 is the variance counterpart of that same construction —
-the covariance leg of EQ-CCC is what makes the SE column equal <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>.</p>
+<p>With this setting the calibrated draws have the mean and covariance
+of the target, whose numbers the estimate table copies (<a href="a2-the-workflow.html#center-target">The full analysis workflow</a>
+explains why pvstackr requires this setting), so the table and the draws
+agree. <code><a href="../reference/pv_control.html">pv_control()</a></code> also accepts
+<code>center = "posterior"</code>, which would keep the mean of the
+stacked draws, <span class="math inline">\(\beta^{\text{cal}}_s =
+\bar\beta^{\text{raw}} + A(\beta_s - \bar\beta^{\text{raw}})\)</span>,
+and calibrate only the covariance; no fitting function uses it (<a href="a2-the-workflow.html#center-target">The full analysis
+workflow</a>).</p>
 </div>
 <div class="section level2">
-<h2 id="the-deterministic-algorithm">4. The deterministic algorithm<a class="anchor" aria-label="anchor" href="#the-deterministic-algorithm"></a>
+<h2 id="algorithm">The algorithm<a class="anchor" aria-label="anchor" href="#algorithm"></a>
 </h2>
-<p>CCC is an <strong>algorithm</strong>, not a sampler: given the raw
-cloud and the target, every quantity in EQ-CCC is computed by
-deterministic linear algebra, and re-running it on the same inputs
-returns bit-identical output. There is no Monte Carlo step inside the
-map. Three implementation facts complete the picture beyond the bare
-equation.</p>
-<p><strong>Lower-triangular Cholesky factors.</strong> Both <span class="math inline">\(L_{\text{raw}}\)</span> and <span class="math inline">\(L_{\text{tgt}}\)</span> are the
-<em>lower-triangular</em> Cholesky factors of their covariances (<span class="math inline">\(LL^\top=\Sigma\)</span>). The triangular structure
-is what makes the map cheap and stable to apply: solving with a
-triangular factor is a back-substitution rather than a general inverse,
-and the factorization is unique for a positive-definite <span class="math inline">\(\Sigma\)</span>. EQ-CCC’s parenthetical
-“(lower-triangular)” is fixing this convention so that “<span class="math inline">\(L\)</span>” is unambiguous wherever the track
-cites it.</p>
-<p><strong>Positive-definite inputs, fail-fast — no automatic
-repair.</strong> The map needs <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>, which exists only if
-<span class="math inline">\(\Sigma_{\text{raw}}\)</span> is positive
-definite, and <span class="math inline">\(L_{\text{tgt}}\)</span>
-likewise requires a positive-definite <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>. CCC
-factors both covariances <strong>as given</strong> and applies
-<strong>no</strong> automatic Tikhonov or near-PD repair to either. When
-the raw draw cloud is <strong>ill-conditioned</strong> — near-collinear
-fixed effects, or too few effective draws relative to the dimension —
-that condition surfaces in one of two ways rather than being silently
-patched: a matrix that is <em>not</em> positive definite is rejected
-outright on the Cholesky path (the factorization aborts with a “must be
-positive definite for CCC calibration” error), while a matrix that is
-positive definite but poorly conditioned clears the Cholesky and is
-instead flagged by the <span class="math inline">\(\kappa_A\)</span>
-conditioning diagnostic below. The remedy is upstream — increase
-effective draws, reduce collinearity, or simplify the fixed-effect block
-before reporting — never an internal ridge.</p>
-<p><strong>The conditioning diagnostic <span class="math inline">\(\kappa_A\)</span>.</strong> Because the map’s
-stability hinges on <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>, the package records
-a conditioning diagnostic, <strong><span class="math inline">\(\kappa_A\)</span></strong> — a numerical-stability
-summary of the transform <span class="math inline">\(A=L_{\text{tgt}}L_{\text{raw}}^{-1}\)</span> (it
-lives in the <code>ccc</code> diagnostic block as <code>kappa_A</code>).
-A well-conditioned raw cloud gives a small <span class="math inline">\(\kappa_A\)</span> and a trustworthy map; a large
-<span class="math inline">\(\kappa_A\)</span> flags that the inverse was
-delicate and the calibration should be read with care. It is a
-<em>trust</em> diagnostic for the algorithm, read alongside the
-center-separation numbers of the next section — never a coverage
-statistic.</p>
+<p>CCC is deterministic: pvstackr computes it with plain Cholesky
+factorizations, a triangular solve and matrix products, without random
+numbers, iterations or tuning, so the same draws and target always give
+the same calibrated draws. A fit that pvstackr’s check of the sampler
+diagnostics blocks is not calibrated. For the other fits, pvstackr
+proceeds as follows:</p>
+<ol style="list-style-type: decimal">
+<li>It takes the fixed-effect columns of the draws of the stacked fit
+and computes their mean <span class="math inline">\(\bar\beta^{\text{raw}}\)</span> and covariance
+<span class="math inline">\(\Sigma_{\text{raw}}\)</span> with
+<code><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans()</a></code> and <code><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov()</a></code>.</li>
+<li>It checks the target: <span class="math inline">\(T_{\text{MI}}\)</span> must be symmetric and
+positive definite, its rows and columns must name the same coefficients
+as the draws, in the same order, and the target must come from
+<code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code>. It also stops with an error when <span class="math inline">\(T_{\text{MI}}\)</span> equals <span class="math inline">\(\Sigma_{\text{raw}}\)</span> or is proportional to
+it.</li>
+<li>It factors <span class="math inline">\(\Sigma_{\text{raw}}\)</span>
+and <span class="math inline">\(T_{\text{MI}}\)</span> with
+<code><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol()</a></code> from base R, without pivoting, after making each
+matrix exactly symmetric as <span class="math inline">\((\Sigma +
+\Sigma^\top)/2\)</span>. <code><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol()</a></code> returns the
+upper-triangular factor <span class="math inline">\(U\)</span> with
+<span class="math inline">\(U^\top U = \Sigma\)</span>, and pvstackr
+uses its transpose, <span class="math inline">\(L =
+U^\top\)</span>.</li>
+<li>It computes <span class="math inline">\(L_{\text{raw}}^{-1}\)</span>
+by forward substitution, with <code><a href="https://rdrr.io/r/base/backsolve.html" class="external-link">forwardsolve()</a></code> applied to the
+identity matrix, and forms <span class="math inline">\(A =
+L_{\text{tgt}} L_{\text{raw}}^{-1}\)</span>, a lower-triangular <span class="math inline">\(p \times p\)</span> matrix.</li>
+<li>It centers every draw at <span class="math inline">\(\bar\beta^{\text{raw}}\)</span>, multiplies it by
+<span class="math inline">\(A\)</span> and adds <span class="math inline">\(\bar\beta\)</span>, and records <a href="#diagnostics">the diagnostics</a>.</li>
+</ol>
+<p>A positive definite matrix has exactly one lower-triangular Cholesky
+factor with a positive diagonal, so <span class="math inline">\(A\)</span> is well defined. Other matrices <span class="math inline">\(G\)</span> with <span class="math inline">\(G\,\Sigma_{\text{raw}}\,G^\top =
+T_{\text{MI}}\)</span> exist, for example matrices built from symmetric
+square roots; used in place of <span class="math inline">\(A\)</span>,
+they give the calibrated draws the same mean and covariance but move
+each draw differently. The preprint’s algorithm, like pvstackr, uses the
+lower-triangular factors of both matrices <span class="citation">(Lee et
+al. 2026, 37)</span>.</p>
+<p>Both factorizations need positive definite matrices, and pvstackr
+applies no automatic Tikhonov or near-PD repair: it adds no ridge (a
+constant on the diagonal) and does not replace a matrix by a nearby
+positive definite one. When <span class="math inline">\(\Sigma_{\text{raw}}\)</span> or <span class="math inline">\(T_{\text{MI}}\)</span> is not positive definite,
+pvstackr stops with an error and returns no fit. For <span class="math inline">\(\Sigma_{\text{raw}}\)</span> the message is
+“pvstackr: <code>Sigma_raw</code> must be positive definite for CCC
+calibration.”; <code>Sigma_raw</code> and <code>Sigma_target</code> are
+the names of <span class="math inline">\(\Sigma_{\text{raw}}\)</span>
+and <span class="math inline">\(T_{\text{MI}}\)</span> in the
+calibration record of a fit (“Calibration record” in
+<code><a href="../reference/pvstackr_object_contracts.html">?pvstackr_object_contracts</a></code>). The calibration in the
+preprint also halts with an error when its preconditions, positive
+definite matrices among them, fail; its implementation keeps a nearest
+positive-semidefinite repair as an explicitly logged fallback, which
+pvstackr does not have <span class="citation">(Lee et al. 2026,
+38)</span>.</p>
+<p><span class="math inline">\(\Sigma_{\text{raw}}\)</span> is not
+positive definite when there are fewer than <span class="math inline">\(p + 1\)</span> draws, or when the draws of one
+fixed effect are an exact linear combination of the draws of others, as
+for a fixed effect that the model does not identify. The remedy is to
+change the stacked fit, for example with more draws or with fewer or
+less collinear fixed effects. A target covariance that is not positive
+definite already stops <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> with an error when
+the target is made, and
+<code>pv_control(allow_target_nearpd = TRUE)</code>, which would allow a
+repair of the target, stops with an error as well.</p>
+<p>A covariance matrix that is positive definite but close to singular
+passes the factorization, and so, because of rounding, can a matrix that
+is singular in exact arithmetic. When one of the two matrices is much
+closer to singular than the other, the condition number <span class="math inline">\(\kappa_A\)</span> of <span class="math inline">\(A\)</span>, stored as <code>kappa_A</code>, is
+large and pvstackr’s thresholds apply (see <a href="#diagnostics">the
+diagnostics</a>); when both are close to singular in the same direction,
+<span class="math inline">\(\kappa_A\)</span> can stay small.</p>
 </div>
 <div class="section level2">
-<h2 id="center-separation-diagnostics">5. Center-separation diagnostics<a class="anchor" aria-label="anchor" href="#center-separation-diagnostics"></a>
+<h2 id="diagnostics">Diagnostics<a class="anchor" aria-label="anchor" href="#diagnostics"></a>
 </h2>
-<p>The covariance leg of EQ-CCC is exact by construction, but the
-<strong>center</strong> leg carries information worth auditing: <em>how
-far apart were the raw stacked center and the external point <span class="math inline">\(\bar\beta\)</span> before CCC shifted things?</em>
-If the bridge (M3) is behaving, the raw stacked posterior mean should
-already sit close to <span class="math inline">\(\bar\beta\)</span>; a
-large gap is a warning that the stacked fit and the external target
-disagree on the point, which no amount of covariance calibration would
-fix. The center-separation diagnostic measures exactly that gap.</p>
-<p><strong>EQ-DELTAC — the center-separation diagnostic.</strong> <span class="math inline">\(\Delta_c\)</span> is the <strong>relative gap
-between the raw stacked center and <span class="math inline">\(\bar\beta\)</span>, measured on the target-SE
-scale</strong> — the per-coefficient difference <span class="math inline">\(\big(\text{raw center}-\bar\beta\big)\)</span>
-divided by that coefficient’s target standard error <span class="math inline">\(\sqrt{\operatorname{diag}(T_{\text{MI}})}\)</span>,
-then summarised across terms. Putting it on the SE scale makes it
-dimensionless and comparable across coefficients on wildly different
-scales (an intercept near 458 versus a slope near 2). The summary is
-then read against <strong>green / yellow / red tiers</strong> that gate
-the fit: green is a negligible separation (the bridge and target agree
-on the point), yellow warns, and red blocks a reportable result.</p>
-<p>The package computes <strong>two summaries</strong> of the per-term
-gaps:</p>
-<ul>
-<li>
-<strong><code>delta_c_rel</code></strong> is the root-mean-square
-(RMS) target-SE-scaled separation across terms. It is a descriptive
-diagnostic that summarizes the overall size of the center shift.</li>
-<li>
-<strong><code>delta_c_max</code></strong> is the maximum absolute
-target-SE-scaled separation — the single worst-separated coefficient.
-This is the reportable <strong>NO-SEND gate</strong> used for the green
-/ yellow / red center-separation bands.</li>
-</ul>
-<p>So when this vignette says “the reportable gate,” it means
-<strong><code>delta_c_max</code></strong>. A3 §6.3 previews the same
-pair: an RMS diagnostic (<code>delta_c_rel</code>) and a max-over-terms
-gate (<code>delta_c_max</code>).</p>
-<div class="alert alert-warning">
-<p><strong><span class="math inline">\(\Delta_c\)</span> has two
-summaries — state both.</strong> <code>delta_c_rel</code> is the RMS
-diagnostic; <code>delta_c_max</code> is the reportable <strong>NO-SEND
-gate</strong>. Center-separation bands are keyed to
-<code>delta_c_max</code>: green below <code>1e-2</code>, yellow from
-<code>1e-2</code> to below <code>5e-2</code>, and red at or above
-<code>5e-2</code>. Neither summary is a coverage statistic; they are
-algorithmic trust diagnostics for deciding whether the calibrated fit
-may be reported.</p>
+<p>The calibration records its diagnostics in
+<code>get_diagnostics(fit)$ccc</code>. Two of them can give the fit the
+status <code>"warning"</code> or <code>"blocked"</code>: the center
+separation and the condition number of <span class="math inline">\(A\)</span>. They are combined with pvstackr’s
+other checks, and the most severe result sets the status (“Status and
+checks” in <code><a href="../reference/pvstackr_object_contracts.html">?pvstackr_object_contracts</a></code> lists all checks).
+Their thresholds are pvstackr’s rules; the preprint sets no thresholds
+for these quantities. The calibration also records
+<code>a_matrix_fro_rel</code>, which measures how far <span class="math inline">\(A\)</span> is from the identity matrix, and
+<code>rho1</code>, <code>rho2</code> and <code>empirical_fro_rel</code>,
+which measure how far the covariance of the calibrated draws is from
+<span class="math inline">\(T_{\text{MI}}\)</span> and are zero apart
+from rounding; these values do not change the status.</p>
+<div class="section level3">
+<h3 id="center-separation">Center separation<a class="anchor" aria-label="anchor" href="#center-separation"></a>
+</h3>
+<p>The center separation compares the mean of the stacked draws before
+calibration with the target estimate, coefficient by coefficient, in
+units of the target standard error:</p>
+<p><span class="math display">\[
+\Delta_c = \max_{\ell = 1, \dots, p}
+  \frac{\lvert \bar\beta_\ell - \bar\beta^{\text{raw}}_\ell \rvert}
+       {\sqrt{T_{\text{MI},\ell\ell}}} .
+\]</span></p>
+<p>pvstackr stores <span class="math inline">\(\Delta_c\)</span> as
+<code>delta_c_max</code> and the ratio for each coefficient as
+<code>delta_c_by_term</code>; <code>delta_c_rel</code> is the root mean
+square (RMS) of the same ratios. Measured in standard errors, the ratios
+can be compared across coefficients on different scales, such as an
+intercept in score points and the coefficient of a 0/1 indicator.</p>
+<p>With a flat prior on the fixed effects, which the bundled engine uses
+when <code>prior = NULL</code>, the mean of the stacked draws differs
+from <span class="math inline">\(\bar\beta\)</span> only by Monte Carlo
+error, as noted <a href="#why-calibrate">above</a>. It differs further
+when the prior is not flat, or when a fitting function of your own does
+not use the stacked weights. In Appendix A.4, the preprint treats this
+agreement in its own setting as an empirical quantity to be measured and
+reported, not as a consequence of the point identity <span class="citation">(Lee et al. 2026, 36)</span>.</p>
+<p>Monte Carlo error alone is not small on this scale. The Monte Carlo
+standard error of the mean of the draws of coefficient <span class="math inline">\(\ell\)</span> is their standard deviation divided
+by <span class="math inline">\(\sqrt{\mathrm{ESS}_\ell}\)</span>, where
+<span class="math inline">\(\mathrm{ESS}_\ell\)</span> is their
+effective sample size. In target standard errors it is therefore the
+ratio of that standard deviation to <span class="math inline">\(\sqrt{T_{\text{MI},\ell\ell}}\)</span>, divided by
+<span class="math inline">\(\sqrt{\mathrm{ESS}_\ell}\)</span>. With a
+ratio of 0.5 and 4,000 effective draws it is about 0.008, close to the
+warning threshold of 0.01 below. A fit that differs from the target only
+by Monte Carlo error can therefore get the status
+<code>"warning"</code>, and with few effective draws even
+<code>"blocked"</code>; more draws make this less likely.</p>
+<p>pvstackr sets <code>center_status</code> from
+<code>delta_c_max</code>. Below 0.01 it is <code>"ok"</code>. From 0.01
+the fit gets the status <code>"warning"</code>, with the reason code
+<code>center_separation_yellow</code>; its estimate table is unchanged,
+since the table copies the target. From 0.05 the fit is
+<code>"blocked"</code>, with <code>center_separation_red</code>, and its
+estimate table is empty; its <code>get_diagnostics(fit)$ccc</code> then
+holds single values grouped as <code>center</code>,
+<code>conditioning</code>, <code>residual</code> and <code>prior</code>,
+for example <code>get_diagnostics(fit)$ccc$center$delta_c_max</code>.
+<code>delta_c_rel</code>, the RMS of the ratios, is recorded and printed
+in the warning message but does not change the status.</p>
+</div>
+<div class="section level3">
+<h3 id="condition-number-of-the-calibration-matrix">Condition number of the calibration matrix<a class="anchor" aria-label="anchor" href="#condition-number-of-the-calibration-matrix"></a>
+</h3>
+<p><span class="math inline">\(\kappa_A\)</span>, stored as
+<code>kappa_A</code>, is the condition number of <span class="math inline">\(A\)</span>: the ratio of its largest to its
+smallest singular value. It is at least 1 and does not change when <span class="math inline">\(A\)</span> is multiplied by a nonzero constant. A
+large <span class="math inline">\(\kappa_A\)</span> means that <span class="math inline">\(A\)</span> stretches the centered draws far more
+in some directions than in others, as when <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is close to singular,
+so that small errors in the stacked draws can be greatly magnified. From
+<span class="math inline">\(\kappa_A = 10^6\)</span> the fit gets the
+status <code>"warning"</code>, with the reason code
+<code>ccc_conditioning_yellow</code>, and from <span class="math inline">\(10^8\)</span> it is <code>"blocked"</code>, with
+<code>ccc_conditioning_red</code>.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="verify-the-ccc-invariant-in-code">6. Verify the CCC invariant in code<a class="anchor" aria-label="anchor" href="#verify-the-ccc-invariant-in-code"></a>
+<h2 id="what-the-calibration-does-not-show">What the calibration does not show<a class="anchor" aria-label="anchor" href="#what-the-calibration-does-not-show"></a>
 </h2>
-<p>The natural way to demonstrate EQ-CCC would be to apply it to the
-fit’s own raw draws and confirm the calibrated cloud has mean <span class="math inline">\(c\)</span> and covariance <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>. We cannot do that
-here for a concrete reason stated at the top of the page: <strong>this
-fixture retains no draws</strong> — it was produced with
-<code>return_draws = FALSE</code>, so <code>get_draws(fit)</code> is
-<code>NULL</code> (A3 §6.2), and there is no raw cloud to calibrate. The
-invariant is therefore demonstrated on a <strong>self-contained
-synthetic</strong> draw cloud, built only to exercise the algebra of the
-map. This is the only randomness in the Method track, and it is
-seeded.</p>
-<p>We manufacture an arbitrary raw cloud with a non-trivial mean and
-covariance, choose target moments to impose (standing in for <span class="math inline">\(c=\bar\beta\)</span> and <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>), and
-apply EQ-CCC exactly as written:</p>
+<p>CCC gives the draws the mean and covariance of the target it
+receives, whatever that target is. It cannot show that the target is
+right, and it does not correct a target that is wrong. The preprint
+calls the correction a moment calibration that guarantees agreement with
+the supplied target, and in its Appendix B.3 it treats the coverage of
+intervals built from the calibrated draws as an empirical question,
+which its simulation addresses for targets from model-based fits only
+<span class="citation">(Lee et al. 2026, 13, 38)</span>. The diagnostics
+compare the stacked fit with the target and describe the matrix <span class="math inline">\(A\)</span>; they say nothing about coverage
+either.</p>
+<p>The interval of a <code>stack_direct</code> fit is computed from the
+estimate, the standard error and the degrees of freedom of the target.
+pvstackr’s reporting rule labels it coverage-claimable only when the
+target uses the Barnard–Rubin degrees of freedom; the label records how
+the interval was built and does not certify its coverage. <a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a> gives the rule, <a href="m5-methods-and-coverage.html#interval-rule">Choosing a method and
+reading its intervals</a> gives its reason, and <a href="m2-brr-fay-target.html">The design-based target: BRR–Fay replicate
+weights and Rubin’s rules</a> shows how <span class="math inline">\(\bar\beta\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> are computed.</p>
+</div>
+<div class="section level2">
+<h2 id="checks">Checks<a class="anchor" aria-label="anchor" href="#checks"></a>
+</h2>
+<p>The first check applies the map to simulated draws; it is an
+arithmetic check of the two moment properties. The second reads the
+diagnostics recorded in the example fit, which hold by construction.</p>
+<div class="section level3">
+<h3 id="the-moment-properties-on-simulated-draws">The moment properties on simulated draws<a class="anchor" aria-label="anchor" href="#the-moment-properties-on-simulated-draws"></a>
+</h3>
+<p>The example fit has no draws, so the chunk below simulates them:
+<span class="math inline">\(S = 4000\)</span> draws of <span class="math inline">\(p = 3\)</span> coefficients from a normal
+distribution with a mean and a covariance chosen for the check. It sets
+a target mean and covariance in place of <span class="math inline">\(\bar\beta\)</span> and <span class="math inline">\(T_{\text{MI}}\)</span> and applies the map as
+pvstackr computes it, except that it inverts <span class="math inline">\(L_{\text{raw}}\)</span> with <code><a href="https://rdrr.io/r/base/solve.html" class="external-link">solve()</a></code>
+where pvstackr uses <code><a href="https://rdrr.io/r/base/backsolve.html" class="external-link">forwardsolve()</a></code>, which gives the same
+matrix up to rounding.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">5104</span><span class="op">)</span>                      <span class="co"># M4 is the only Method vignette with randomness</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">5104</span><span class="op">)</span>                      <span class="co"># fixed seed, so the simulated draws are the same in every run</span></span>
 <span><span class="va">p</span> <span class="op">&lt;-</span> <span class="fl">3L</span>; <span class="va">S</span> <span class="op">&lt;-</span> <span class="fl">4000L</span></span>
 <span></span>
-<span><span class="co">## an arbitrary raw draw cloud with a non-trivial mean and covariance</span></span>
+<span><span class="co">## simulated draws of p = 3 coefficients with a chosen mean and covariance</span></span>
 <span><span class="va">Sigma_raw_true</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/crossprod.html" class="external-link">crossprod</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">p</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, <span class="va">p</span>, <span class="va">p</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">p</span><span class="op">)</span></span>
 <span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">S</span> <span class="op">*</span> <span class="va">p</span><span class="op">)</span>, <span class="va">S</span>, <span class="va">p</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="va">Sigma_raw_true</span><span class="op">)</span>,</span>
 <span>             <span class="fl">2L</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>, <span class="op">-</span><span class="fl">3</span>, <span class="fl">0.5</span><span class="op">)</span>, <span class="va">`+`</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">## target moments to impose (stand in for c = beta_bar and Sigma_tgt = T_MI)</span></span>
+<span><span class="co">## target mean and covariance for the check, in place of beta_bar and T_MI</span></span>
 <span><span class="va">c_tgt</span>     <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">458</span>, <span class="fl">47</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">Sigma_tgt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4.0</span>, <span class="fl">0.5</span>, <span class="fl">0.0</span>,</span>
 <span>                      <span class="fl">0.5</span>, <span class="fl">2.0</span>, <span class="fl">0.3</span>,</span>
 <span>                      <span class="fl">0.0</span>, <span class="fl">0.3</span>, <span class="fl">1.5</span><span class="op">)</span>, <span class="fl">3</span>, <span class="fl">3</span>, byrow <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co">## EQ-CCC: beta_cal = c + L_tgt L_raw^{-1} (beta - colMeans(raw))</span></span>
-<span><span class="va">L_tgt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="va">Sigma_tgt</span><span class="op">)</span><span class="op">)</span>         <span class="co"># lower-triangular Cholesky factor of the target</span></span>
-<span><span class="va">L_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>          <span class="co"># lower-triangular Cholesky factor of the (empirical) raw cov</span></span>
-<span><span class="va">A</span>     <span class="op">&lt;-</span> <span class="va">L_tgt</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/solve.html" class="external-link">solve</a></span><span class="op">(</span><span class="va">L_raw</span><span class="op">)</span>     <span class="co"># the affine transform L_tgt L_raw^{-1}</span></span>
+<span><span class="co">## the map: beta_cal = c_tgt + A (beta - colMeans(raw)), with A = L_tgt L_raw^{-1}</span></span>
+<span><span class="va">L_tgt</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="va">Sigma_tgt</span><span class="op">)</span><span class="op">)</span>         <span class="co"># lower Cholesky factor of the target covariance</span></span>
+<span><span class="va">L_raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/chol.html" class="external-link">chol</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>          <span class="co"># lower Cholesky factor of the covariance of the draws</span></span>
+<span><span class="va">A</span>     <span class="op">&lt;-</span> <span class="va">L_tgt</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/solve.html" class="external-link">solve</a></span><span class="op">(</span><span class="va">L_raw</span><span class="op">)</span>     <span class="co"># the calibration matrix A</span></span>
 <span></span>
-<span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">raw</span>, <span class="fl">2L</span>, <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span>, <span class="va">`-`</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">A</span><span class="op">)</span>   <span class="co"># recenter, then linear map</span></span>
-<span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">cal</span>, <span class="fl">2L</span>, <span class="va">c_tgt</span>, <span class="va">`+`</span><span class="op">)</span>                    <span class="co"># shift to the target center</span></span>
+<span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">raw</span>, <span class="fl">2L</span>, <span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">raw</span><span class="op">)</span>, <span class="va">`-`</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">A</span><span class="op">)</span>   <span class="co"># center the draws, then multiply by A</span></span>
+<span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/sweep.html" class="external-link">sweep</a></span><span class="op">(</span><span class="va">cal</span>, <span class="fl">2L</span>, <span class="va">c_tgt</span>, <span class="va">`+`</span><span class="op">)</span>                    <span class="co"># add the target mean</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">cal</span><span class="op">)</span><span class="op">)</span>, <span class="va">c_tgt</span><span class="op">)</span>      <span class="co"># TRUE  (max|diff| ~ 1e-13)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colSums.html" class="external-link">colMeans</a></span><span class="op">(</span><span class="va">cal</span><span class="op">)</span><span class="op">)</span>, <span class="va">c_tgt</span><span class="op">)</span>      <span class="co"># TRUE (largest difference about 1e-13)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="va">cal</span><span class="op">)</span><span class="op">)</span>,      <span class="va">Sigma_tgt</span><span class="op">)</span>  <span class="co"># TRUE  (max|diff| ~ 1e-15)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="va">cal</span><span class="op">)</span><span class="op">)</span>,      <span class="va">Sigma_tgt</span><span class="op">)</span>  <span class="co"># TRUE (largest difference about 1e-14)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>Both invariants hold: the calibrated cloud’s mean equals the imposed
-center <span class="math inline">\(c\)</span> and its covariance equals
-the imposed target <span class="math inline">\(\Sigma_{\text{tgt}}\)</span>, each to machine
-precision. That is EQ-CCC realised — the affine map does exactly what
-Section 2’s algebra said it must.</p>
-<div class="alert alert-info">
-<p><strong>Construction note — why these hit machine precision, and what
-production requires.</strong> In this panel <span class="math inline">\(L_{\text{raw}}\)</span> is the Cholesky factor of
-the <strong>empirical</strong> <code>cov(raw)</code> and the draws are
-recentered on the <strong>empirical</strong> <code>colMeans(raw)</code>
-— the very same cloud’s own moments. Because the map is built from and
-applied to the identical empirical moments, the cancellation in Section
-2’s covariance derivation is exact and both invariants land at ~<span class="math inline">\(10^{-14}\)</span>. Production CCC adds no ridge to
-this: it factors <span class="math inline">\(\Sigma_{\text{raw}}\)</span> exactly as this panel
-does, by plain Cholesky, and <strong>requires</strong> only that <span class="math inline">\(\Sigma_{\text{raw}}\)</span> and the external
-target both be positive definite (Section 4). The difference is one of
-guardrails, not arithmetic — in production a non-positive-definite <span class="math inline">\(\Sigma_{\text{raw}}\)</span> is rejected on the
-Cholesky path and a poorly conditioned one is flagged through <span class="math inline">\(\kappa_A\)</span>, whereas this synthetic cloud is
-well-conditioned by construction (<code>Sigma_raw_true</code> is
-positive-definite with a <code>+ diag(p)</code> term), so those
-guardrails never fire. The plain inverse used here is exactly the
-production map, not a simplified stand-in for it.</p>
+<p>Both comparisons return <code>TRUE</code>. <code><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal()</a></code>
+accepts a relative difference below about <span class="math inline">\(1.5 \times 10^{-8}\)</span>; the largest absolute
+differences in this run are about <span class="math inline">\(10^{-13}\)</span> for the mean, whose entries are
+as large as 458, and <span class="math inline">\(10^{-14}\)</span> for
+the covariance, the size of rounding errors. The agreement is exact
+apart from rounding because the map is built from the mean and
+covariance of the same draws that the check summarizes, as in pvstackr.
+The simulated covariance is positive definite and well conditioned by
+construction (the term <code>+ diag(p)</code> and 4000 draws for three
+coefficients), so the check reaches neither the error for a matrix that
+is not positive definite nor the thresholds of <code>kappa_A</code>.</p>
 </div>
-<p>We can still read the fit’s <strong>realized</strong>
-center-separation numbers directly off the fixture, even though there
-are no draws — they were recorded in the <code>ccc</code> diagnostic
-block when the fixture was calibrated. This is read-only:</p>
+<div class="section level3">
+<h3 id="the-diagnostics-of-the-example-fit">The diagnostics of the example fit<a class="anchor" aria-label="anchor" href="#the-diagnostics-of-the-example-fit"></a>
+</h3>
+<p>The example fit recorded its calibration diagnostics when it was
+made, and they can be read without the draws:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_diagnostics.html">get_diagnostics</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dg</span><span class="op">)</span>                                                    <span class="co"># preflight, stack_fit, stack_fit_warnings, ccc</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dg</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "preflight"          "sampler"            "sampler_gate"      </span></span>
 <span><span class="co">#&gt; [4] "stack_fit"          "stack_fit_warnings" "ccc"</span></span>
 <span><span class="va">dg</span><span class="op">$</span><span class="va">ccc</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"center_status"</span>, <span class="st">"delta_c_rel"</span>, <span class="st">"delta_c_max"</span><span class="op">)</span><span class="op">]</span></span>
@@ -473,89 +535,20 @@ block when the fixture was calibrated. This is read-only:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; $delta_c_max</span></span>
 <span><span class="co">#&gt; [1] 4.415668e-14</span></span></code></pre></div>
-<p><code>center_status == "ok"</code> says the center separation fell in
-the green tier — the raw stacked center and <span class="math inline">\(\bar\beta\)</span> agree. The two summaries are
-both effectively zero: <code>delta_c_rel</code> (the
-<strong>RMS</strong> diagnostic of Section 5) is about <span class="math inline">\(2.5\times10^{-14}\)</span> and
-<code>delta_c_max</code> (the <strong>max-over-terms reportable
-gate</strong>) about <span class="math inline">\(4.4\times10^{-14}\)</span>. Both are reported, and
-the green / yellow / red gate is keyed to <code>delta_c_max</code>. The
-same <code>ccc</code> block carries the conditioning diagnostic
-<code>kappa_A</code> of Section 4 and a per-term breakdown
-<code>delta_c_by_term</code>, should you wish to inspect the algorithm’s
-behaviour further.</p>
-<div class="alert alert-warning">
-<p><strong>CCC is an affine moment match, NOT a coverage
-theorem.</strong> This is the central honesty point of the page, and it
-mirrors A3 §4’s warning exactly. Everything verified above is
-<strong>algebraic by construction</strong>: EQ-CCC <em>forces</em> <span class="math inline">\(\operatorname{mean}=c\)</span> and <span class="math inline">\(\operatorname{Cov}=\Sigma_{\text{tgt}}\)</span>,
-so the ~<span class="math inline">\(10^{-14}\)</span> agreement merely
-confirms the linear algebra <strong>ran cleanly</strong> — it is not,
-and must never be read as, evidence that the resulting intervals
-<em>cover</em>. Coverage comes from the <strong>provenance</strong> of
-<span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> —
-external, design-based, BRR–Fay <span class="citation">(Judkins
-1990)</span>, pooled by the Rubin rules <span class="citation">(Rubin
-1987)</span> (M2) — together with the companion paper’s simulation
-oracle, <strong>not</strong> from CCC. Concretely, this fixture’s
-near-zero <span class="math inline">\(\Delta_c\)</span> sits alongside
-<code>coverage_claim_allowed == FALSE</code> (it carries classic Rubin
-df, not Barnard–Rubin; A3 §4, M5): the calibration ran perfectly and the
-fit is still, honestly, <strong>descriptive</strong>. A clean CCC is
-necessary plumbing, not a coverage certificate.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="where-to-next">7. Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h2>
-<p>You now have the variance counterpart to M3’s point identity in full:
-the CCC affine map (EQ-CCC) that forces the raw stacked draw cloud’s
-first two moments onto the external target’s <span class="math inline">\(c=\bar\beta\)</span> and <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span>, the
-target-versus-posterior centering convention that decides whether a fit
-is reportable, the deterministic fail-fast Cholesky algorithm and its
-<span class="math inline">\(\kappa_A\)</span> conditioning check, and
-the center-separation diagnostic (EQ-DELTAC) with both the RMS
-diagnostic (<code>delta_c_rel</code>) and the max-over-terms gate
-(<code>delta_c_max</code>). And its hard boundary: an algebraic moment
-match, exact by construction, that confers <strong>no</strong> coverage
-on its own.</p>
-<ul>
-<li>
-<strong>M5 · Methods, PSIS, and coverage</strong> — the natural next
-step, and where the caveat of this page is cashed out. CCC’s clean
-moment match is <em>not</em> the source of coverage; M5 states precisely
-why only <code>stack_direct</code> — calibrated by CCC to an external
-design-based target — is coverage-claimable, while <code>per_pv</code>
-and <code>stack_psis</code> carry model-based covariance and are
-descriptive always.</li>
-<li>
-<strong>M2 · The BRR–Fay fixed-effect target</strong> — the
-provenance of <span class="math inline">\(\Sigma_{\text{tgt}}=T_{\text{MI}}\)</span> that
-this page imposes: the BRR–Fay sandwich (EQ-BRRFAY) and Rubin pooling
-(EQ-TMI) that build the external object, and the design-variance
-coverage result that — unlike CCC — actually licenses coverage.</li>
-<li>
-<strong>M3 · The stacked fractional bridge</strong> — the
-<em>point</em> leg this page’s variance leg completes: Theorem 2.2
-(EQ-THM22) matched <span class="math inline">\(\bar\beta\)</span>, CCC
-matches the covariance, and the two together are the “one fit instead of
-<span class="math inline">\(M\)</span>” machinery.</li>
-</ul>
-<p>To see these diagnostics from the reporting side — the
-<code>get_diagnostics(fit)$ccc</code> peek, the
-<code>center_status</code> / <code>delta_c_rel</code> /
-<code>delta_c_max</code> fields, and the reminder that their tiny values
-do not confer coverage — return to <strong>A3 · Reading results</strong>
-(§6.3).</p>
-<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="external-link uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
-<div class="section level3">
-<h3 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
-</h3>
+<p><code>center_status</code> is <code>"ok"</code>:
+<code>delta_c_max</code> is about <span class="math inline">\(4.4 \times
+10^{-14}\)</span> and <code>delta_c_rel</code> about <span class="math inline">\(2.5 \times 10^{-14}\)</span>, far below 0.01.
+These values hold by construction. The functions that made the example
+fit returned draws built around the target, whose means equal <span class="math inline">\(\bar\beta\)</span> apart from rounding (<a href="a1-getting-started.html#example-fit">Getting started with
+pvstackr</a>), so the values show what the diagnostics look like, not
+how close the draws of a sampler come to the target. The list also holds
+<code>delta_c_by_term</code> and <code>kappa_A</code> (see <a href="#diagnostics">the diagnostics</a>).</p>
+<p>The numbers above were computed in this session:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
 <span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.4 LTS</span></span>
+<span><span class="co">#&gt; Running under: Ubuntu 24.04.5 LTS</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Matrix products: default</span></span>
 <span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
@@ -574,12 +567,12 @@ do not confer coverage — return to <strong>A3 · Reading results</strong>
 <span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
+<span><span class="co">#&gt; [1] pvstackr_0.2.1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
 <span><span class="co">#&gt;  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    </span></span>
-<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
-<span><span class="co">#&gt;  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
+<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.52        htmltools_0.5.9  </span></span>
+<span><span class="co">#&gt;  [9] rmarkdown_2.32    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
 <span><span class="co">#&gt; [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
 <span><span class="co">#&gt; [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
 <span><span class="co">#&gt; [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
@@ -590,14 +583,18 @@ do not confer coverage — return to <strong>A3 · Reading results</strong>
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
-<div id="ref-judkins1990fay" class="csl-entry">
-Judkins, David R. 1990. <span>“Fay’s Method for Variance
-Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
-223–39.
+<div id="ref-lee2026onemcmc" class="csl-entry">
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026.
+<em>One <span>Markov</span> Chain <span>Monte</span> <span>Carlo</span>
+Fit for Many Plausible Values: A Calibrated Stacked Posterior Workflow
+for <span>Bayesian</span> Multilevel Models of Large-Scale Assessment
+Data</em>. Zenodo preprint, version 1. <a href="https://doi.org/10.5281/zenodo.22407935" class="external-link">https://doi.org/10.5281/zenodo.22407935</a>.
 </div>
-<div id="ref-rubin1987multiple" class="csl-entry">
-Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
-Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696" class="external-link">https://doi.org/10.1002/9780470316696</a>.
+<div id="ref-williams2021uncertainty" class="csl-entry">
+Williams, Matthew R., and Terrance D. Savitsky. 2021. <span>“Uncertainty
+Estimation for Pseudo-<span>Bayesian</span> Inference Under Complex
+Sampling.”</span> <em>International Statistical Review</em> 89 (1):
+72–107. <a href="https://doi.org/10.1111/insr.12376" class="external-link">https://doi.org/10.1111/insr.12376</a>.
 </div>
 </div>
 </div>

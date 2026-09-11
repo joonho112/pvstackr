@@ -1,50 +1,91 @@
-# pvstackr: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values
+# pvstackr: Bayesian Plausible-Value Analysis with One Calibrated Stacked Fit
 
-`pvstackr` currently implements the `stack_direct` path: one stacked
-plausible-value fit plus fixed-effect CCC calibration to a design-based
-external Rubin/BRR-Fay target. It also implements the `per_pv` reference
-path: one backend fit or posterior-draw source per plausible value plus
-model-based Rubin pooling, and the `stack_psis` diagnostic/reference
-path: one stacked draw source plus caller-declared external PSIS
-weights, model-based Rubin pooling, and Pareto-k gating.
+pvstackr fits survey-weighted linear regression models to assessment
+data whose outcome is given as plausible values, as in PISA, and reports
+estimates, standard errors and intervals for the fixed effects. The
+default method, `stack_direct`, fits one Bayesian model to the stacked
+data (one copy of the data per plausible value) and then applies the
+Cholesky calibration correction (CCC): the fixed-effect draws are
+transformed to have the mean and covariance of a design-based target,
+whose estimates, standard errors and degrees of freedom are the ones
+reported. The other methods, `per_pv` (one fit per plausible value) and
+`stack_psis` (one stacked fit reweighted toward each plausible value),
+work from draws, fitting functions or importance weights that you
+supply.
 
 ## Details
 
-### Typical workflow
+### Workflow
 
-A reportable analysis moves through the package API in five stages:
-declare the plausible-value design with
-[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md);
-assemble the external Rubin/BRR-Fay fixed-effect target with
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md);
-fit a method with
+1.  Optionally,
+    [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+    checks and records the plausible-value, final-weight and
+    replicate-weight columns and the Fay coefficient. By default it
+    finds PISA-style column names with
+    [`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)
+    and
+    [`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md).
+    This step can be skipped:
+    [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+    takes the same column arguments and finds the PISA-style columns
+    itself.
+
+2.  [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+    computes the target: a survey-weighted regression for each plausible
+    value, the sampling covariance of the coefficients from the BRR-Fay
+    replicate weights, and Rubin's rules across plausible values.
+
+3.  [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+    fits a method with settings from
+    [`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md).
+    Only `stack_direct` has a bundled engine, brms, selected with
+    `pv_control(backend = "brms")`.
+
+4.  Optionally,
+    [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md)
+    compares fits made with different methods.
+
+5.  [`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
+    [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
+    [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
+    and
+    [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+    read the results. A fit with `status` `"blocked"` has no estimates;
+    `reason_codes` says why.
+
+### Scope
+
+pvstackr is built for the fixed effects of a survey-weighted linear
+model.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+`stack_direct` and `stack_psis` stop with an error on a random-effect
+term such as `(1 | school)`. Only the fixed-effect coefficients
+(intercept and slopes) are reported; other parameters, such as the
+residual standard deviation `sigma`, are neither calibrated nor
+reported.
+
+By pvstackr's reporting rule, only a `stack_direct` fit whose target
+uses Barnard-Rubin degrees of freedom (`df_method = "barnard_rubin"` in
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md))
+has coverage-claimable intervals, which can be read as confidence
+intervals with nominal coverage. All other intervals are descriptive,
+including those of a `stack_direct` fit whose target uses the default
+classic Rubin degrees of freedom.
 [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
-(default `method = "stack_direct"`); optionally line the methods up side
-by side with
-[`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md);
-and read the results with the accessor family
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
-[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
-and
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
+gives the full rule.
 
-### Where to learn more
+### Articles
 
-The documentation is organized as two vignette tracks. The Applied track
-is workflow-first and starts at
-[`vignette("a1-getting-started", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/a1-getting-started.md).
-The Method track is the rigorous treatment of the notation, target,
-stacked bridge, and calibration, and starts at
-[`vignette("m1-foundations-and-notation", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/m1-foundations-and-notation.md).
-
-### Scope and honesty
-
-Reportable output is fixed-effect-only (variance components are fit but
-not calibrated); among the three methods only `stack_direct`, whose
-intervals rest on the external Rubin/BRR-Fay target, is
-coverage-claimable, while `per_pv` and `stack_psis` are
-descriptive/reference paths.
+The Applied articles, starting with
+[`vignette("a1-getting-started", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/a1-getting-started.md),
+show how to run an analysis and read the results. The Method articles,
+starting with
+[`vignette("m1-foundations-and-notation", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/m1-foundations-and-notation.md),
+give the formulas and assumptions behind the target, the stacked fit and
+the calibration. The companion methods preprint (Lee, Williams and
+Savitsky 2026,
+[doi:10.5281/zenodo.22407935](https://doi.org/10.5281/zenodo.22407935) )
+describes the stacked fit and its calibration.
 
 ## See also
 
@@ -67,7 +108,7 @@ Read:
 [`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
 [`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md).
-Contracts:
+Returned objects and their fields:
 [pvstackr_object_contracts](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md).
 
 ## Author

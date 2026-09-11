@@ -1,8 +1,11 @@
-# Access pvstackr Targets
+# Get the target of a fit
 
-Return the formal target object carried by a fit. Estimate-row
-provenance labels such as `target_source` are separate from this
-accessor and do not imply that every method has a formal target object.
+`get_target()` returns the target that the estimates of a fit come from.
+For a `stack_direct` fit this is the BRR-Fay target from
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+to which the stacked fit was calibrated; for a `per_pv` fit it is the
+Rubin's-rules combination of the draws of the per-plausible-value fits.
+A `stack_psis` fit has no target object.
 
 ## Usage
 
@@ -26,27 +29,36 @@ get_target(x, ...)
 
 - x:
 
-  A pvstackr fit or target object.
+  A fit (class `pvstackr_fit`), or a target from
+  [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
 
 - ...:
 
-  Reserved for future extensions.
+  Ignored.
 
 ## Value
 
-The target object used by a fit, or `NULL` when the method has no target
-component. Estimate-row `target_source` labels are provenance metadata
-and may be present even when a method, such as `stack_psis`, does not
-carry a formal target object. A legacy PSIS inspection object also
-returns `NULL`.
+For a `stack_direct` fit, its `pvstackr_brr_target` object, also when
+the fit is blocked.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+lists its elements, such as `beta`, `T_MI`, `df` and `fmi` (the fraction
+of missing information, which the estimate table does not have). For a
+`per_pv` fit, a `pvstackr_reference_pool` object with the same kind of
+elements. For a `stack_psis` fit, `NULL`: its estimate table has
+`target_source = "stack_psis_rubin_pooling"`, but that is only a label
+for the combined result, not a target object. Given a target,
+`get_target()` checks it and returns it unchanged.
+
+`get_target()` stops with an error if the fit or target was changed
+after it was created. For the inspection object that
+[`pv_migrate_legacy_psis_fit()`](https://joonho112.github.io/pvstackr/reference/pv_migrate_legacy_psis_fit.md)
+makes from a `stack_psis` fit of an earlier pvstackr version, it returns
+`NULL`.
 
 ## See also
 
-[`get_estimates()`](https://joonho112.github.io/pvstackr/reference/get_estimates.md),
-[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md),
-[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md);
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
-[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md).
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+for the elements of a target.
 
 Other pvstackr-accessors:
 [`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md),
@@ -56,7 +68,9 @@ Other pvstackr-accessors:
 ## Examples
 
 ``` r
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   get_target(fit)

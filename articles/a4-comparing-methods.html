@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>A4: Comparing methods — choosing stack_direct, per_pv, or stack_psis • pvstackr</title>
+<title>Comparing the three fitting methods • pvstackr</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -21,7 +21,8 @@
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="A4: Comparing methods — choosing stack_direct, per_pv, or stack_psis">
+<script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
+<meta property="og:title" content="Comparing the three fitting methods">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -31,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">pvstackr</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,23 +41,24 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="../articles/a1-getting-started.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><h6 class="dropdown-header" data-toc-skip>Applied Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">A1 · Getting started</a></li>
-    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">A2 · The end-to-end workflow</a></li>
-    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">A3 · Reading results &amp; what to report</a></li>
-    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">A4 · Comparing methods</a></li>
-    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">A5 · Real PISA data guidance</a></li>
+<li><h6 class="dropdown-header" data-toc-skip>Applied articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/a1-getting-started.html">Getting started with pvstackr</a></li>
+    <li><a class="dropdown-item" href="../articles/a2-the-workflow.html">The full analysis workflow</a></li>
+    <li><a class="dropdown-item" href="../articles/a3-reading-results.html">Reading and reporting the results</a></li>
+    <li><a class="dropdown-item" href="../articles/a4-comparing-methods.html">Comparing the three fitting methods</a></li>
+    <li><a class="dropdown-item" href="../articles/a5-real-pisa-guidance.html">Real PISA data: access, memory and reproducibility</a></li>
     <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header" data-toc-skip>Method Track</h6></li>
-    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">M1 · Foundations and notation</a></li>
-    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">M2 · The BRR–Fay fixed-effect target</a></li>
-    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">M3 · The stacked fractional bridge</a></li>
-    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">M4 · CCC: Cholesky Calibration Correction</a></li>
-    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">M5 · Methods, PSIS, and coverage</a></li>
+    <li><h6 class="dropdown-header" data-toc-skip>Method articles</h6></li>
+    <li><a class="dropdown-item" href="../articles/m1-foundations-and-notation.html">Plausible values, survey weights and notation</a></li>
+    <li><a class="dropdown-item" href="../articles/m2-brr-fay-target.html">The design-based target: BRR–Fay replicate weights and Rubin's rules</a></li>
+    <li><a class="dropdown-item" href="../articles/m3-stacked-bridge.html">One stacked fit and the Rubin point estimate</a></li>
+    <li><a class="dropdown-item" href="../articles/m4-ccc-calibration.html">Calibrating the fixed-effect draws (CCC)</a></li>
+    <li><a class="dropdown-item" href="../articles/m5-methods-and-coverage.html">Choosing a method and reading its intervals</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -78,153 +80,157 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.svg" class="logo" alt=""><h1>A4: Comparing methods — choosing stack_direct, per_pv, or stack_psis</h1>
+      <img src="../logo.svg" class="logo" alt=""><h1>Comparing the three fitting methods</h1>
                         <h4 data-toc-skip class="author">JoonHo Lee</h4>
             
-            <h4 data-toc-skip class="date">2026-08-14</h4>
+            <h4 data-toc-skip class="date">2026-09-11</h4>
       
-      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/v0.2.0/vignettes/a4-comparing-methods.Rmd" class="external-link"><code>vignettes/a4-comparing-methods.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/joonho112/pvstackr/blob/main/vignettes/a4-comparing-methods.Rmd" class="external-link"><code>vignettes/a4-comparing-methods.Rmd</code></a></small>
       <div class="d-none name"><code>a4-comparing-methods.Rmd</code></div>
     </div>
 
     
         <div class="abstract">
       <p class="abstract">Abstract</p>
-      <p>pvstackr ships three fitting methods. This vignette uses
-      <code><a href="../reference/pv_compare_methods.html">pv_compare_methods()</a></code> to align
-      <code>stack_direct</code>, <code>per_pv</code>, and
-      <code>stack_psis</code> on the same data and shows how to read the
-      agreement diagnostics. It states the two cautions plainly — design
-      variance is not optional, and a small Pareto-k does not imply a
-      correct <code>stack_psis</code> variance — and gives the rule of
-      thumb: use <code>stack_direct</code>, keep <code>stack_psis</code>
-      as a cross-check, and treat <code>per_pv</code> as the
-      reference.</p>
+      <p>pvstackr has three fitting methods, <code>stack_direct</code>,
+      <code>per_pv</code> and <code>stack_psis</code>. This article
+      describes how they differ, lines up three example fits with
+      <code><a href="../reference/pv_compare_methods.html">pv_compare_methods()</a></code>, and reads the estimates and the
+      agreement diagnostics of the comparison. It ends with two
+      cautions, on the standard errors and on the Pareto k-hat values of
+      <code>stack_psis</code>, and with pvstackr’s recommendation for
+      choosing a method.</p>
     </div>
     
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://joonho112.github.io/pvstackr/">pvstackr</a></span><span class="op">)</span></span></code></pre></div>
-<p>Vignettes A1–A3 lived entirely inside one method: load a
-<code>stack_direct</code> fit, read its estimate table, and decide what
-is safe to report. This vignette steps back to the choice
-<em>between</em> methods. pvstackr ships three —
-<code>stack_direct</code>, <code>per_pv</code>, and
-<code>stack_psis</code> — and <code><a href="../reference/pv_compare_methods.html">pv_compare_methods()</a></code> aligns
-them on the same fixed-effect terms so you can read them side by side.
-The point of the article is not to crown a winner on a toy dataset; it
-is to show the <strong>comparison machinery</strong> and the
-<strong>interval semantics</strong> that separate the methods, and to
-state the two cautions that govern when agreement means something.</p>
-<div class="alert alert-warning">
-<p>A note on the worked example below. We feed <code>per_pv</code>
-<strong>synthetic, injected</strong> posterior draws (random noise
-centred near the fixture’s coefficients), because the package ships only
-one cached fit and runs no live MCMC. For <code>stack_psis</code>, the
-example deliberately supplies equal placeholder weights and arbitrary
-Pareto-<span class="math inline">\(\hat k\)</span> values
-<strong>without</strong> claiming that PSIS ran. The fit therefore fails
-closed and remains visible as a blocked comparison row. Read this
-article for the <strong>structure</strong> of a comparison and the
-<strong>interval semantics</strong>, not as a substantive agreement
-result.</p>
-</div>
+<p>pvstackr fits a model to plausible-value data with one of three
+methods: <code>stack_direct</code> (the default), <code>per_pv</code>
+and <code>stack_psis</code>.</p>
+<p>The example compares three fits of the small synthetic data set
+bundled with pvstackr. The <code>stack_direct</code> fit is the example
+fit that ships with the package; <a href="a1-getting-started.html#example-fit">Getting started with
+pvstackr</a> describes how it was made. The <code>per_pv</code> fit is
+made from random numbers near the example estimates instead of posterior
+draws, because a real <code>per_pv</code> fit needs one Bayesian fit per
+plausible value. The <code>stack_psis</code> fit gets placeholder
+importance weights and Pareto <span class="math inline">\(\hat
+k\)</span> values, both explained in <a href="#methods-table">the three
+methods</a>, that no program computed; since no program is named,
+pvstackr blocks the fit (PSIS status
+<code>provenance_incomplete</code>). The numbers therefore show the
+layout of the output and say nothing about how the methods compare on
+real data.</p>
 <div class="section level2">
-<h2 id="the-three-methods-in-one-table">1. The three methods in one table<a class="anchor" aria-label="anchor" href="#the-three-methods-in-one-table"></a>
+<h2 id="methods-table">The three methods<a class="anchor" aria-label="anchor" href="#methods-table"></a>
 </h2>
-<p>The three methods answer the same question — <em>what is the
-fixed-effect block <span class="math inline">\(\beta_{\text{FE}}\)</span>?</em> — but they get
-their <strong>variance</strong> from different places, and that
-difference is the whole story of when a row may carry a coverage
-claim.</p>
+<p>All three methods report only the fixed effects, and all three
+combine the results for the <span class="math inline">\(M\)</span>
+plausible values with Rubin’s rules <span class="citation">(Rubin
+1987)</span>, so their standard errors include the variation between
+plausible values. They differ in the number of Bayesian fits they need
+and in where the variance within a plausible value comes from:</p>
 <table class="table">
 <colgroup>
-<col width="25%">
-<col width="25%">
-<col width="25%">
-<col width="25%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
 </colgroup>
 <thead><tr class="header">
-<th>Method</th>
-<th>Covariance basis</th>
-<th>Interval status</th>
-<th>Fit count</th>
+<th align="left">Method</th>
+<th align="left">Bayesian fits</th>
+<th align="left">Variance within a plausible value</th>
+<th align="left">Intervals</th>
+<th align="left">Bundled engine</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>
-<code>stack_direct</code> <em>(default)</em>
+<td align="left">
+<code>stack_direct</code> (default)</td>
+<td align="left">1</td>
+<td align="left">BRR–Fay replicate weights, through the target</td>
+<td align="left">coverage-claimable only with an external Barnard–Rubin
+target, otherwise descriptive</td>
+<td align="left">brms, with
+<code>pv_control(backend = "brms")</code>
 </td>
-<td>design-based external <span class="math inline">\(T_{\text{MI}}\)</span> (Rubin / BRR–Fay)</td>
-<td>
-<strong>conditional</strong> — coverage-claimable only with an
-external Barnard–Rubin BRR–Fay target; descriptive under classic df</td>
-<td><strong>1</strong></td>
 </tr>
 <tr class="even">
-<td><code>per_pv</code></td>
-<td>model-based posterior</td>
-<td>descriptive / reference</td>
-<td><strong><span class="math inline">\(M\)</span></strong></td>
+<td align="left"><code>per_pv</code></td>
+<td align="left"><span class="math inline">\(M\)</span></td>
+<td align="left">posterior draws of each fit</td>
+<td align="left">always descriptive</td>
+<td align="left">none</td>
 </tr>
 <tr class="odd">
-<td><code>stack_psis</code></td>
-<td>model-based posterior <strong>+ PSIS</strong> reweighting</td>
-<td>descriptive / reference</td>
-<td>
-<strong>1</strong> (+ PSIS)</td>
+<td align="left"><code>stack_psis</code></td>
+<td align="left">1</td>
+<td align="left">posterior draws of the stacked fit, reweighted</td>
+<td align="left">always descriptive</td>
+<td align="left">none</td>
 </tr>
 </tbody>
 </table>
-<p>In one sentence each:</p>
-<ul>
-<li>
-<strong><code>stack_direct</code></strong> fits one stacked model
-and calibrates it (via CCC) to an <strong>external,
-design-based</strong> Rubin / BRR–Fay target. Because that target’s
-covariance is design-based, <code>stack_direct</code> rows are the only
-ones the package ever marks <code>coverage_claim_allowed = TRUE</code>
-<span class="citation">(Judkins 1990; Rubin 1987)</span>.</li>
-<li>
-<strong><code>per_pv</code></strong> is the orthodox path: fit the
-model once per plausible value and pool the <span class="math inline">\(M\)</span> model-based results with Rubin’s rules.
-It is the natural <strong>reference</strong>, but its covariance is
-<em>model-based</em>, so its intervals stay descriptive.</li>
-<li>
-<strong><code>stack_psis</code></strong> reweights a single stacked
-draw cloud with per-PV Pareto-smoothed importance sampling <span class="citation">(Vehtari et al. 2017, 2024)</span>, pooling the
-PSIS-weighted summaries. One fit, model-based covariance — a
-<strong>cross-check</strong>, never the deliverable.</li>
-</ul>
-<div class="alert alert-warning">
-<p>The <strong>“fit count” column is topology, not speed.</strong> It
-records how many model fits a method’s architecture requires — one
-stacked fit versus <span class="math inline">\(M\)</span> separate ones
-— not a benchmarked runtime. The current package makes no “faster”
-claim; see the honesty triad in Section 7.</p>
-</div>
-<p>Two scope reminders carried over from A1–A3, because they bound this
-whole comparison: the reportable surface is <strong>fixed effects
-only</strong>, and <strong>coverage lives on exactly one path</strong>
-(<code>stack_direct</code> against an external Barnard–Rubin BRR–Fay
-target). Everything below respects both.</p>
+<p>A coverage-claimable interval is one that pvstackr’s reporting rule
+lets you read as a confidence interval with nominal coverage
+(<code>coverage_claim_allowed = TRUE</code>); <a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a> gives the rule and the <code>interval_role</code> label
+of each case.</p>
+<p><code>stack_direct</code> fits one model to the stacked data (<span class="math inline">\(M\)</span> copies of the data, one per plausible
+value) and calibrates its fixed-effect draws to the target from
+<code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code>; its estimate table reports the target’s
+estimates, standard errors and degrees of freedom. The target itself
+takes <span class="math inline">\(M(R + 1)\)</span> weighted
+least-squares fits, which need no sampler. <a href="a2-the-workflow.html#fitting">The full analysis workflow</a>
+describes both steps.</p>
+<p><code>per_pv</code> combines one Bayesian fit per plausible value.
+You supply the fits, either as their posterior draws
+(<code>per_pv_draws</code>) or as your own fitting functions, which
+pvstackr calls once per plausible value. pvstackr does not pass the
+survey weights to these functions, so a weighted fit has to take them
+from the data. Scale them as pvstackr scales the weights of the stacked
+fit, by dividing the final weight by its mean: with flat priors on the
+coefficients, the posterior means do not depend on the scale of the
+weights, but the posterior standard deviations do. PISA final weights
+count the students that each sampled student represents <span class="citation">(OECD 2024)</span>, so fits that use them unscaled give
+posterior standard deviations that are far too small, and
+<code>per_pv</code> standard errors that are too small.
+<code><a href="../reference/pv_fit_reference.html">?pv_fit_reference</a></code> lists what these functions receive and
+return. pvstackr also collects no sampler diagnostics from them: a
+<code>per_pv</code> fit always has status <code>"ok"</code>, so check
+the convergence of each fit yourself.</p>
+<p><code>stack_psis</code> reweights the draws of one fit to the stacked
+data toward each plausible value. For each plausible value you supply
+importance weights and a Pareto <span class="math inline">\(\hat
+k\)</span> value, computed outside pvstackr, for example by Pareto
+smoothed importance sampling (PSIS) with the loo package <span class="citation">(Vehtari et al. 2017, 2024)</span>; <span class="math inline">\(\hat k\)</span> shows how reliable the reweighted
+estimates are. pvstackr computes no part of PSIS: it divides each column
+of weights by its sum, reweights the draws and combines the results with
+Rubin’s rules. It blocks the fit unless every <span class="math inline">\(\hat k\)</span> is below
+<code>psis_k_threshold</code> in <code><a href="../reference/pv_control.html">pv_control()</a></code> (0.7 by
+default) and the program that made the weights is named with
+<code>psis_producer</code> and <code>psis_producer_version</code>.
+<code><a href="../reference/pv_fit_stack_psis.html">?pv_fit_stack_psis</a></code> lists the inputs.</p>
+<p>The number of Bayesian fits says how many samplers run, not how long
+the analysis takes.</p>
 </div>
 <div class="section level2">
-<h2 id="run-a-comparison-pv_compare_methods">2. Run a comparison — <code>pv_compare_methods()</code><a class="anchor" aria-label="anchor" href="#run-a-comparison-pv_compare_methods"></a>
+<h2 id="running-a-comparison">Running a comparison<a class="anchor" aria-label="anchor" href="#running-a-comparison"></a>
 </h2>
-<p><code><a href="../reference/pv_compare_methods.html">pv_compare_methods()</a></code> takes two or more already-built
-<code>pvstackr_fit</code> objects and aligns their fixed-effect estimate
-tables. It does <strong>not</strong> fit anything — you hand it finished
-fits — so the only setup is building three fits that share the same
-fixed-effect names (<code>b_Intercept</code>, <code>b_x</code>,
-<code>b_female</code>).</p>
-<p>The first fit is the cached <code>stack_direct</code> fixture you
-already met in A1. The other two use injected synthetic inputs:
-<code><a href="../reference/pv_fit_reference.html">pv_fit_reference()</a></code> accepts a list of per-PV posterior draw
-matrices, and <code><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis()</a></code> accepts a stacked draw
-matrix plus weight diagnostics. No live MCMC or PSIS routine runs below.
-Consequently, the PSIS example intentionally omits producer/version and
-must remain blocked; a string label is not evidence that smoothing
-occurred.</p>
+<p><code><a href="../reference/pv_compare_methods.html">pv_compare_methods()</a></code> takes two or more finished fits and
+lines up their estimate tables by fixed-effect name; it fits no model
+itself. The three fits below have the same fixed effects,
+<code>b_Intercept</code>, <code>b_x</code> and <code>b_female</code>.
+The <code>stack_direct</code> fit is read from the package. The other
+two are made from draws passed in directly:
+<code><a href="../reference/pv_fit_reference.html">pv_fit_reference()</a></code>, which runs the <code>per_pv</code>
+method, takes a list of draw matrices, one per plausible value, and
+<code><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis()</a></code>, which runs <code>stack_psis</code>,
+takes a matrix of stacked draws with the weights and the <span class="math inline">\(\hat k\)</span> values. No sampler runs and no
+PSIS is computed. The <code>stack_psis</code> call names no program,
+because no program made its weights.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fe</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"b_Intercept"</span>, <span class="st">"b_x"</span>, <span class="st">"b_female"</span><span class="op">)</span></span>
 <span></span>
@@ -233,8 +239,9 @@ occurred.</p>
 <span>              package <span class="op">=</span> <span class="st">"pvstackr"</span><span class="op">)</span></span>
 <span><span class="op">)</span><span class="op">$</span><span class="va">fit</span></span>
 <span></span>
-<span><span class="co"># Synthetic per-PV draw clouds, centred near the fixture's coefficients</span></span>
-<span><span class="co"># (~458 / 47 / 2). These are random noise for illustration, NOT real posteriors.</span></span>
+<span><span class="co"># Made-up draws for the per_pv fit: for each plausible value, 300 random values</span></span>
+<span><span class="co"># per fixed effect, with standard deviation 2, around 458, 47 and 2, near the</span></span>
+<span><span class="co"># example estimates. They stand in for posterior draws; no model was fitted.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">mk</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">mu</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">300</span> <span class="op">*</span> <span class="fl">3</span>, sd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">3</span>, dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="cn">NULL</span>, <span class="va">fe</span><span class="op">)</span><span class="op">)</span></span>
@@ -247,9 +254,9 @@ occurred.</p>
 <span>  control      <span class="op">=</span> <span class="fu"><a href="../reference/pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"per_pv"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Synthetic stacked draw cloud + equal placeholder weights and arbitrary</span></span>
-<span><span class="co"># Pareto-k. Nothing is importance-sampled live, so producer/version are omitted</span></span>
-<span><span class="co"># and the fit must fail closed as provenance_incomplete.</span></span>
+<span><span class="co"># Made-up stacked draws with equal placeholder weights and Pareto k-hat values</span></span>
+<span><span class="co"># of 0.2. No PSIS was run, so no program is named, and pvstackr blocks the fit</span></span>
+<span><span class="co"># (its PSIS status is provenance_incomplete).</span></span>
 <span><span class="va">sd_mat</span> <span class="op">&lt;-</span> <span class="fu">mk</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">458</span>, <span class="fl">47</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">fit_psis</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pv_fit_stack_psis.html">pv_fit_stack_psis</a></span><span class="op">(</span></span>
 <span>  stacked_draws <span class="op">=</span> <span class="va">sd_mat</span>,</span>
@@ -258,8 +265,7 @@ occurred.</p>
 <span>  pareto_k      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.2</span>, <span class="fl">0.2</span><span class="op">)</span>,</span>
 <span>  control       <span class="op">=</span> <span class="fu"><a href="../reference/pv_control.html">pv_control</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"stack_psis"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>With two reportable fits and one intentionally blocked fit in hand,
-the comparison is one call:</p>
+<p>The comparison is one call:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/pv_compare_methods.html">pv_compare_methods</a></span><span class="op">(</span></span>
 <span>  stack_direct <span class="op">=</span> <span class="va">fit_direct</span>,</span>
@@ -275,35 +281,33 @@ the comparison is one call:</p>
 <span><span class="co">#&gt;   blocked: stack_psis</span></span>
 <span><span class="co">#&gt;   provenance note: Agreement bands are descriptive; shared target, pooling, or source metadata should not be read as independent corroboration.</span></span>
 <span><span class="co">#&gt;   interval note: intervals are descriptive rather than coverage-claimable.</span></span></code></pre></div>
-<p>The <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> box names the <strong>reference
-method</strong> (here <code>per_pv</code>, the default when a
-non-blocked <code>per_pv</code> fit is present), lists the three
-labelled methods, and confirms the comparison aligned on <strong>3
-shared fixed-effect terms</strong>. It then prints two honest one-liners
-that recur throughout this article:</p>
-<ul>
-<li>a <strong>provenance note</strong> — agreement bands are
-<em>descriptive</em> and shared target/pooling/source metadata is not
-independent corroboration (Section 4); and</li>
-<li>an <strong>interval note</strong> — at least one compared interval
-is <em>descriptive rather than coverage-claimable</em> (Sections 3,
-5–7).</li>
-</ul>
-<p>Comparison aligns methods on their <strong>shared</strong>
-fixed-effect terms. The two reportable methods supply
-<code>b_Intercept</code>, <code>b_x</code>, and <code>b_female</code>;
-the blocked <code>stack_psis</code> fit still gets one row for each
-term, with numeric fields left <code>NA</code> rather than silently
-disappearing.</p>
+<p>The print first names the reference fit, <code>per_pv</code>, from
+which the differences in the comparison are taken. By default it is the
+first <code>per_pv</code> fit that is not blocked, or, without one, the
+first fit that is not blocked; choose another with the argument
+<code>reference_method</code>. It then lists the label and the method of
+each fit, the number of fixed effects (3) and the blocked fit,
+<code>stack_psis</code>. The line <code>provenance note:</code> appears
+in every comparison; <a href="#agreement">the agreement diagnostics</a>
+explain it. The line <code>interval note:</code> says that the compared
+intervals are descriptive.</p>
+<p>The comparison has a row for each fit and each fixed effect that
+appears in any of the fits. A blocked fit keeps its rows, with
+<code>NA</code> values and its reason code, so that it stays visible in
+the comparison.</p>
 </div>
 <div class="section level2">
-<h2 id="the-three-methods-side-by-side">3. The three methods side by side<a class="anchor" aria-label="anchor" href="#the-three-methods-side-by-side"></a>
+<h2 id="the-estimates-side-by-side">The estimates side by side<a class="anchor" aria-label="anchor" href="#the-estimates-side-by-side"></a>
 </h2>
-<p><code><a href="../reference/get_estimates.html">get_estimates()</a></code> on a comparison returns the
-<strong>aligned</strong> table: one row per (method, term) pair — here
-<span class="math inline">\(3 \times 3 = 9\)</span> rows. The slice that
-matters for choosing a method puts the point estimate next to its
-interval and the interval’s licensing metadata:</p>
+<p><code><a href="../reference/get_estimates.html">get_estimates()</a></code> on a comparison returns one row per fit
+and fixed effect, here <span class="math inline">\(3 \times 3 =
+9\)</span> rows. For each row it gives the fit’s estimate, standard
+error, degrees of freedom, interval and interval labels, the method,
+status and reason codes of the fit, and the estimate and standard error
+of the reference fit with the differences from them (see <a href="#agreement">the agreement diagnostics</a>); the source labels and
+checksums of the fits are in <code><a href="../reference/get_diagnostics.html">get_diagnostics()</a></code>. The columns
+below put each estimate next to its interval and the two columns that
+say how the interval can be read:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_estimates.html">get_estimates</a></span><span class="op">(</span><span class="va">cmp</span><span class="op">)</span></span>
 <span></span>
@@ -330,43 +334,31 @@ interval and the interval’s licensing metadata:</p>
 <span><span class="co">#&gt; 7                      &lt;NA&gt;                     NA</span></span>
 <span><span class="co">#&gt; 8                      &lt;NA&gt;                     NA</span></span>
 <span><span class="co">#&gt; 9                      &lt;NA&gt;                     NA</span></span></code></pre></div>
-<p>Read this table on two axes.</p>
-<p><strong>The available points do not match here — and that is the
-synthetic setup, not a finding.</strong> The <code>per_pv</code> rows
-were built from independent random noise, not from the same data as
-<code>stack_direct</code>; the blocked <code>stack_psis</code> rows
-correctly contain no estimates. In a <strong>real</strong> comparison,
-<code>stack_direct</code> and <code>per_pv</code> points agree closely:
-this is the <strong>stacked-MLE point identity</strong> — one stacked,
-<span class="math inline">\(1/M\)</span>-weighted fit recovers the
-Rubin-pooled per-PV point estimate. That identity is <em>exact</em> only
-under its regularity conditions (flat prior, linear-Gaussian, common
-design, a common plug-in covariance) and holds <strong>approximately,
-not exactly</strong>, in production with REML variance components and
-real PISA data. The precise statement and its caveat are Theorem 2.2 in
-the <strong>Method track, M3</strong>.</p>
-<p><strong>The interval semantics are the real teaching point.</strong>
-Even where points agree, two columns separate the methods and never
-collapse:</p>
+<p>The <code>stack_direct</code> rows hold the numbers of the example
+fit, which are those of its target. The <code>per_pv</code> estimates
+are close to them only because the made-up draws were placed around 458,
+47 and 2, and their standard errors, about 2, come from the standard
+deviation of those draws. The <code>stack_psis</code> rows are
+<code>NA</code> because that fit is blocked.</p>
+<p>Two columns say how each interval can be read:</p>
 <ul>
 <li>
-<strong><code>interval_role</code></strong> records the
-<em>kind</em> of available interval —
-<code>descriptive_classic_rubin</code> for <code>stack_direct</code>
-(this classic-df fixture) and <code>reference_classic_rubin</code> for
-<code>per_pv</code>. It is <code>NA</code> for the blocked PSIS rows; a
-valid reportable PSIS path would use <code>psis_classic_rubin</code>
-here.</li>
+<code>interval_role</code> is <code>descriptive_classic_rubin</code>
+for <code>stack_direct</code>, because the example target uses the
+classic Rubin degrees of freedom, and
+<code>reference_classic_rubin</code> for <code>per_pv</code>. It is
+<code>NA</code> for the blocked <code>stack_psis</code> rows; a
+<code>stack_psis</code> fit with estimates has
+<code>psis_classic_rubin</code> or <code>psis_barnard_rubin</code>.</li>
 <li>
-<strong><code>coverage_claim_allowed</code></strong> is
-<code>FALSE</code> for the two available methods and <code>NA</code> for
-the blocked one. The fixture’s <code>stack_direct</code> target uses
-<em>classic</em> Rubin df (so it is descriptive by design, as in A2/A3),
-and <code>per_pv</code> / <code>stack_psis</code> intervals are always
-descriptive regardless of their df.</li>
+<code>coverage_claim_allowed</code> is <code>FALSE</code> for the
+two fits with estimates and <code>NA</code> for the blocked one. With a
+target made with Barnard–Rubin degrees of freedom, the
+<code>stack_direct</code> rows would have <code>TRUE</code>; the
+<code>per_pv</code> and <code>stack_psis</code> rows have
+<code>FALSE</code> whatever their degrees of freedom.</li>
 </ul>
-<p>Interval <strong>width</strong> also differs sharply, and width is
-where the methods genuinely diverge. Look at the slope on
+<p>The intervals also differ in width. For the slope of
 <code>x</code>:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bx</span> <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="va">est</span><span class="op">$</span><span class="va">term</span> <span class="op">==</span> <span class="st">"b_x"</span>,</span>
@@ -377,18 +369,17 @@ where the methods genuinely diverge. Look at the slope on
 <span><span class="co">#&gt; 2 stack_direct 0.3717929 44.41457  49.35215 4.937582</span></span>
 <span><span class="co">#&gt; 5       per_pv 2.0556785 43.00933  51.06750 8.058174</span></span>
 <span><span class="co">#&gt; 8   stack_psis        NA       NA        NA       NA</span></span></code></pre></div>
-<p>The two available widths are not interchangeable; the blocked PSIS
-row has no width at all. Do not read the available ordering as a general
-result: it is an artifact of the injected <code>per_pv</code> draw
-clouds. The durable lesson is that <strong>width, availability, and the
-coverage flag are method-specific</strong> — exactly what
-<code>interval_role</code>, <code>status</code>, and
-<code>coverage_claim_allowed</code> are there to flag.</p>
-<p>A figure makes the per-term overlay easy to read. We plot the two
-slope coefficients (dropping the intercept, whose ~458 scale would
-flatten the axis) and overlay the two available methods. The blocked
-PSIS method remains in the table but is correctly absent from the
-interval geometry:</p>
+<p>The width of an interval depends on the standard error and on the
+degrees of freedom. The <code>stack_direct</code> interval is 4.9 points
+wide although its standard error is 0.37, because the example target has
+only 1.40 classic degrees of freedom for <code>b_x</code>. The
+<code>per_pv</code> interval is 8.1 points wide, about four times its
+standard error of 2.06, which comes from the made-up draws. Neither
+width says anything about real data. The blocked <code>stack_psis</code>
+row has no interval.</p>
+<p>The figure shows the estimates and intervals of the two slopes; the
+intercept, about 458, is left out because its scale would compress the
+axis. The blocked <code>stack_psis</code> fit has nothing to draw.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">slopes</span>  <span class="op">&lt;-</span> <span class="va">est</span><span class="op">[</span><span class="va">est</span><span class="op">$</span><span class="va">term</span> <span class="op">!=</span> <span class="st">"b_Intercept"</span>,</span>
 <span>               <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method_label"</span>, <span class="st">"term"</span>, <span class="st">"estimate"</span>, <span class="st">"conf_low"</span>, <span class="st">"conf_high"</span><span class="op">)</span><span class="op">]</span></span>
@@ -415,44 +406,78 @@ interval geometry:</p>
 <span>  <span class="fu"><a href="https://rdrr.io/r/graphics/points.html" class="external-link">points</a></span><span class="op">(</span><span class="va">sub</span><span class="op">$</span><span class="va">estimate</span>, <span class="va">yy</span>, pch <span class="op">=</span> <span class="fl">19</span>, cex <span class="op">=</span> <span class="fl">1.3</span>, col <span class="op">=</span> <span class="va">cols</span><span class="op">[[</span><span class="va">mlab</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/axis.html" class="external-link">axis</a></span><span class="op">(</span><span class="fl">2</span>, at <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_along</a></span><span class="op">(</span><span class="va">terms</span><span class="op">)</span>, labels <span class="op">=</span> <span class="va">terms</span>, las <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topright"</span>, legend <span class="op">=</span> <span class="va">methods</span>, col <span class="op">=</span> <span class="va">cols</span>, pch <span class="op">=</span> <span class="fl">19</span>, lwd <span class="op">=</span> <span class="fl">2</span>,</span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topleft"</span>, legend <span class="op">=</span> <span class="va">methods</span>, col <span class="op">=</span> <span class="va">cols</span>, pch <span class="op">=</span> <span class="fl">19</span>, lwd <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>       bty <span class="op">=</span> <span class="st">"n"</span>, cex <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span></code></pre></div>
 <div class="figure" style="text-align: center">
-<img src="a4-comparing-methods_files/figure-html/overlay-figure-1.png" class="r-plt" alt="A horizontal dot-and-interval plot with two rows, one for the coefficient on x and one for the coefficient on female. Within each row the reportable stack_direct and per_pv methods are drawn at slightly offset heights with 95 percent intervals. The blocked stack_psis method has no plotted point or interval. A dashed vertical reference line is drawn at zero." width="85%"><p class="caption">
-The two slope coefficients (b_x, b_female) under the two reportable
-methods, with their 95% intervals overlaid. The blocked stack_psis rows
-remain in the comparison table but have no interval to draw. The dashed
-line marks zero; the synthetic per_pv points and widths are illustrative
-only.
+<img src="a4-comparing-methods_files/figure-html/overlay-figure-1.png" class="r-plt" alt="Dot-and-interval plot with one row for b_female, at the bottom, and one for b_x, at the top. In each row the stack_direct estimate, in blue, is drawn slightly below the per_pv estimate, in yellow, each with its 95 percent interval. The stack_direct interval for b_female runs from about −42 to 46 and covers most of the horizontal axis; the per_pv interval for b_female, from about −2 to 6, and the two intervals for b_x, between about 43 and 51, are short. A dashed vertical line marks zero. There is no point or interval for stack_psis." width="85%"><p class="caption">
+Estimates and 95% intervals of the two slopes, b_x and b_female, from
+the stack_direct and per_pv fits. The blocked stack_psis fit has no
+estimates to draw. The dashed line marks zero. The per_pv values come
+from made-up draws.
 </p>
 </div>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span><span class="va">op</span><span class="op">)</span></span></code></pre></div>
-<p>The available intervals comfortably span zero for
-<code>b_female</code> and sit clear of zero for <code>b_x</code> — but
-their <em>widths</em> differ by method, and only the
-<code>stack_direct</code> row could ever (with a Barnard–Rubin target)
-carry a coverage claim. The absent PSIS interval is itself part of the
-honesty contract. That is the bridge to the cautions.</p>
+<p>Both intervals for <code>b_x</code> lie well above zero, and both
+intervals for <code>b_female</code> include it. The
+<code>stack_direct</code> interval for <code>b_female</code>, from about
+−42 to 46, is much wider than the <code>per_pv</code> one, from about −2
+to 6, for the reasons given above.</p>
+<p>On real data, the estimates of the three methods are close when they
+all fit the same survey-weighted model. A <code>stack_direct</code> fit
+reports the target’s <span class="math inline">\(\bar\beta\)</span>, the
+average over the plausible values of the survey-weighted least-squares
+estimates. A <code>per_pv</code> fit reports the average of the
+posterior means of your fits. If each of these fits is the same
+survey-weighted regression, with the weights taken from the data and
+flat priors on the fixed effects (in brms, write the intercept as
+<code>0 + Intercept</code>, because its default prior on the intercept
+is not flat), its posterior mean is the weighted least-squares estimate
+for its plausible value, apart from Monte Carlo error; the
+<code>per_pv</code> estimates then differ from <span class="math inline">\(\bar\beta\)</span> only by that error.</p>
+<p>The same holds for a stacked fit, which <code>stack_direct</code>
+calibrates and <code>stack_psis</code> reweights. When its rows are
+weighted by <span class="math inline">\(\tilde w_i/M\)</span>, where
+<span class="math inline">\(\tilde w_i\)</span> is the final survey
+weight divided by its mean, the weighted least-squares estimate from the
+stacked data equals <span class="math inline">\(\bar\beta\)</span>
+exactly in pvstackr’s model, a weighted linear regression without random
+effects. The stacked fixed-effect point identity, Theorem 4.1 of the
+companion preprint <span class="citation">(Lee et al. 2026)</span>,
+states the conditions for this equality, and <a href="m3-stacked-bridge.html">One stacked fit and the Rubin point
+estimate</a> explains it. The reweighted means of
+<code>stack_psis</code> approximate the posterior means for the separate
+plausible values, and the Pareto <span class="math inline">\(\hat
+k\)</span> values show how reliable these approximations are <span class="citation">(Vehtari et al. 2024)</span>. The standard errors are
+another matter, which the first of <a href="#cautions">the cautions</a>
+explains.</p>
 </div>
 <div class="section level2">
-<h2 id="agreement-diagnostics">4. Agreement diagnostics<a class="anchor" aria-label="anchor" href="#agreement-diagnostics"></a>
+<h2 id="agreement">Agreement diagnostics<a class="anchor" aria-label="anchor" href="#agreement"></a>
 </h2>
-<p><code><a href="../reference/get_diagnostics.html">get_diagnostics()</a></code> on a comparison returns a named list.
-Its keys:</p>
+<p><code><a href="../reference/get_diagnostics.html">get_diagnostics()</a></code> on a comparison returns a list:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dg</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/get_diagnostics.html">get_diagnostics</a></span><span class="op">(</span><span class="va">cmp</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">dg</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "reference_method"   "methods"            "statuses"          </span></span>
 <span><span class="co">#&gt; [4] "blocked_methods"    "warning_methods"    "agreement"         </span></span>
 <span><span class="co">#&gt; [7] "method_diagnostics" "timing"             "target_overlap"</span></span></code></pre></div>
-<p>Two of these carry the interpretive weight.</p>
-<p><strong><code>agreement</code></strong> summarises, per method, how
-far each method’s rows sit from the reference (<code>per_pv</code>
-here). The two columns to read are <code>max_abs_z_diff</code> (the
-largest standardised point gap from the reference, across terms) and
-<code>max_abs_log_se_ratio</code> (the largest log standard-error ratio
-— i.e. how differently the method spreads its intervals):</p>
+<p><code>reference_method</code> and <code>methods</code> repeat what
+<code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> shows, <code>statuses</code> gives the status of
+each fit, and <code>blocked_methods</code> and
+<code>warning_methods</code> list the fits with status
+<code>"blocked"</code> or <code>"warning"</code>. <code>timing</code>
+gives the number of model fits of each method and, when you pass times
+that you measured with the argument <code>timings</code>, the elapsed
+seconds; pvstackr does not time the fits itself. The other three
+elements describe how the fits agree.</p>
+<p><code>agreement</code> has one row per fit.
+<code>max_abs_z_diff</code> is the largest, over the fixed effects, of
+the absolute difference between the fit’s estimate and the reference
+estimate, divided by <span class="math inline">\(\sqrt{\mathrm{se}^2 +
+\mathrm{se}_{\text{ref}}^2}\)</span>. <code>max_abs_log_se_ratio</code>
+is the largest absolute log of the ratio of the fit’s standard error to
+the reference standard error:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dg</span><span class="op">$</span><span class="va">agreement</span></span>
 <span><span class="co">#&gt;         method method_label  status max_abs_z_diff max_abs_log_se_ratio n_terms</span></span>
@@ -463,18 +488,27 @@ largest standardised point gap from the reference, across terms) and
 <span><span class="co">#&gt; 1           3</span></span>
 <span><span class="co">#&gt; 2           3</span></span>
 <span><span class="co">#&gt; 3           0</span></span></code></pre></div>
-<p>The reference compares to itself, so its <code>max_abs_z_diff</code>
-and <code>max_abs_log_se_ratio</code> are exactly zero. The
-<code>stack_direct</code> point gap is large here only because the
-injected <code>per_pv</code> draws are synthetic. The blocked
-<code>stack_psis</code> row has no available comparison statistics. In a
-real comparison the informative pattern is <strong>agree on points,
-disagree on variance</strong> — methods that share a target tend to
-match on the point while differing on variance.</p>
-<p><strong><code>target_overlap</code></strong> is the honesty gate on
-reading agreement as corroboration. It flags whether the compared
-methods share provenance — an external target, a target hash, a pooling
-hash, or a target-source family:</p>
+<p>The reference fit, <code>per_pv</code>, has zeros. For
+<code>stack_direct</code>, <code>max_abs_z_diff</code> is 0.07: the
+estimates are close because the made-up <code>per_pv</code> draws were
+placed near them. <code>max_abs_log_se_ratio</code> is 1.71 and comes
+from <code>b_x</code>, whose <code>stack_direct</code> standard error,
+0.37, is 0.18 times the <code>per_pv</code> one, 2.06. The blocked
+<code>stack_psis</code> fit has no estimates (<code>n_available</code>
+is 0) and therefore no values.</p>
+<p>The estimate table of the comparison gives the same measures for each
+row (<code>estimate_diff</code>, <code>se_ratio</code> and
+<code>abs_z_diff</code>), and <code>agreement_band</code> groups
+<code>abs_z_diff</code> by pvstackr’s cut-offs: <code>"close"</code>
+below 0.1, <code>"moderate"</code> from 0.1, <code>"different"</code>
+from 0.5, and <code>"not_available"</code> for a blocked fit. These
+values describe how far apart the fits are; they are not a statistical
+test. In a real comparison, <code>max_abs_z_diff</code> shows whether
+the fits agree on the estimates and <code>max_abs_log_se_ratio</code>
+how far their standard errors differ; <a href="#cautions">the
+cautions</a> explain why the two need not go together.</p>
+<p><code>target_overlap</code> records whether fits share their
+numbers:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/str.html" class="external-link">str</a></span><span class="op">(</span><span class="va">dg</span><span class="op">$</span><span class="va">target_overlap</span><span class="op">)</span></span>
 <span><span class="co">#&gt; List of 8</span></span>
@@ -486,18 +520,31 @@ hash, or a target-source family:</p>
 <span><span class="co">#&gt;  $ shared_target_sources       : chr(0) </span></span>
 <span><span class="co">#&gt;  $ independence_caveat_required: logi FALSE</span></span>
 <span><span class="co">#&gt;  $ independence_caveat         : chr "Agreement bands are descriptive; shared target, pooling, or source metadata should not be read as independent corroboration."</span></span></code></pre></div>
-<p>In this synthetic run <code>independence_caveat_required</code> is
-<code>FALSE</code>, because the available fits carry distinct hashes and
-only <code>stack_direct</code> holds the
-<code>external_brr_fay_rubin</code> source. But the field exists
-precisely for the common case where it flips to <code>TRUE</code>: when
-two methods are calibrated to the <em>same</em> external target (or pool
-the same draws), close agreement is <strong>mechanically
-guaranteed</strong> and tells you nothing about correctness. The
-<code>independence_caveat</code> string spells this out, and it is the
-same message the <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> box surfaces.</p>
-<p>The per-method diagnostic table carries the rest, including the PSIS
-row’s Pareto-<span class="math inline">\(\hat k\)</span>:</p>
+<p>Every flag is <code>FALSE</code> here: the <code>stack_direct</code>
+fit has the target made by <code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code>, the
+<code>per_pv</code> fit has its own combination of its draws, and the
+blocked fit has neither. The flags become <code>TRUE</code> when two or
+more fits have the same target (<code>shared_target_hash</code>, and
+<code>shared_external_target</code> when they are
+<code>stack_direct</code> fits calibrated to the same target) or the
+same combined result (<code>shared_pooling_hash</code>), or when a fit
+has the target or the combined result of the reference fit
+(<code>shares_reference_target</code>,
+<code>shares_reference_pooling</code>).
+<code>shared_target_sources</code> lists the source labels that two or
+more fits have, and <code>independence_caveat_required</code> is
+<code>TRUE</code> when any flag is <code>TRUE</code> or that list is not
+empty. <code>independence_caveat</code> holds the text of the
+<code>provenance note:</code> line.</p>
+<p>Agreement between fits that share their numbers follows by
+construction: two <code>stack_direct</code> fits calibrated to the same
+target report the same estimates and standard errors, whatever their
+draws. Even without shared numbers, fits of the same data and plausible
+values are not independent, so their agreement does not confirm a
+result.</p>
+<p><code>method_diagnostics</code> has one row per fit and many columns,
+which <code><a href="../reference/pv_compare_methods.html">?pv_compare_methods</a></code> lists; the chunk shows some of
+them:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dg</span><span class="op">$</span><span class="va">method_diagnostics</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"method_label"</span>, <span class="st">"interval_role"</span>,</span>
 <span>                          <span class="st">"coverage_claim_allowed"</span>, <span class="st">"target_source"</span>,</span>
@@ -510,228 +557,133 @@ row’s Pareto-<span class="math inline">\(\hat k\)</span>:</p>
 <span><span class="co">#&gt; stack_direct external_brr_fay_rubin                  &lt;NA&gt;           NA      1</span></span>
 <span><span class="co">#&gt; per_pv           per_pv_rubin_draws                  &lt;NA&gt;           NA      2</span></span>
 <span><span class="co">#&gt; stack_psis                     &lt;NA&gt; provenance_incomplete          0.2      1</span></span></code></pre></div>
-<p>A few reads from this table. <code>target_source</code> is
-<strong>provenance vocabulary, not a formal target object</strong>. It
-is withheld for the blocked PSIS row; a reportable PSIS fit would use
-<code>stack_psis_rubin_pooling</code>, while <code><a href="../reference/get_target.html">get_target()</a></code>
-would still return <code>NULL</code>. The <code>n_fits</code> column is
-the topology count from Section 1 (<code>stack_direct</code> = 1,
-<code>per_pv</code> = <span class="math inline">\(M\)</span> = 2,
-<code>stack_psis</code> = 1). For <code>stack_psis</code>,
-<code>psis_status = "provenance_incomplete"</code>: the arbitrary
-<code>pareto_k_max = 0.2</code> is retained as a bounded diagnostic, but
-it cannot establish that smoothing ran. For a genuine PSIS run, the
-<strong>Vehtari et al. thresholds</strong> <span class="citation">(Vehtari et al. 2024)</span> are —</p>
-<ul>
-<li>
-<span class="math inline">\(\hat k &lt; 0.5\)</span>:
-<strong>good</strong>;</li>
-<li>
-<span class="math inline">\(0.5 \le \hat k &lt; 0.7\)</span>:
-<strong>borderline</strong>;</li>
-<li>
-<span class="math inline">\(\hat k \ge 0.7\)</span>:
-<strong>unreliable</strong>.</li>
-</ul>
-<div class="alert alert-warning">
-<p><strong>Agreement is descriptive, never independent corroboration
-when methods share a target, pooling, or source.</strong> Three methods
-reading the <em>same</em> information are expected to agree; their
-concordance is then uninformative about whether the shared answer is
-right. Read <code>target_overlap</code> before you read any agreement
-band as reassurance. Section 6 shows how this bites
-<code>stack_psis</code> specifically.</p>
-</div>
+<p><code>target_source</code> labels where the numbers of a fit come
+from: <code>external_brr_fay_rubin</code> for the target from
+<code><a href="../reference/pv_brr_target.html">pv_brr_target()</a></code> and <code>per_pv_rubin_draws</code> for
+Rubin’s rules applied to the <code>per_pv</code> draws. It is
+<code>NA</code> for the blocked fit. A <code>stack_psis</code> fit with
+estimates has the label <code>stack_psis_rubin_pooling</code> but no
+target object: <code><a href="../reference/get_target.html">get_target()</a></code> returns <code>NULL</code> for
+it. <code>n_fits</code> is the number of model fits: 1 for
+<code>stack_direct</code>, <span class="math inline">\(M = 2\)</span>
+for <code>per_pv</code> and 1 for <code>stack_psis</code>. For the
+blocked fit, <code>psis_status</code> is
+<code>"provenance_incomplete"</code> because no program was named, and
+<code>pareto_k_max</code>, the largest of the <span class="math inline">\(\hat k\)</span> values supplied, is the 0.2 typed
+into the example; pvstackr records it but cannot tell how it was
+obtained.</p>
+<p>pvstackr checks the <span class="math inline">\(\hat k\)</span>
+values against one cut-off, <code>psis_k_threshold</code> in
+<code><a href="../reference/pv_control.html">pv_control()</a></code>: 0.7 by default, which is also the largest
+value allowed. A <code>stack_psis</code> fit is blocked unless the <span class="math inline">\(\hat k\)</span> of every plausible value is below
+it. <a href="m5-methods-and-coverage.html#psis">Choosing a method and
+reading its intervals</a> gives the cut-offs of the literature and how
+to set <code>psis_k_threshold</code> to one of them.</p>
 </div>
 <div class="section level2">
-<h2 id="caution-1-design-variance-is-not-optional">5. Caution 1 — design variance is not optional<a class="anchor" aria-label="anchor" href="#caution-1-design-variance-is-not-optional"></a>
+<h2 id="cautions">Cautions in reading a comparison<a class="anchor" aria-label="anchor" href="#cautions"></a>
 </h2>
-<p>The first caution is why <code>per_pv</code> and
-<code>stack_psis</code> are <em>descriptive</em> while only
-<code>stack_direct</code> is coverage-claimable. It is a statement about
-<strong>variance</strong>, not about points.</p>
-<p>A weighted analysis can get the <strong>point</strong> estimate
-exactly right and still report intervals that are far too narrow,
-because <strong>model-based standard errors ignore the survey
-design</strong>. Complex PISA sampling — stratification, clustering,
-unequal selection — inflates the true sampling variance above what an
-i.i.d.-style model-based posterior assumes. The fix is to take the
-variance from the design, not the model: the <strong>BRR–Fay</strong>
-replicate-weight sandwich, pooled across plausible values into the Rubin
-total <span class="math inline">\(T_{\text{MI}} = \bar U + (1 +
-1/M)\,B\)</span>, restores nominal coverage <span class="citation">(Judkins 1990; Rubin 1987)</span>. That is exactly the
-external target <code>stack_direct</code> calibrates to.</p>
-<div class="alert alert-info">
-<p>The illustrative evidence for “model-based SEs under-cover;
-design-based BRR–Fay <span class="math inline">\(T_{\text{MI}}\)</span>
-restores nominal coverage” comes from the <strong>companion methods
-paper (in preparation)</strong>. It is described here qualitatively and
-deliberately carries <strong>no hard-coded numbers</strong> — the
-package neither bundles real PISA nor presents simulation results as its
-own output.</p>
-</div>
-<p>This is the whole reason the package draws the line where it does.
-<code>per_pv</code> and <code>stack_psis</code> produce
-<em>model-based</em> covariances, so however sensible their points,
-their intervals cannot bear a design-coverage claim — the package marks
-them descriptive. Only a <code>stack_direct</code> fit calibrated to the
-<strong>external Barnard–Rubin</strong> BRR–Fay target earns
-<code>coverage_claim_allowed = TRUE</code>. (And, as A2/A3 stressed,
-even <code>stack_direct</code> stays descriptive under <em>classic</em>
-df — as on this fixture.)</p>
-</div>
-<div class="section level2">
-<h2 id="caution-2-small-pareto-hat-k-correct-variance">6. Caution 2 — small Pareto-<span class="math inline">\(\hat
-k\)</span> ≠ correct variance<a class="anchor" aria-label="anchor" href="#caution-2-small-pareto-hat-k-correct-variance"></a>
-</h2>
-<p>The second caution is the trap specific to <code>stack_psis</code>,
-and it is subtle because the diagnostic that looks reassuring can be
-reassuring about the <em>wrong thing</em>.</p>
-<p>A small Pareto-<span class="math inline">\(\hat k\)</span> tells you
-the <strong>importance-sampling step is stable</strong> — the weights
-are well-behaved. It does <strong>not</strong> tell you the resulting
-<strong>variance</strong> is right. The reason is structural:
-<code>stack_psis</code> reweights <strong>one</strong> stacked draw
-cloud to stand in for all <span class="math inline">\(M\)</span>
-plausible values, so the per-PV “imputations” are drawn from the
-<em>same</em> cloud and are therefore <strong>correlated</strong>.
-Rubin’s between-imputation variance <span class="math inline">\(B\)</span> assumes independent imputations;
-correlated ones shrink <span class="math inline">\(B\)</span>, and the
-pooled <code>stack_psis</code> interval can run <strong>narrow even when
-<span class="math inline">\(\hat k\)</span> is small</strong>.</p>
-<p>Worse, <span class="math inline">\(\hat k\)</span> is
-<strong>specification-dependent</strong>. It can sit comfortably below
-<span class="math inline">\(0.5\)</span> in a simplified,
-low-dimensional reading demo and climb <strong>above <span class="math inline">\(1\)</span></strong> in a full production
-specification — the regime where PSIS is formally unreliable. A green
-<span class="math inline">\(\hat k\)</span> on a toy model is no
-guarantee of a green <span class="math inline">\(\hat k\)</span> on the
-model you actually report.</p>
-<div class="alert alert-warning">
-<p>Treat <code>stack_psis</code> as a <strong>cross-check, never the
-deliverable.</strong> A small Pareto-<span class="math inline">\(\hat
-k\)</span> is necessary but <strong>not sufficient</strong> for a
-trustworthy interval; the correlated-imputation narrowing and the
-specification dependence of <span class="math inline">\(\hat k\)</span>
-are described qualitatively in the <strong>companion methods paper (in
-preparation)</strong>. The package hard-codes <strong>no</strong> <span class="math inline">\(\hat k\)</span> values as facts — the
-<code>pareto_k = 0.2</code> used above is an arbitrary injected
-diagnostic and remains blocked, nothing more <span class="citation">(Vehtari et al. 2017, 2024)</span>.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="which-to-use-rule-of-thumb">7. Which to use (rule of thumb)<a class="anchor" aria-label="anchor" href="#which-to-use-rule-of-thumb"></a>
-</h2>
-<p>The choice collapses to one sentence per method:</p>
-<ul>
-<li>
-<strong>Report <code>stack_direct</code>.</strong> It is the only
-path that is coverage-claimable (when calibrated to an external
-Barnard–Rubin BRR–Fay target), from <strong>one</strong> stacked fit.
-This is the deliverable.</li>
-<li>
-<strong>Use <code>stack_psis</code> as a one-fit
-cross-check.</strong> Watch the Pareto-<span class="math inline">\(\hat
-k\)</span>, and — per Caution 2 — <em>do not trust a small <span class="math inline">\(\hat k\)</span> alone</em>. Never report it as the
-headline.</li>
-<li>
-<strong>Use <code>per_pv</code> as the orthodox reference.</strong>
-The classic fit-it-<span class="math inline">\(M\)</span>-times-and-pool
-answer is the natural sanity check on <code>stack_direct</code>’s point
-estimate; its intervals stay descriptive.</li>
-</ul>
-<p>And the <strong>honesty triad</strong> that governs every claim in
-this article:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>Fixed effects only.</strong> The current package calibrates
-and reports <span class="math inline">\(\beta_{\text{FE}}\)</span>;
-variance components are out of scope.</li>
-<li>
-<strong>Coverage on one path only.</strong>
-<code>coverage_claim_allowed = TRUE</code> requires
-<code>stack_direct</code> <strong>and</strong> an external Barnard–Rubin
-BRR–Fay target; <code>per_pv</code> and <code>stack_psis</code> are
-always descriptive.</li>
-<li>
-<strong>No speed claims.</strong> “One fit” is <em>topology</em> —
-an architecture statement, not a benchmarked runtime. The current
-package makes no efficiency claim.</li>
-</ol>
-</div>
-<div class="section level2">
-<h2 id="where-to-next">8. Where to next<a class="anchor" aria-label="anchor" href="#where-to-next"></a>
-</h2>
-<p>You can now align three methods and read their agreement honestly.
-From here:</p>
-<ul>
-<li>
-<strong>A3 · Reading results &amp; what to report</strong> — the
-interval-metadata columns (<code>interval_role</code>,
-<code>coverage_claim_allowed</code>, <code>df_method</code>,
-<code>df_complete</code>) read here across methods, treated in depth for
-a single fit, plus the fraction of missing information and a reporting
-checklist.</li>
-<li>
-<strong>A5 · Real PISA data guidance</strong> — running these
-comparisons on genuine PISA files: licensing and non-affiliation, the
-design declaration, and the memory/runtime cost of <span class="math inline">\(M(R+1)\)</span> replicate fits.</li>
-</ul>
-<p>For the underlying theory, the <strong>Method track</strong> carries
-the proofs this article gestures at: <strong>M5 · Methods, PSIS, and
-coverage</strong> states the precise method contrast, the PSIS weights
-and Pareto-<span class="math inline">\(\hat k\)</span> thresholds, and
-<em>why only <code>stack_direct</code> is coverage-claimable</em>;
-<strong>M3 · The stacked fractional bridge</strong> proves the
-stacked-MLE point identity (and where it stops). Start the track at
-<strong>M1 · Foundations and notation</strong>.</p>
-<p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="external-link uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
 <div class="section level3">
-<h3 id="session-info">Session info<a class="anchor" aria-label="anchor" href="#session-info"></a>
+<h3 id="standard-errors-from-the-model-and-from-the-replicate-weights">Standard errors from the model and from the replicate weights<a class="anchor" aria-label="anchor" href="#standard-errors-from-the-model-and-from-the-replicate-weights"></a>
 </h3>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; R version 4.6.1 (2026-06-24)</span></span>
-<span><span class="co">#&gt; Platform: x86_64-pc-linux-gnu</span></span>
-<span><span class="co">#&gt; Running under: Ubuntu 24.04.4 LTS</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Matrix products: default</span></span>
-<span><span class="co">#&gt; BLAS:   /usr/lib/x86_64-linux-gnu/openblas-pthread/libblas.so.3 </span></span>
-<span><span class="co">#&gt; LAPACK: /usr/lib/x86_64-linux-gnu/openblas-pthread/libopenblasp-r0.3.26.so;  LAPACK version 3.12.0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; locale:</span></span>
-<span><span class="co">#&gt;  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       </span></span>
-<span><span class="co">#&gt;  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   </span></span>
-<span><span class="co">#&gt;  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          </span></span>
-<span><span class="co">#&gt; [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; time zone: UTC</span></span>
-<span><span class="co">#&gt; tzcode source: system (glibc)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; attached base packages:</span></span>
-<span><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; other attached packages:</span></span>
-<span><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span><span class="co">#&gt;  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    </span></span>
-<span><span class="co">#&gt;  [5] xfun_0.60         cachem_1.1.0      knitr_1.51        htmltools_0.5.9  </span></span>
-<span><span class="co">#&gt;  [9] rmarkdown_2.31    lifecycle_1.0.5   cli_3.6.6         sass_0.4.10      </span></span>
-<span><span class="co">#&gt; [13] pkgdown_2.2.1     textshaping_1.0.5 jquerylib_0.1.4   systemfonts_1.3.2</span></span>
-<span><span class="co">#&gt; [17] compiler_4.6.1    tools_4.6.1       ragg_1.5.2        bslib_0.12.0     </span></span>
-<span><span class="co">#&gt; [21] evaluate_1.0.5    yaml_2.3.12       otel_0.2.0        jsonlite_2.0.0   </span></span>
-<span><span class="co">#&gt; [25] rlang_1.3.0       fs_2.1.0</span></span></code></pre></div>
+<p>Fits that agree on the estimates can still differ in their standard
+errors, because the methods take the variance within a plausible value
+from different sources. The target of <code>stack_direct</code> takes it
+from the BRR–Fay replicate weights, which PISA provides for estimating
+the sampling variance under its design. In such a design, clustering
+(students sampled within schools) and unequal weights usually increase
+the sampling variance, while stratification reduces it <span class="citation">(OECD 2024)</span>. <code>per_pv</code> and
+<code>stack_psis</code> take the variance from the posterior draws of a
+model. The draws reflect the clustering only as far as the model
+includes it (a single-level regression treats the students as
+independent), and weighting the likelihood by the survey weights does
+not by itself make their variance design-based <span class="citation">(Williams and Savitsky 2021)</span>. The two variances
+can therefore differ even when the estimates agree. The example cannot
+show this, because its <code>per_pv</code> standard errors come from the
+made-up draws.</p>
+<p>This difference is the reason for pvstackr’s reporting rule in <a href="#methods-table">the three methods</a>. Close agreement between the
+estimates of two methods does not tell you which standard errors to
+report.</p>
 </div>
+<div class="section level3">
+<h3 id="pareto-hat-k-values-check-only-the-importance-weights">Pareto <span class="math inline">\(\hat k\)</span> values check only
+the importance weights<a class="anchor" aria-label="anchor" href="#pareto-hat-k-values-check-only-the-importance-weights"></a>
+</h3>
+<p>For a <code>stack_psis</code> fit, a <span class="math inline">\(\hat
+k\)</span> below the cut-off of <span class="citation">Vehtari et al.
+(2024)</span>, <span class="math inline">\(\min(1 - 1/\log_{10} S,
+0.7)\)</span> for <span class="math inline">\(S\)</span> draws,
+indicates that the importance ratios for that plausible value pass this
+diagnostic; the reliability of a weighted mean or covariance depends on
+the Pareto <span class="math inline">\(\hat k\)</span> of that quantity,
+which can be larger <span class="citation">(Vehtari et al. 2024, 7,
+14)</span>. With fewer than about 2,000 draws this cut-off is below
+pvstackr’s default of 0.7. It does not change where the variance comes
+from: the standard errors of a <code>stack_psis</code> fit still come
+from the posterior draws of the stacked model, as in the previous
+caution.</p>
+<p>pvstackr cannot check the <span class="math inline">\(\hat k\)</span>
+values either. It computes neither them nor the weights, so it asks you
+to name the program that produced them, with <code>psis_producer</code>
+and <code>psis_producer_version</code>, and records the name without
+checking it: a producer name alone is not evidence that PSIS was run. In
+the example the value 0.2 was typed in and no program is named, so the
+fit stays blocked.</p>
+<p><span class="math inline">\(\hat k\)</span> also depends on the data,
+the model and the posteriors that the weights aim at, so check it in
+every analysis. In the application of the companion preprint to PISA
+2022, one stacked fit per country was reweighted, in the same way in
+both countries, toward the posteriors of a model with a school random
+intercept, with the survey weights placed in two stages; every <span class="math inline">\(\hat k\)</span> was below 0.7 in the United States
+and above it in Korea <span class="citation">(Lee et al. 2026, sec. 6.4
+and app. D.1)</span>. pvstackr 0.2.x does not fit that model, so these
+values are not direct evidence about <code>stack_psis</code> fits of the
+single-level model that pvstackr fits (<a href="m5-methods-and-coverage.html">Choosing a method and reading its
+intervals</a> gives the details).</p>
+</div>
+</div>
+<div class="section level2">
+<h2 id="choosing">Choosing a method<a class="anchor" aria-label="anchor" href="#choosing"></a>
+</h2>
+<p>pvstackr recommends the following (a package rule, not a result of
+the companion preprint):</p>
+<ul>
+<li>Report a <code>stack_direct</code> fit. Its estimate table holds the
+numbers of the design-based target, its intervals are the only ones that
+can be coverage-claimable (with a Barnard–Rubin target), and it needs
+one Bayesian fit.</li>
+<li>Use <code>per_pv</code> to compare the <code>stack_direct</code>
+estimates with one Bayesian fit per plausible value. Its intervals are
+descriptive, and pvstackr does not check the convergence of its
+fits.</li>
+<li>Use <code>stack_psis</code> only as a check on a stacked fit, with
+importance weights and <span class="math inline">\(\hat k\)</span>
+values from a PSIS program. Its intervals are descriptive as well.</li>
+</ul>
+<p>The companion preprint notes that for a single, final, high-stakes
+model one fit per plausible value remains a sound default <span class="citation">(Lee et al. 2026, sec. 7)</span>.</p>
+<p><a href="a3-reading-results.html#interval-columns">Reading and
+reporting the results</a> explains the interval labels of every method
+and what to report for a fit. Among the Method articles, <a href="m5-methods-and-coverage.html">Choosing a method and reading its
+intervals</a> compares the methods and their intervals in more detail,
+and <a href="m3-stacked-bridge.html">One stacked fit and the Rubin point
+estimate</a> explains the stacked fixed-effect point identity, whose
+proof is in the preprint.</p>
 </div>
 <div class="section level2 unnumbered">
 <h2 class="unnumbered" id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
-<div id="ref-judkins1990fay" class="csl-entry">
-Judkins, David R. 1990. <span>“Fay’s Method for Variance
-Estimation.”</span> <em>Journal of Official Statistics</em> 6 (3):
-223–39.
+<div id="ref-lee2026onemcmc" class="csl-entry">
+Lee, JoonHo, Matthew R. Williams, and Terrance D. Savitsky. 2026.
+<em>One <span>Markov</span> Chain <span>Monte</span> <span>Carlo</span>
+Fit for Many Plausible Values: A Calibrated Stacked Posterior Workflow
+for <span>Bayesian</span> Multilevel Models of Large-Scale Assessment
+Data</em>. Zenodo preprint, version 1. <a href="https://doi.org/10.5281/zenodo.22407935" class="external-link">https://doi.org/10.5281/zenodo.22407935</a>.
+</div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. PISA. OECD Publishing.
+<a href="https://doi.org/10.1787/01820d6d-en" class="external-link">https://doi.org/10.1787/01820d6d-en</a>.
 </div>
 <div id="ref-rubin1987multiple" class="csl-entry">
 Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
@@ -746,7 +698,13 @@ Computing</em> 27 (5): 1413–32. <a href="https://doi.org/10.1007/s11222-016-96
 <div id="ref-vehtari2024pareto" class="csl-entry">
 Vehtari, Aki, Daniel Simpson, Andrew Gelman, Yuling Yao, and Jonah
 Gabry. 2024. <span>“Pareto Smoothed Importance Sampling.”</span>
-<em>Journal of Machine Learning Research</em> 25 (72): 1–58.
+<em>Journal of Machine Learning Research</em> 25 (72): 1–58. <a href="https://www.jmlr.org/papers/v25/19-556.html" class="external-link">https://www.jmlr.org/papers/v25/19-556.html</a>.
+</div>
+<div id="ref-williams2021uncertainty" class="csl-entry">
+Williams, Matthew R., and Terrance D. Savitsky. 2021. <span>“Uncertainty
+Estimation for Pseudo-<span>Bayesian</span> Inference Under Complex
+Sampling.”</span> <em>International Statistical Review</em> 89 (1):
+72–107. <a href="https://doi.org/10.1111/insr.12376" class="external-link">https://doi.org/10.1111/insr.12376</a>.
 </div>
 </div>
 </div>

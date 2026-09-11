@@ -1,40 +1,18 @@
 # pvstackr
 
-`pvstackr` is an R package for Bayesian-backend fixed-effect calibration
-and reporting with plausible-value survey data.
-
-## The problem
-
-Large educational surveys such as PISA report each latent score not as a
-single number but as **M plausible values** — M imputations that
-together carry the measurement uncertainty in the construct. The honest
-analysis fits the model M times and combines the results with Rubin’s
-rules so that *between-imputation* variance is propagated into every
-standard error.
-
-The tempting shortcut is to **fit `PV1` only** and report that single
-fit. It is fast and it looks fine, but it silently discards the
-between-imputation variance. The point estimate drifts and, more
-dangerously, the standard errors are too small, so confidence intervals
-**under-cover**: a nominal 95% interval traps the truth far less than
-95% of the time.
-
-`pvstackr` produces an *honest* fixed-effect fit from **one stacked
-fit** calibrated to an external **Rubin/BRR-Fay fixed-effect target**,
-and records, **per row**, whether an interval is coverage-claimable. You
-get a single set of reportable fixed-effect estimates and standard
-errors that carry the design-based combining variance, together with
-diagnostics that say plainly when an interval may be read as a coverage
-statement and when it may not.
-
-`pvstackr` is a focused, self-contained method package — not a
-paper-replication repository. A companion methods paper is in
-preparation.
+pvstackr fits survey-weighted linear regression models to large-scale
+assessment data such as PISA, with plausible values as the outcome, and
+reports estimates, standard errors and intervals for the fixed effects.
+The standard analysis of such data fits the model once for each
+plausible value, with a replicate-weight estimate of each fit’s sampling
+variance, and combines the results with Rubin’s rules for multiple
+imputation. An analysis of `PV1` alone has standard errors that are too
+small, because it leaves out the between-imputation variance: the
+variation of the estimates from one plausible value to the next.
 
 ## Installation
 
-You can install the development version of `pvstackr` from
-[GitHub](https://github.com/joonho112/pvstackr) with:
+Install pvstackr from [GitHub](https://github.com/joonho112/pvstackr):
 
 ``` r
 
@@ -42,131 +20,93 @@ You can install the development version of `pvstackr` from
 pak::pak("joonho112/pvstackr")
 ```
 
-Optional live Bayesian backends (e.g. `cmdstanr`/`brms`) and their
-toolchains are **not** required for installation, loading, examples, or
-the default tests.
+pvstackr installs and loads without brms or Stan, and its examples and
+default tests run without them. The engine that pvstackr bundles for
+`stack_direct`, selected with `pv_control(backend = "brms")`, needs the
+brms and posterior packages. It samples through cmdstanr if that package
+is installed, and CmdStan must then be configured or the fit stops with
+an error; without cmdstanr it samples through rstan. [Getting started
+with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html)
+shows the call for a first fit and how to read its output.
 
-## The method in three steps
+## What pvstackr computes
 
-A reportable `stack_direct` analysis is three calls:
-
-``` r
-
-# 1. Declare the plausible-value design (PV columns, BRR replicate weights, Fay k)
-design <- pv_design(data, formula, pv_suffix = "READ", ...)
-
-# 2. Assemble the external Rubin/BRR-Fay fixed-effect target
-target <- pv_brr_target(data, formula, pv_cols = design$pv_cols, ...)
-
-# 3. Fit one stacked model and calibrate its draws to that target
-fit <- pv_fit(data, formula, target = target, method = "stack_direct", ...)
-```
-
-[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
-resolves the survey design,
 [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
-builds the design-based combining target, and
-`pv_fit(method = "stack_direct")` produces the calibrated, reportable
-fixed-effect fit. The Five-Minute Synthetic Example below runs the whole
-shape end to end on a bundled synthetic fixture.
+computes the design-based target with the standard analysis. For each
+plausible value it fits the regression by weighted least squares with
+the final survey weight, and estimates the sampling covariance of the
+coefficients from the replicate weights by balanced repeated replication
+with Fay’s method (BRR–Fay, as in PISA); Rubin’s rules then combine the
+plausible values. pvstackr calls the result, the combined estimates with
+their covariance matrix and degrees of freedom, the target.
 
-## Method Names
+The default method of
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md),
+`stack_direct`, fits one Bayesian model, weighted by the survey weights,
+to the stacked data: one copy of the data for each plausible value, with
+that plausible value as the outcome. The Cholesky calibration correction
+(CCC) then transforms the fixed-effect draws of this fit to have the
+mean and covariance of the target. `stack_direct` requires
+`center = "target"` (the default in
+[`pv_control()`](https://joonho112.github.io/pvstackr/reference/pv_control.md)),
+under which the reported estimates, standard errors and degrees of
+freedom are those of the target; the Bayesian fit does not change them.
+The stacked fit supplies the calibrated draws, whose mean and covariance
+are those of the target, and diagnostics that compare the fit with the
+target; quantiles of the draws do not carry the target’s degrees of
+freedom. The companion methods preprint (Lee, Williams and Savitsky
+2026, <https://doi.org/10.5281/zenodo.22407935>) describes the stacked
+fit and its calibration.
 
-The public method IDs are:
+The other two methods, `per_pv` and `stack_psis`, have no bundled engine
+and do not use the target:
 
-| Method | Role |
-|----|----|
-| `stack_direct` | Default calibrated-reporting path: a design-based external Rubin/BRR-Fay fixed-effect target for reported estimates and SEs, plus one stacked backend fit used to calibrate draws and diagnose agreement. |
-| `stack_psis` | Diagnostic/reference method: one stacked draw source plus externally produced weights, Pareto-k diagnostics, explicit PSIS producer/version provenance, and model-based Rubin pooling of weighted fixed-effect summaries. |
-| `per_pv` | Per-PV Bayesian/backend reference: one fit or posterior-draw source per plausible value, with fixed-effect centers and model-based within-PV covariance combined by Rubin pooling. |
+| Method | What it does | What you supply |
+|:---|:---|:---|
+| `per_pv` | combines one Bayesian fit per plausible value | the posterior draws of each fit, or fitting functions that pvstackr calls once per plausible value (they do not receive the survey weights automatically) |
+| `stack_psis` | reweights the draws of one stacked fit toward each plausible value | the stacked draws, or a fitting function that pvstackr calls once on the stacked data; importance weights and a Pareto k-hat value for each plausible value, computed outside pvstackr (for example by Pareto smoothed importance sampling with the loo package); the name and version of the program that computed them |
 
-`stack_direct` can run without any adapter of your own:
-`pv_control(backend = "brms")` fits the stacked model with `brms`. It
-uses `cmdstanr` when that package is installed and CmdStan is
-configured, and `rstan` when `cmdstanr` is not installed at all; an
-installed `cmdstanr` without a working CmdStan is an error rather than a
-silent fallback. `brms` stays in Suggests, so nothing heavy is needed to
-install, load, or test the package. To attach a different engine, inject
-a fit function, a draws function, and a diagnose function; the bundled
-adapter is exported
-([`pv_backend_brms_fit_function()`](https://joonho112.github.io/pvstackr/reference/pv_backend_brms_fit_function.md)
-and its two companions) so you can reuse it and replace only the part
-that differs. All three are required for a reportable fit — an adapter
-that reports no sampler diagnostics leaves the evidence incomplete and
-the fit is blocked.
-
-`per_pv` and `stack_psis` remain injected or precomputed light paths.
-`stack_psis` expects supplied or injected weights, Pareto-k diagnostics,
-and a caller-declared external PSIS producer and version rather than
-depending on a live PSIS backend. Raw self-normalized log ratios and
-external weights without that provenance are diagnostic-only and fail
-closed. Diagnostics include per-PV Kish-style iid weight ESS and maximum
-normalized weight; these are not MCMC ESS or autocorrelation-adjusted
-`loo` diagnostics.
+Both combine the plausible values with Rubin’s rules, but their variance
+within each plausible value is model-based, taken from the posterior
+draws, so their intervals are always descriptive. By pvstackr’s
+reporting rule, only a `stack_direct` fit whose target uses
+Barnard–Rubin degrees of freedom (`df_method = "barnard_rubin"`, not the
+default) has intervals that can be read as confidence intervals with
+nominal coverage; [Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#interval-columns)
+explains the interval columns and [Comparing the three fitting
+methods](https://joonho112.github.io/pvstackr/articles/a4-comparing-methods.html)
+compares the methods.
 
 ## Scope
 
-The `stack_direct` path uses a one-stacked-fit architecture for
-Bayesian/backend fitting while preserving a design-based external
-Rubin/BRR-Fay fixed-effect target. `per_pv` and `stack_psis` are
-reference/diagnostic paths: they use model-based within-PV covariance in
-Rubin pooling and do not construct or calibrate to the external BRR-Fay
-target.
+Only the fixed effects (the intercept and the slopes) are reported;
+other parameters, such as the residual standard deviation `sigma`, are
+neither calibrated nor reported.
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md),
+`stack_direct` and `stack_psis` stop with an error on a random-effect
+term such as `(1 | school)`.
 
-Interval metadata follows that method boundary. Coverage-claimable
-intervals are reserved for `stack_direct` rows backed by an external
-BRR-Fay target with Barnard-Rubin df and explicit `df_complete`;
-`per_pv` and `stack_psis` intervals remain descriptive/reference
-intervals even when they use Barnard-Rubin df.
+## An example on synthetic data
 
-The package should not be read as claiming unqualified “same inference
-with one MCMC.” Calibrated reporting is scoped to fixed effects and is
-not a full posterior for all model parameters.
+pvstackr includes `pisa_tiny.csv`, a small synthetic data set with PISA
+column names (12 students, two plausible values in reading, a final
+weight and four replicate weights), and a `stack_direct` fit of these
+data that was made without a sampler ([Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html#example-fit)
+explains how).
 
-## Current `stack_direct` Boundary
+The data were made up for the examples and the package tests. They
+contain no real PISA records and are not suitable for real inference.
 
-`stack_direct` requires an external `pvstackr_brr_target` from
-[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md).
-The public wrapper checks formula RHS equality, fixed-effect name
-alignment, target provenance, and target policy before fitting. Group
-terms such as `(1 | school)` and `(1 || school)` are rejected in this
-version because the current BRR-Fay target engine is fixed-effect-only.
-
-Reportable `pvstackr_fit` objects contain the design, target, stacked
-fit, CCC calibration object, fixed-effect estimate table, and calibrated
-fixed-effect draws when requested by `control$return_draws`. Variance
-components and sampler diagnostic columns may be retained inside nested
-backend or stack-fit components, but they are not calibrated reportable
-estimates.
-
-Under the default `control$center = "target"`, the reported fixed-effect
-estimate and standard error are the external Rubin/BRR-Fay target
-values: `estimate` is the target coefficient after CCC centering, and
-`se` is `sqrt(diag(target$T_MI))` with the target degrees of freedom and
-interval metadata. The stacked fit supplies the raw draw cloud for
-calibration, retained calibrated fixed-effect draws when requested, and
-center-separation agreement diagnostics. It is not a replacement source
-for the headline Rubin/BRR-Fay fixed-effect numbers.
-
-Reportable `stack_direct` fits require `control$center = "target"`. The
-posterior-centered CCC convention is reserved for diagnostic/exploratory
-checks because it retains the raw stacked posterior center while using
-the external target covariance.
-
-Yellow CCC center-separation diagnostics and explicit priors become
-top-level warning-status fits. Red center separation blocks reportable
-estimates. Routine dropped draw columns such as `lp__` remain nested in
-`stack_fit$warnings`.
-
-For the formal object contract, see
-[`?pvstackr_object_contracts`](https://joonho112.github.io/pvstackr/reference/pvstackr_object_contracts.md).
-
-## Five-Minute Synthetic Example
-
-The package ships a tiny, package-owned synthetic PISA-shaped fixture
-for API smoke tests and examples. It contains no real PISA records or
-OECD/PISA distributed files, and is not suitable for real inference,
-coverage claims, or performance benchmarking.
+[`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md)
+finds and checks the plausible-value and weight columns; the two
+functions it uses,
+[`detect_pisa_pv_columns()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_pv_columns.md)
+and
+[`detect_pisa_brr_replicate_weights()`](https://joonho112.github.io/pvstackr/reference/detect_pisa_brr_replicate_weights.md),
+can also be called on their own.
 
 ``` r
 
@@ -176,32 +116,12 @@ pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
 
-list(
-  pv_cols = detect_pisa_pv_columns(
-    pisa_tiny,
-    suffix = "READ",
-    expected_M = 2L
-  ),
-  rep_weight_cols = detect_pisa_brr_replicate_weights(
-    pisa_tiny,
-    expected_R = 4L
-  )
-)
-#> $pv_cols
-#> [1] "PV1READ" "PV2READ"
-#> 
-#> $rep_weight_cols
-#> [1] "W_FSTURWT1" "W_FSTURWT2" "W_FSTURWT3" "W_FSTURWT4"
-```
-
-``` r
-
 design <- pv_design(
   data = pisa_tiny,
-  formula = OUTCOME ~ x + female,
-  pv_suffix = "READ",
-  expected_M = 2L,
-  expected_R = 4L,
+  formula = OUTCOME ~ x + female,  # OUTCOME stands for each plausible value
+  pv_suffix = "READ",              # finds PV1READ and PV2READ
+  expected_M = 2L,                 # stop unless 2 plausible values are found
+  expected_R = 4L,                 # stop unless 4 replicate weights are found
   id_cols = "CNTSTUID"
 )
 
@@ -214,6 +134,12 @@ design
 #>   replicate weights: 4
 #>   fay_k: 0.5
 #>   design hash: fa78c04b
+```
+
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+computes the target from the same data and formula:
+
+``` r
 
 target <- pv_brr_target(
   data = pisa_tiny,
@@ -236,22 +162,16 @@ target
 #>   source: external_brr_fay_rubin
 ```
 
-The cached example fit was generated by the package’s fixture-build
-script through the lightweight injected backend. It lets the README
-demonstrate the public object surface without running heavy MCMC.
+Fitting the model needs a Bayesian sampler, so the example reads the fit
+that comes with pvstackr:
 
 ``` r
 
-cached <- readRDS(
-  system.file(
-    "extdata",
-    "examples",
-    "pisa_tiny_stack_direct.rds",
-    package = "pvstackr"
-  )
-)
+fit <- readRDS(
+  system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
+              package = "pvstackr")
+)$fit
 
-fit <- cached$fit
 fit
 #> pvstackr fit
 #>   method: stack_direct
@@ -262,54 +182,45 @@ fit
 #>   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc
 #>   interval note: intervals are descriptive rather than coverage-claimable.
 
-get_estimates(fit)[
-  ,
-  c("term", "estimate", "se", "df", "conf_low", "conf_high")
-]
+get_estimates(fit)[, c("term", "estimate", "se", "df", "conf_low", "conf_high")]
 #>          term   estimate        se       df  conf_low conf_high
 #> 1 b_Intercept 457.894088 1.2873118 1.021194 442.31804 473.47013
 #> 2         b_x  46.883361 0.3717929 1.402308  44.41457  49.35215
 #> 3    b_female   2.143702 3.5550309 1.013730 -41.60687  45.89428
-
-get_target(fit)$target_hash
-#> [1] "sha256:f173650e9120742a1a6fc6406bfe3ab130e454b17f28e4822cb99e25c108bfaa"
-names(get_diagnostics(fit))
-#> [1] "preflight"          "sampler"            "sampler_gate"      
-#> [4] "stack_fit"          "stack_fit_warnings" "ccc"
-get_draws(fit)
-#> NULL
 ```
 
-## Conceptual Live Workflow
+The intervals are wide because the degrees of freedom are between 1.0
+and 1.4 in this example, and descriptive because the target uses the
+default, classic degrees of freedom; [Getting started with
+pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html#intervals)
+explains both.
+[`get_target()`](https://joonho112.github.io/pvstackr/reference/get_target.md),
+[`get_draws()`](https://joonho112.github.io/pvstackr/reference/get_draws.md)
+and
+[`get_diagnostics()`](https://joonho112.github.io/pvstackr/reference/get_diagnostics.md)
+return the target, the calibrated draws and the diagnostics of a fit
+([Reading and reporting the
+results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html#target-and-diagnostics)
+describes them); this fit was saved without its draws, so
+`get_draws(fit)` returns `NULL`.
 
-For a real analysis, regenerate the design, target, and fit from the
-real data. The current `stack_direct` boundary is explicit: build the
-external Rubin/BRR-Fay fixed-effect target first, then fit and calibrate
-the stacked model to that target. For reportable output,
-`center = "target"` is required and the fixed-effect estimate table is
-target-based; the stacked model contributes calibrated draws and
-agreement diagnostics around that external target. Backend wiring is
-user- or adapter-specific in this package stage, so the
-real-data/live-backend sketch below is not run by the README.
+## Fitting real data
 
-See
-[`vignette("a5-real-pisa-guidance", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.md)
-for real-data loading, licensing, memory, and runtime guidance. Real
-PISA work can be large: stacked preparation creates about `N * M` rows,
-and BRR-Fay target construction runs about `M * (R + 1)` fixed-effect
-fits per model before any live Bayesian backend runs.
-
-Modern PISA plausible values are often subject-suffixed. For columns
-such as `PV1MATH`, set `pv_suffix = "MATH"`; leave `pv_suffix = ""` only
-when the analytic extract intentionally uses bare plausible-value names
-such as `PV1`, `PV2`, and so on.
+On real data the steps are the same, except that the model is fitted
+with
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+and a Bayesian engine instead of read from a file. The code below is not
+run here: pvstackr includes no real data, and the fit needs a sampler.
+`pisa_country` stands for the student data of one country in PISA 2022,
+with ten plausible values in mathematics and 80 replicate weights, and
+the fit uses the engine bundled with pvstackr:
 
 ``` r
 
 design <- pv_design(
   data = pisa_country,
-  formula = OUTCOME ~ escs + female,
-  pv_suffix = "READ",
+  formula = OUTCOME ~ ESCS + ST004D01T,  # ST004D01T is the student's gender
+  pv_suffix = "MATH",                    # finds PV1MATH to PV10MATH
   expected_M = 10L,
   expected_R = 80L,
   id_cols = "CNTSTUID"
@@ -332,107 +243,128 @@ fit <- pv_fit(
   method = "stack_direct",
   control = pv_control(
     method = "stack_direct",
-    backend = "brms",
-    iter = 2000L,
-    warmup = 1000L,
-    chains = 4L,
+    backend = "brms",  # the engine bundled with pvstackr
     seed = 20260607
   )
-)
-
-# To drive a different engine, inject all three adapter functions instead.
-# The bundled ones are exported, so you can reuse the parts you do not replace.
-fit <- pv_fit(
-  data = design$data,
-  formula = design$formula,
-  target = target,
-  method = "stack_direct",
-  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
-  fit_function      = pv_backend_brms_fit_function,
-  draws_function    = pv_backend_brms_draws_function,
-  diagnose_function = pv_backend_brms_sampler_diagnostics,
-  cache_dir         = NULL
 )
 
 summary(fit)
 ```
 
-## Vignettes
+The bundled engine saves the brms fit in a folder `cache` in the working
+directory and reuses it for later calls with the same model and data;
+read `cache_dir` in
+[`?pv_fit_direct`](https://joonho112.github.io/pvstackr/reference/pv_fit_direct.md)
+before you change the sampler settings.
 
-The documentation is organized into two tracks. The **Applied track** is
-workflow-first with light math; the **Method track** derives the
-estimators and states the coverage-claimability contract. Every vignette
-runs on the bundled synthetic fixture — real PISA numbers are
-*described*, never recomputed in-package.
+Instead of the bundled engine you can pass to
+[`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md)
+three functions of your own, `fit_function`, `draws_function` and
+`diagnose_function`, which [The full analysis
+workflow](https://joonho112.github.io/pvstackr/articles/a2-the-workflow.html#own-engine)
+describes.
 
-### Applied track
+PISA 2022 names the plausible values by subject, so for columns such as
+`PV1MATH` set `pv_suffix = "MATH"`. The default, `pv_suffix = ""`,
+matches only bare plausible-value names such as `PV1`.
 
-| Article | What it covers |
-|----|----|
-| [A1 · Getting started](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html) | The fastest path: install, the single `pv_fit(method = "stack_direct")` shape, load the cached fixture fit, and read it three ways. |
-| [A2 · The end-to-end workflow](https://joonho112.github.io/pvstackr/articles/a2-the-workflow.html) | The full pipeline on synthetic data — [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md) → [`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md) → [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md) — plus the conceptual live-backend sketch. |
-| [A3 · Reading results & what to report](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html) | The accessor family, the estimate table, the interval-metadata columns, fraction of missing information, and a reporting checklist. |
-| [A4 · Comparing methods](https://joonho112.github.io/pvstackr/articles/a4-comparing-methods.html) | [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md) aligns the three paths; how to read agreement diagnostics and the two cautions; which method to use. |
-| [A5 · Real PISA data guidance](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.html) | Connecting to real PISA without bundling licensed files: licensing & non-affiliation, the design declaration, memory/runtime, reproducibility. |
+Two counts give the size of an analysis. The stacked data have `N * M`
+rows for `N` students and `M` plausible values, and
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+makes `M * (R + 1)` weighted least-squares fits for `R` replicate
+weights, 810 for PISA 2022, before any Bayesian sampling. [Real PISA
+data: access, memory and
+reproducibility](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.html),
+also available as
+[`vignette("a5-real-pisa-guidance", package = "pvstackr")`](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.md),
+covers obtaining the files under their terms, where to keep the data and
+the engine’s cache files, memory and running time, and what to record so
+that the analysis can be repeated.
 
-### Method track
+## Articles
 
-| Article | What it covers |
-|----|----|
-| [M1 · Foundations and notation](https://joonho112.github.io/pvstackr/articles/m1-foundations-and-notation.html) | Fixes the notation the track reuses: the PV survey setting, M/R/Fay k, the within/between model, and the fixed-effect estimand. |
-| [M2 · The BRR–Fay target](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.html) | Derives the external target — Rubin combining, the BRR–Fay sandwich, Barnard–Rubin df, FMI — and the design-variance coverage result. |
-| [M3 · The stacked fractional bridge](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.html) | What “stacked fractional” means, the stacked-MLE identity, why one stacked fit recovers the Rubin average, and where the identity stops. |
-| [M4 · CCC calibration](https://joonho112.github.io/pvstackr/articles/m4-ccc-calibration.html) | The Cholesky Calibration Correction map, the centering conventions, the deterministic algorithm, and the center-separation diagnostics. |
-| [M5 · Methods, PSIS & coverage](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.html) | The precise contrast of the three methods, PSIS weights and Pareto-\\\hat k\\ thresholds, and why only `stack_direct` is coverage-claimable. |
+The [package website](https://joonho112.github.io/pvstackr/) has ten
+articles. The Applied articles show how to run an analysis and read its
+result; the Method articles give the formulas, their sources and the
+assumptions under which they hold.
+
+| Applied article | What it covers |
+|:---|:---|
+| [Getting started with pvstackr](https://joonho112.github.io/pvstackr/articles/a1-getting-started.html) | Installing pvstackr, the [`pv_fit()`](https://joonho112.github.io/pvstackr/reference/pv_fit.md) call for `stack_direct`, and reading the example fit and its intervals |
+| [The full analysis workflow](https://joonho112.github.io/pvstackr/articles/a2-the-workflow.html) | The steps of an analysis in order, from checking the columns with [`pv_design()`](https://joonho112.github.io/pvstackr/reference/pv_design.md) to reading the result; why `stack_direct` requires `center = "target"`; fitting functions of your own |
+| [Reading and reporting the results](https://joonho112.github.io/pvstackr/articles/a3-reading-results.html) | The functions that read a fit, the estimate table and its interval columns, the fraction of missing information, and what to report |
+| [Comparing the three fitting methods](https://joonho112.github.io/pvstackr/articles/a4-comparing-methods.html) | How `stack_direct`, `per_pv` and `stack_psis` differ, a comparison of three example fits with [`pv_compare_methods()`](https://joonho112.github.io/pvstackr/reference/pv_compare_methods.md), two cautions in reading it, and pvstackr’s recommendation for choosing a method |
+| [Real PISA data: access, memory and reproducibility](https://joonho112.github.io/pvstackr/articles/a5-real-pisa-guidance.html) | Obtaining PISA files under their terms, declaring the PISA 2022 design, memory and running time, a reproducibility checklist, and what the companion preprint shows about PISA |
+
+| Method article | What it covers |
+|:---|:---|
+| [Plausible values, survey weights and notation](https://joonho112.github.io/pvstackr/articles/m1-foundations-and-notation.html) | Plausible values, final and replicate weights with Fay’s coefficient, the survey-weighted model that pvstackr fits, and the symbols and main formulas of the Method articles |
+| [The design-based target: BRR–Fay replicate weights and Rubin’s rules](https://joonho112.github.io/pvstackr/articles/m2-brr-fay-target.html) | The BRR–Fay replicate covariance, Rubin’s rules, the classic and Barnard–Rubin degrees of freedom and the fraction of missing information, with their sources and a check on the example target |
+| [One stacked fit and the Rubin point estimate](https://joonho112.github.io/pvstackr/articles/m3-stacked-bridge.html) | The weighted stacked data, the stacked fractional posterior, and the stacked fixed-effect point identity of the companion preprint: when the stacked estimate equals the Rubin point estimate, and what the identity does not cover |
+| [Calibrating the fixed-effect draws (CCC)](https://joonho112.github.io/pvstackr/articles/m4-ccc-calibration.html) | The Cholesky calibration correction, its exact moment properties, the algorithm that pvstackr uses, and the diagnostics `delta_c_max`, `delta_c_rel` and `kappa_A` with pvstackr’s thresholds |
+| [Choosing a method and reading its intervals](https://joonho112.github.io/pvstackr/articles/m5-methods-and-coverage.html) | The formulas of the three methods, the importance weights and Pareto k-hat values of `stack_psis`, and why, by pvstackr’s reporting rule, only `stack_direct` fits whose target uses Barnard–Rubin degrees of freedom have intervals that can be read as confidence intervals |
 
 ## Citation
 
-To cite `pvstackr` in publications, please cite the package:
+`citation("pvstackr")` gives the reference for the package:
 
 ``` r
 
 citation("pvstackr")
 ```
 
-JoonHo Lee · <jlee296@ua.edu> · [ORCID
-0009-0006-4019-8703](https://orcid.org/0009-0006-4019-8703) · Assistant
-Professor, The University of Alabama.
+Author and maintainer: JoonHo Lee (<jlee296@ua.edu>, ORCID
+[0009-0006-4019-8703](https://orcid.org/0009-0006-4019-8703)).
 
-The method paper describing the BRR-Fay target, the stacked fractional
-bridge, and CCC calibration is forthcoming; a method citation will be
-added here once it is finalized.
+For the method, cite the companion methods preprint, which describes the
+stacked fit and its calibration:
 
-## Related work
+Lee, J., Williams, M. R., and Savitsky, T. D. (2026). *One Markov Chain
+Monte Carlo Fit for Many Plausible Values: A Calibrated Stacked
+Posterior Workflow for Bayesian Multilevel Models of Large-Scale
+Assessment Data.* Zenodo preprint, version 1.
+<https://doi.org/10.5281/zenodo.22407935>
 
-`pvstackr` is built to interoperate with the established survey and
-multiple-imputation ecosystem in R. Its runtime BRR-Fay target engine is
-dependency-free base-R weighted least squares; optional development
-tests compare that engine to
-[survey](https://CRAN.R-project.org/package=survey)’s replicate-weight
-machinery. The package follows Rubin-combining conventions familiar from
+The preprint’s default target comes from model-based fits of each
+plausible value, and its PISA application has a random intercept for
+schools; pvstackr 0.2.x computes only a target from replicate weights,
+for models without random effects.
+
+## Related packages
+
+pvstackr computes the standard analysis itself, without the survey
+package:
+[`pv_brr_target()`](https://joonho112.github.io/pvstackr/reference/pv_brr_target.md)
+fits the weighted least-squares regressions with
+[`lm.wfit()`](https://rdrr.io/r/stats/lmfit.html) from the stats
+package. The optional development tests compare the results with those
+of `svyglm()` from the
+[survey](https://CRAN.R-project.org/package=survey) package on a Fay
+replicate-weight design. pvstackr combines the plausible values with
+Rubin’s rules, as the multiple-imputation packages
 [mitools](https://CRAN.R-project.org/package=mitools) and
-[mice](https://CRAN.R-project.org/package=mice). For general PISA-style
-plausible-value analysis, see
+[mice](https://CRAN.R-project.org/package=mice) combine the results of
+imputed data sets. For other analyses of large-scale assessment data
+with plausible values and replicate weights, see
 [intsvy](https://CRAN.R-project.org/package=intsvy) and
-[BIFIEsurvey](https://CRAN.R-project.org/package=BIFIEsurvey);
-`pvstackr` differs by calibrating a single stacked fit to an external
-design-based fixed-effect target rather than pooling per-PV model fits.
+[BIFIEsurvey](https://CRAN.R-project.org/package=BIFIEsurvey).
 
 ## Getting help
 
-Found a bug, or have a question about the workflow? Please open an issue
-at <https://github.com/joonho112/pvstackr/issues>.
+Report bugs and ask questions at
+<https://github.com/joonho112/pvstackr/issues>.
 
 ## Status
 
-This package is in early development. Public APIs are being added step
-by step with focused tests. Real PISA data are not bundled. Optional
-live Bayesian backends and their toolchains are not required for package
-installation, loading, README rendering, or default tests. `pvstackr` is
-an independent research package and is not affiliated with or endorsed
-by the OECD or the PISA programme.
+The lifecycle stage of pvstackr is experimental: its functions and
+arguments may change in later versions. In version 0.2.1 the
+documentation was rewritten; the computations are those of 0.2.0. The
+package includes no real PISA data. pvstackr is an independent research
+package and is not affiliated with or endorsed by the OECD or the PISA
+programme.
 
 ## License
 
 MIT © JoonHo Lee. See
-[LICENSE.md](https://joonho112.github.io/pvstackr/LICENSE) for details.
+[LICENSE.md](https://joonho112.github.io/pvstackr/LICENSE.md) for the
+license text.
