@@ -12,9 +12,9 @@
 
 <meta name="author" content="JoonHo Lee" />
 
-<meta name="date" content="2026-08-14" />
+<meta name="date" content="2026-09-11" />
 
-<title>A1: Getting started — your first calibrated plausible-value fit</title>
+<title>Getting started with pvstackr</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -371,255 +371,263 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">A1: Getting started — your first calibrated
-plausible-value fit</h1>
+<h1 class="title toc-ignore">Getting started with pvstackr</h1>
 <h4 class="author">JoonHo Lee</h4>
-<h4 class="date">2026-08-14</h4>
+<h4 class="date">2026-09-11</h4>
 <div class="abstract">
 <p class="abstract">Abstract</p>
-<p>The fastest path into pvstackr. In a few lines you install the
-package, see the single <code>pv_fit(method = &quot;stack_direct&quot;)</code>
-call shape, load the bundled cached fixture fit, and read it three ways:
-the console <code>print()</code> box, the tidy
-<code>get_estimates()</code> table, and one figure. You leave knowing
-what a calibrated fixed-effect fit needs, how to read its intervals
-honestly, and where the full end-to-end workflow lives next.</p>
+<p>pvstackr fits regression models to assessment data with plausible
+values, such as PISA, and reports the fixed-effect coefficients. This
+article shows how to install the package and write the
+<code>pv_fit()</code> call for the default method,
+<code>stack_direct</code>. It then reads a precomputed fit of the
+bundled synthetic data with <code>print()</code>,
+<code>get_estimates()</code> and a coefficient plot, and shows the
+columns of the estimate table that say whether pvstackr’s reporting rule
+lets you read an interval as a confidence interval with nominal
+coverage.</p>
 </div>
 
 
 <div id="TOC">
 <ul>
-<li><a href="#why-you-are-here" id="toc-why-you-are-here">1. Why you are
-here</a></li>
-<li><a href="#what-you-will-leave-with" id="toc-what-you-will-leave-with">2. What you will leave with</a></li>
-<li><a href="#install-and-load" id="toc-install-and-load">3. Install and
-load</a></li>
-<li><a href="#the-one-call-conceptual" id="toc-the-one-call-conceptual">4. The one call (conceptual)</a></li>
-<li><a href="#load-the-cached-fixture-fit" id="toc-load-the-cached-fixture-fit">5. Load the cached fixture
+<li><a href="#plausible-values" id="toc-plausible-values">Plausible
+values</a></li>
+<li><a href="#what-pvstackr-computes" id="toc-what-pvstackr-computes">What pvstackr computes</a></li>
+<li><a href="#installing-pvstackr" id="toc-installing-pvstackr">Installing pvstackr</a></li>
+<li><a href="#calling-pv_fit" id="toc-calling-pv_fit">Calling
+<code>pv_fit()</code></a></li>
+<li><a href="#example-fit" id="toc-example-fit">The example data and
 fit</a></li>
-<li><a href="#read-it-three-ways" id="toc-read-it-three-ways">6. Read it
-three ways</a>
+<li><a href="#reading-the-fit" id="toc-reading-the-fit">Reading the
+fit</a>
 <ul>
-<li><a href="#the-console-print" id="toc-the-console-print">6.1 The
-console — <code>print()</code></a></li>
-<li><a href="#the-tidy-table-get_estimates" id="toc-the-tidy-table-get_estimates">6.2 The tidy table —
-<code>get_estimates()</code></a></li>
-<li><a href="#one-figure" id="toc-one-figure">6.3 One figure</a></li>
+<li><a href="#the-overview-from-print" id="toc-the-overview-from-print">The overview from
+<code>print()</code></a></li>
+<li><a href="#the-estimate-table" id="toc-the-estimate-table">The
+estimate table</a></li>
+<li><a href="#a-plot-of-the-slopes" id="toc-a-plot-of-the-slopes">A plot
+of the slopes</a></li>
+<li><a href="#the-draws" id="toc-the-draws">The draws</a></li>
 </ul></li>
-<li><a href="#how-to-read-the-intervals-honestly" id="toc-how-to-read-the-intervals-honestly">7. How to read the intervals
-honestly</a></li>
-<li><a href="#where-to-next" id="toc-where-to-next">8. Where to next</a>
-<ul>
-<li><a href="#session-info" id="toc-session-info">Session info</a></li>
-</ul></li>
+<li><a href="#intervals" id="toc-intervals">Reading the
+intervals</a></li>
 <li><a href="#references" id="toc-references">References</a></li>
 </ul>
 </div>
 
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
-<div id="why-you-are-here" class="section level2">
-<h2>1. Why you are here</h2>
-<p>Large-scale assessments such as PISA do not report a single test
-score per student. Because proficiency is a latent trait that is never
-observed directly, the score is published as a set of <em>plausible
-values</em> (PVs): <span class="math inline">\(M\)</span> draws from
-each student’s posterior proficiency distribution <span class="citation">(Mislevy 1991; Davier et al. 2009)</span>. To honour
-the uncertainty those draws encode, an analysis must fit the model once
-per PV and combine the <span class="math inline">\(M\)</span> results
-with multiple-imputation (MI) rules <span class="citation">(Rubin
-1987)</span>. The common shortcut — fit one model to <code>PV1</code>
-and stop — silently discards the between-imputation variance and reports
-intervals that are too narrow.</p>
-<p><strong>pvstackr</strong> gives you an honest fixed-effect fit
-without that shortcut and without the bookkeeping. Its default method,
-<code>stack_direct</code>, produces a fixed-effect report from
-<strong>one</strong> stacked model fit that is calibrated to an external
-Rubin / BRR–Fay target. The stacked fit supplies the model-side draw
-cloud and agreement diagnostics; the reportable fixed-effect estimate
-and standard error come from the external target. Intervals are
-coverage-claimable only on the external design-based BRR-Fay /
-Barnard-Rubin path; otherwise the metadata marks them descriptive.</p>
-<p>Two scope notes, stated up front so nothing later surprises you:</p>
+<div id="plausible-values" class="section level2">
+<h2>Plausible values</h2>
+<p>Large-scale assessments such as PISA do not publish a single test
+score for each student. Because proficiency is not observed directly,
+each student receives a set of <em>plausible values</em>: <span class="math inline">\(M\)</span> draws from that student’s posterior
+distribution of proficiency <span class="citation">(Mislevy 1991; <span class="nocase">von Davier et al.</span> 2009)</span>. The standard
+analysis fits the model once for each plausible value, with the survey
+weights and a replicate-weight estimate of each fit’s sampling variance,
+and combines the <span class="math inline">\(M\)</span> results with
+Rubin’s rules for multiple imputation <span class="citation">(Rubin
+1987)</span>. An analysis that uses only <code>PV1</code> omits the
+between-imputation variance (the variation of the estimates across
+plausible values), so its standard errors are too small.</p>
+</div>
+<div id="what-pvstackr-computes" class="section level2">
+<h2>What pvstackr computes</h2>
+<p>The default method, <code>stack_direct</code>, fits one model to the
+stacked data (<span class="math inline">\(M\)</span> copies of the data,
+one per plausible value) and then calibrates the fixed-effect draws of
+that fit to the <em>target</em>: the estimates, covariance matrix and
+degrees of freedom that <code>pv_brr_target()</code> computes with the
+standard analysis described above (a survey-weighted regression for each
+plausible value, the BRR–Fay replicate weights for the sampling variance
+of the coefficients, and Rubin’s rules to combine the results). The
+calibration transforms the draws so that their mean and covariance equal
+those of the target. The setting <code>center = &quot;target&quot;</code> in
+<code>pv_control()</code>, the default and the only value
+<code>stack_direct</code> accepts, centers the calibrated draws on the
+target’s estimates, so the reported estimates, standard errors and
+degrees of freedom are those of the target: the Bayesian fit does not
+change them. It supplies the calibrated draws, which can be used for
+quantities derived from the coefficients, such as the difference between
+two of them, and diagnostics that show how closely the fit agrees with
+the target. <code>stack_direct</code> needs one Bayesian fit where a
+Bayesian analysis of each plausible value needs <span class="math inline">\(M\)</span>, but that fit has <span class="math inline">\(M\)</span> times as many rows.</p>
+<p><code>pv_fit()</code> also offers <code>per_pv</code>, which fits one
+model per plausible value and combines the results with Rubin’s rules,
+and <code>stack_psis</code>, which reweights one stacked fit toward each
+plausible value with importance weights that you supply. Both take the
+variance within each plausible value from the model’s posterior draws
+rather than from the replicate weights, so their intervals are always
+descriptive. The <code>stack_direct</code> model is a linear regression
+weighted by the survey weights; <code>stack_direct</code>,
+<code>stack_psis</code> and <code>pv_brr_target()</code> stop with an
+error if the formula contains a random-effect term such as
+<code>(1 | school)</code>. Only the fixed-effect coefficients (intercept
+and slopes) are reported; other parameters of the model, such as the
+residual standard deviation <code>sigma</code>, are neither calibrated
+nor reported.</p>
+<p>By pvstackr’s reporting rule, only a <code>stack_direct</code> fit
+whose target uses Barnard–Rubin degrees of freedom has intervals that
+can be read as confidence intervals with nominal coverage; the example
+fit uses the classic Rubin degrees of freedom, so its intervals are
+descriptive (see the <a href="#intervals">section on intervals</a>).</p>
+<p>The examples below read a fit of the small synthetic data set bundled
+with the package, computed in advance (<a href="#example-fit">the
+example data and fit</a>); the article fits no model, so it runs in
+seconds.</p>
+</div>
+<div id="installing-pvstackr" class="section level2">
+<h2>Installing pvstackr</h2>
+<p>Install pvstackr from GitHub, for example with the pak package:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># install.packages(&quot;pak&quot;)</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;joonho112/pvstackr&quot;</span>)</span></code></pre></div>
+<p>Then load it (the first chunk of this article did so):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
+<p>Reading the example fit needs no modeling engine. A fit on your own
+data needs one: either the engine bundled with pvstackr or fitting
+functions of your own. The bundled engine fits the model with the brms
+package, so it needs brms and posterior installed.</p>
+</div>
+<div id="calling-pv_fit" class="section level2">
+<h2>Calling <code>pv_fit()</code></h2>
+<p><code>pv_fit()</code> fits a model with any of the three methods. For
+<code>stack_direct</code>, the default, a call on your own data has this
+form. The chunk is not run, because this article computes no target and
+uses no engine:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">pv_fit</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="at">data    =</span> your_data,</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="at">formula =</span> OUTCOME <span class="sc">~</span> x <span class="sc">+</span> female,   <span class="co"># OUTCOME stands for each plausible value</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="at">target  =</span> your_target,            <span class="co"># made by pv_brr_target()</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="at">method  =</span> <span class="st">&quot;stack_direct&quot;</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="at">control =</span> <span class="fu">pv_control</span>(<span class="at">method =</span> <span class="st">&quot;stack_direct&quot;</span>, <span class="at">backend =</span> <span class="st">&quot;brms&quot;</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>)</span></code></pre></div>
 <ul>
-<li><strong>Fixed effects only.</strong> The package calibrates and
-reports the fixed-effect block <span class="math inline">\(\beta_{\text{FE}}\)</span> (intercept and slopes).
-Variance components are estimated but <strong>not</strong> calibrated,
-and are not part of the reportable output.</li>
-<li><strong>“One fit” is an architecture statement, not a speed
-claim.</strong> It describes the <em>topology</em> of the method (one
-stacked fit instead of <span class="math inline">\(M\)</span> separate
-ones); this vignette makes no benchmarked timing claims.</li>
+<li><code>data</code> is a data frame with one row per student: the
+plausible-value columns, the final survey weight, the replicate weights
+and the covariates.</li>
+<li><code>formula</code> has the placeholder <code>OUTCOME</code> on the
+left-hand side. pvstackr replaces it by each plausible-value column in
+turn (<code>PV1READ</code>, <code>PV2READ</code>, …), so you write the
+model once instead of <span class="math inline">\(M\)</span> times.</li>
+<li><code>target</code> is the design-based target, made by
+<code>pv_brr_target()</code> from the same data and formula (<a href="a2-the-workflow.html#target">The full analysis workflow</a> shows
+the call); <code>pv_fit()</code> stops with an error when the data or
+the formula differ from those of the target.</li>
+<li><code>control</code> holds the settings of the fit, made by
+<code>pv_control()</code> with the same <code>method</code>;
+<code>pv_fit()</code> stops with an error when the two differ.
+<code>backend = &quot;brms&quot;</code> selects the engine bundled with pvstackr;
+with the default, <code>backend = &quot;none&quot;</code>, a
+<code>stack_direct</code> fit stops with an error unless you pass
+fitting functions of your own.</li>
 </ul>
-<p>The road map for this article: install → the one call → load a cached
-fit → read it three ways → read the intervals honestly → where to go
-next.</p>
+<p>Instead of the bundled engine you can pass three functions of your
+own to <code>pv_fit()</code>: <code>fit_function</code>,
+<code>draws_function</code> and <code>diagnose_function</code>. <a href="a2-the-workflow.html#own-engine">The full analysis workflow</a>
+describes what each one receives and returns.</p>
 </div>
-<div id="what-you-will-leave-with" class="section level2">
-<h2>2. What you will leave with</h2>
-<p>After this vignette you will be able to:</p>
-<ul>
-<li>recognise the single canonical
-<code>pv_fit(method = &quot;stack_direct&quot;)</code> call and name the pieces it
-needs (an external target and a model backend);</li>
-<li>load the bundled cached fixture fit and read it three ways — the
-console <code>print()</code> box, the tidy <code>get_estimates()</code>
-table, and one coefficient figure;</li>
-<li>tell at a glance, from the estimate table itself, whether a row’s
-interval is <strong>coverage-claimable</strong> or merely
-<strong>descriptive</strong>, and say why;</li>
-<li>know exactly which companion vignette to open for the full workflow,
-the accessor tour, method comparison, real PISA data, and the underlying
-method.</li>
-</ul>
-<p>This article runs in <strong>seconds</strong> because it never fits a
-model: it loads a precomputed fit object and reads off it. There is no
-live MCMC anywhere below.</p>
+<div id="example-fit" class="section level2">
+<h2>The example data and fit</h2>
+<p>pvstackr includes a small synthetic data set and a
+<code>stack_direct</code> fit made from it, so that the examples run
+without PISA files. Load both:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>pisa_tiny <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;pisa_tiny.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>)<span class="sc">$</span>fit</span></code></pre></div>
+<p>The data set, <code>pisa_tiny</code>, has 12 students in three
+schools of one made-up country (<code>CNT</code> is <code>&quot;SYN&quot;</code>).
+Besides the student and school identifiers <code>CNTSTUID</code> and
+<code>CNTSCHID</code>, it has a continuous covariate <code>x</code>, a
+0/1 indicator <code>female</code>, two plausible values for reading,
+<code>PV1READ</code> and <code>PV2READ</code> (<span class="math inline">\(M = 2\)</span>), the final survey weight
+<code>W_FSTUWT</code> and four replicate weights,
+<code>W_FSTURWT1</code> to <code>W_FSTURWT4</code> (<span class="math inline">\(R = 4\)</span>):</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="fu">str</span>(pisa_tiny)</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    12 obs. of  12 variables:</span></span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt;  $ CNT       : chr  &quot;SYN&quot; &quot;SYN&quot; &quot;SYN&quot; &quot;SYN&quot; ...</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt;  $ CNTSCHID  : chr  &quot;sch01&quot; &quot;sch01&quot; &quot;sch01&quot; &quot;sch01&quot; ...</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt;  $ CNTSTUID  : chr  &quot;stu01&quot; &quot;stu02&quot; &quot;stu03&quot; &quot;stu04&quot; ...</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt;  $ x         : num  -1.4 -1.1 -0.7 -0.4 -0.1 0.2 0.5 0.8 1 1.3 ...</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;  $ female    : int  1 0 1 0 1 0 0 1 1 0 ...</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt;  $ PV1READ   : int  398 410 423 437 451 466 480 494 507 522 ...</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt;  $ PV2READ   : int  402 408 427 435 454 463 483 492 511 519 ...</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTUWT  : num  1 1.08 0.94 1.12 1.03 1.19 0.91 1.25 1.1 0.98 ...</span></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT1: num  0.82 1.28 1.01 1.09 0.96 1.35 0.84 1.42 1.21 0.89 ...</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT2: num  1.18 0.91 0.85 1.31 1.12 1.02 0.76 1.5 0.99 1.08 ...</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT3: num  1.05 1.02 1.12 0.98 1.25 1.14 0.87 1.3 1.34 1.03 ...</span></span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT4: num  0.95 1.17 0.93 1.24 1.01 1.31 1.07 1.08 0.88 1.19 ...</span></span></code></pre></div>
+<p>The values were made up for the examples and the package tests; the
+data contain no PISA records, so the numbers illustrate the output and
+support no substantive conclusion. PISA 2022 provides ten plausible
+values per domain and 80 replicate weights <span class="citation">(OECD
+2024)</span>; the example has two and four, which keeps the objects
+small. <a href="a5-real-pisa-guidance.html">Real PISA data: access,
+memory and reproducibility</a> describes how to work with real PISA
+files.</p>
+<p>The example fit was not made by a sampler. Its target was computed
+from <code>pisa_tiny</code> by <code>pv_brr_target()</code> with the
+classic degrees of freedom, and the fit was made with fitting functions
+written for the example, which ignore the data and return draws built
+from the target’s estimates and standard errors together with a typed-in
+sampler record. The fit was saved without its calibrated draws
+(<code>return_draws = FALSE</code> in <code>pv_control()</code>).</p>
+<p>Because its draws were built around the target, the stacked fit
+agrees with the target by construction. The diagnostics that compare the
+two show differences of about <span class="math inline">\(10^{-14}\)</span> target standard errors, where a
+fit made by a sampler would differ by its Monte Carlo error (<a href="a3-reading-results.html#target-and-diagnostics">Reading and
+reporting the results</a> shows these values). The example therefore
+shows what the output of a fit looks like, not how well the method
+works.</p>
 </div>
-<div id="install-and-load" class="section level2">
-<h2>3. Install and load</h2>
-<p>Once the package is on CRAN:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># install.packages(&quot;pvstackr&quot;)</span></span></code></pre></div>
-<p>Until then, install the development version from GitHub:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># install.packages(&quot;pak&quot;)</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>pak<span class="sc">::</span><span class="fu">pak</span>(<span class="st">&quot;joonho112/pvstackr&quot;</span>)</span></code></pre></div>
-<p>The one line to remember — already run in the setup above — is:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(pvstackr)</span></code></pre></div>
-<p>Reading a cached fit (everything in this vignette) needs
-<strong>no</strong> modelling backend and no extra dependencies. A
-<em>live</em> fit on your own data additionally needs a fitting engine;
-that is the subject of vignette A2.</p>
+<div id="reading-the-fit" class="section level2">
+<h2>Reading the fit</h2>
+<div id="the-overview-from-print" class="section level3">
+<h3>The overview from <code>print()</code></h3>
+<p><code>print()</code> shows an overview of the fit:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">print</span>(fit)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; pvstackr fit</span></span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;   method: stack_direct</span></span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt;   status: ok</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt;   fixed effects: 3</span></span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;   target: external_brr_fay_rubin</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;   draws: not retained</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;   interval note: intervals are descriptive rather than coverage-claimable.</span></span></code></pre></div>
+<p>The first lines give the method, the status and the number of fixed
+effects. The <code>target</code> line gives the source of the target:
+<code>external_brr_fay_rubin</code> marks a target made by
+<code>pv_brr_target()</code> from the BRR–Fay replicate weights and
+Rubin’s rules. The <code>draws</code> line says that the calibrated
+draws were not kept, and the <code>diagnostics</code> line names the
+parts that <code>get_diagnostics(fit)</code> returns. The last line
+notes that the intervals are descriptive, which <a href="#intervals">Reading the intervals</a> explains.</p>
+<p><code>status: ok</code> means that none of pvstackr’s checks raised a
+warning or blocked the fit. It is not a statement that a sampler
+converged. For a <code>stack_direct</code> fit the checks cover the
+sampler diagnostics (R-hat, effective sample sizes, divergent
+transitions), the difference between the stacked fit and the target
+before the calibration, the numerical stability of the calibration, and
+any prior that you set (an explicit prior always gives a warning). A fit
+with status <code>&quot;warning&quot;</code> still has estimates, and
+<code>print()</code> then lists the reason codes; a fit with status
+<code>&quot;blocked&quot;</code> has an empty estimate table. “Status and checks”
+in <code>?pvstackr_object_contracts</code> gives the thresholds of the
+checks.</p>
 </div>
-<div id="the-one-call-conceptual" class="section level2">
-<h2>4. The one call (conceptual)</h2>
-<p>Every pvstackr analysis funnels through a single dispatcher,
-<code>pv_fit()</code>. Its canonical <code>stack_direct</code> form
-looks like this. The chunk is <strong>not run</strong> here — it only
-shows the <em>shape</em> of the call, since a real fit needs an external
-target and a backend that this article does not assemble:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">pv_fit</span>(</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="at">data          =</span> your_data,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>  <span class="at">formula       =</span> OUTCOME <span class="sc">~</span> x <span class="sc">+</span> female,           <span class="co"># OUTCOME is a placeholder</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="at">target        =</span> your_target,                    <span class="co"># from pv_brr_target()</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="at">method        =</span> <span class="st">&quot;stack_direct&quot;</span>,</span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="at">control       =</span> <span class="fu">pv_control</span>(<span class="at">method =</span> <span class="st">&quot;stack_direct&quot;</span>, <span class="at">backend =</span> <span class="st">&quot;brms&quot;</span>)</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>)</span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="co"># Or drive your own engine, which takes all three adapter functions:</span></span>
-<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">pv_fit</span>(</span>
-<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="at">data              =</span> your_data,</span>
-<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="at">formula           =</span> OUTCOME <span class="sc">~</span> x <span class="sc">+</span> female,</span>
-<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="at">target            =</span> your_target,</span>
-<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>  <span class="at">method            =</span> <span class="st">&quot;stack_direct&quot;</span>,</span>
-<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a>  <span class="at">control           =</span> <span class="fu">pv_control</span>(<span class="at">method =</span> <span class="st">&quot;stack_direct&quot;</span>, <span class="at">backend =</span> <span class="st">&quot;cmdstanr&quot;</span>),</span>
-<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a>  <span class="at">fit_function      =</span> your_fit_function,          <span class="co"># estimates the stacked model</span></span>
-<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a>  <span class="at">draws_function    =</span> your_draws_function,        <span class="co"># extracts posterior draws</span></span>
-<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a>  <span class="at">diagnose_function =</span> your_diagnose_function,     <span class="co"># reports sampler diagnostics</span></span>
-<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a>  <span class="at">cache_dir         =</span> <span class="cn">NULL</span></span>
-<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a>)</span></code></pre></div>
-<p>A few words on the pieces:</p>
-<ul>
-<li><strong><code>OUTCOME</code> is a placeholder.</strong> Internally
-pvstackr substitutes it with each plausible-value column in turn
-(<code>PV1READ</code>, <code>PV2READ</code>, …) so you write the model
-once, not <span class="math inline">\(M\)</span> times.</li>
-<li><strong><code>target =</code></strong> supplies the external Rubin /
-BRR–Fay variance target built by <code>pv_brr_target()</code>.
-<code>stack_direct</code> intervals are coverage-claimable only when
-backed by an external design-based BRR-Fay target with Barnard-Rubin
-degrees of freedom; without that coverage path the fit falls back to
-descriptive intervals.</li>
-<li><strong><code>fit_function =</code></strong> is the modelling
-backend that actually estimates the stacked model.</li>
-</ul>
-<p>Assembling the target and a backend end to end is the job of
-<strong>vignette A2 (the end-to-end workflow)</strong>. Here we skip
-straight to a fit that has already been run for you.</p>
-</div>
-<div id="load-the-cached-fixture-fit" class="section level2">
-<h2>5. Load the cached fixture fit</h2>
-<p>The package ships a small synthetic dataset and a cached
-<code>stack_direct</code> fit so that every example runs offline and
-deterministically. Load both:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>pisa_tiny <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;pisa_tiny.csv&quot;</span>, <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>)</span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="fu">system.file</span>(<span class="st">&quot;extdata&quot;</span>, <span class="st">&quot;examples&quot;</span>, <span class="st">&quot;pisa_tiny_stack_direct.rds&quot;</span>,</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>              <span class="at">package =</span> <span class="st">&quot;pvstackr&quot;</span>)</span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>)<span class="sc">$</span>fit</span></code></pre></div>
-<p>The fixture is a deliberately tiny, <strong>synthetic</strong>
-PISA-shaped table — one make-believe country
-(<code>CNT == &quot;SYN&quot;</code>), 12 students nested in a handful of schools.
-It carries one continuous covariate <code>x</code>, a binary
-<code>female</code> indicator, <strong>two</strong> plausible reading
-values <code>PV1READ</code> / <code>PV2READ</code> (so <span class="math inline">\(M = 2\)</span>), <strong>four</strong> BRR
-replicate weights <code>W_FSTURWT1</code>–<code>W_FSTURWT4</code> (so
-<span class="math inline">\(R = 4\)</span>), a final weight
-<code>W_FSTUWT</code>, and student / school identifiers:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="fu">str</span>(pisa_tiny)</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    12 obs. of  12 variables:</span></span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a><span class="co">#&gt;  $ CNT       : chr  &quot;SYN&quot; &quot;SYN&quot; &quot;SYN&quot; &quot;SYN&quot; ...</span></span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a><span class="co">#&gt;  $ CNTSCHID  : chr  &quot;sch01&quot; &quot;sch01&quot; &quot;sch01&quot; &quot;sch01&quot; ...</span></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="co">#&gt;  $ CNTSTUID  : chr  &quot;stu01&quot; &quot;stu02&quot; &quot;stu03&quot; &quot;stu04&quot; ...</span></span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="co">#&gt;  $ x         : num  -1.4 -1.1 -0.7 -0.4 -0.1 0.2 0.5 0.8 1 1.3 ...</span></span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="co">#&gt;  $ female    : int  1 0 1 0 1 0 0 1 1 0 ...</span></span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co">#&gt;  $ PV1READ   : int  398 410 423 437 451 466 480 494 507 522 ...</span></span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co">#&gt;  $ PV2READ   : int  402 408 427 435 454 463 483 492 511 519 ...</span></span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTUWT  : num  1 1.08 0.94 1.12 1.03 1.19 0.91 1.25 1.1 0.98 ...</span></span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT1: num  0.82 1.28 1.01 1.09 0.96 1.35 0.84 1.42 1.21 0.89 ...</span></span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT2: num  1.18 0.91 0.85 1.31 1.12 1.02 0.76 1.5 0.99 1.08 ...</span></span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT3: num  1.05 1.02 1.12 0.98 1.25 1.14 0.87 1.3 1.34 1.03 ...</span></span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="co">#&gt;  $ W_FSTURWT4: num  0.95 1.17 0.93 1.24 1.01 1.31 1.07 1.08 0.88 1.19 ...</span></span></code></pre></div>
-<div class="alert alert-warning">
-<p>These are <strong>synthetic, illustrative</strong> numbers — included
-only so examples and package checks run without licensed data. They are
-<strong>not</strong> real PISA results and must never be cited as such.
-Real PISA reading uses <span class="math inline">\(M = 10\)</span>
-plausible values and <span class="math inline">\(R = 80\)</span>
-replicate weights; here <span class="math inline">\(M = 2\)</span> and
-<span class="math inline">\(R = 4\)</span> keep the object small. For
-working with genuine PISA files, see vignette A5.</p>
-</div>
-<p>Everything below simply <em>reads</em> the <code>fit</code> object.
-Nothing is re-estimated.</p>
-</div>
-<div id="read-it-three-ways" class="section level2">
-<h2>6. Read it three ways</h2>
-<div id="the-console-print" class="section level3">
-<h3>6.1 The console — <code>print()</code></h3>
-<p>The quickest look is the result-first <code>print()</code> box, which
-leads with the answer and the things you most need to know before
-trusting it:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="fu">print</span>(fit)</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; pvstackr fit</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="co">#&gt;   method: stack_direct</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="co">#&gt;   status: ok</span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="co">#&gt;   fixed effects: 3</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="co">#&gt;   target: external_brr_fay_rubin</span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt;   draws: not retained</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt;   diagnostics: preflight, sampler, sampler_gate, stack_fit, stack_fit_warnings, ccc</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt;   interval note: intervals are descriptive rather than coverage-claimable.</span></span></code></pre></div>
-<p>It tells you the method (<code>stack_direct</code>), that the fit
-converged (<code>status: ok</code>), that there are 3 fixed effects, the
-target it was calibrated against (<code>external_brr_fay_rubin</code>),
-that posterior draws were not retained, which diagnostics are attached,
-and — crucially — an interval note. For this fixture the note reads that
-<em>intervals are descriptive rather than coverage-claimable</em>;
-Section 7 explains why, and how to change it.</p>
-</div>
-<div id="the-tidy-table-get_estimates" class="section level3">
-<h3>6.2 The tidy table — <code>get_estimates()</code></h3>
-<p><code>get_estimates()</code> returns the reportable data frame: one
-row per fixed-effect term, with the estimate, its standard error, the
-confidence interval, and the metadata that says how far you may trust
-that interval. The full table is wide; here is the compact view most
-analyses start from:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>est <span class="ot">&lt;-</span> <span class="fu">get_estimates</span>(fit)</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;estimate&quot;</span>, <span class="st">&quot;se&quot;</span>, <span class="st">&quot;df&quot;</span>,</span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>        <span class="st">&quot;conf_low&quot;</span>, <span class="st">&quot;conf_high&quot;</span>,</span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>        <span class="st">&quot;interval_role&quot;</span>, <span class="st">&quot;coverage_claim_allowed&quot;</span>)]</span></code></pre></div>
+<div id="the-estimate-table" class="section level3">
+<h3>The estimate table</h3>
+<p><code>get_estimates()</code> returns the estimate table, a data frame
+with one row per fixed effect. The chunk shows 8 of its 17 columns:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>est <span class="ot">&lt;-</span> <span class="fu">get_estimates</span>(fit)</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;estimate&quot;</span>, <span class="st">&quot;se&quot;</span>, <span class="st">&quot;df&quot;</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>        <span class="st">&quot;conf_low&quot;</span>, <span class="st">&quot;conf_high&quot;</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>        <span class="st">&quot;interval_role&quot;</span>, <span class="st">&quot;coverage_claim_allowed&quot;</span>)]</span></code></pre></div>
 <div class="kable-table">
 <table style="width:100%;">
 <colgroup>
@@ -678,220 +686,139 @@ analyses start from:</p>
 </tbody>
 </table>
 </div>
-<p>The three terms are <code>b_Intercept</code>, <code>b_x</code>, and
-<code>b_female</code>. On this synthetic fixture the intercept sits near
-458 score points, the slope on <code>x</code> near 47 points per unit,
-and the <code>female</code> coefficient near 2 points (with a wide
-interval — see below). The metadata columns (<code>interval_role</code>,
-<code>coverage_claim_allowed</code>, and the degrees-of-freedom
-machinery) are the heart of honest reporting; the full column-by-column
-tour, including the <em>fraction of missing information</em>, lives in
-<strong>vignette A3</strong>.</p>
+<p>The terms are the intercept <code>b_Intercept</code> and the slopes
+<code>b_x</code> and <code>b_female</code>: pvstackr names each
+coefficient after its column of the model matrix, with the prefix
+<code>b_</code>. In these synthetic data the intercept is about 458
+points, the slope of <code>x</code> about 47 points per unit of
+<code>x</code>, and the coefficient of <code>female</code> about 2
+points. <code>se</code> is the standard error, and <code>df</code> the
+degrees of freedom used for the interval from <code>conf_low</code> to
+<code>conf_high</code>. The last two columns say how each interval can
+be read. <a href="a3-reading-results.html#estimate-table">Reading and
+reporting the results</a> describes all 17 columns.</p>
 </div>
-<div id="one-figure" class="section level3">
-<h3>6.3 One figure</h3>
-<p>A dot-and-interval plot makes the slope estimates easy to read at a
-glance. We plot <strong>only the slope coefficients</strong>
-(<code>b_x</code> and <code>b_female</code>) and drop the intercept,
-whose scale (~458) would otherwise flatten everything else. A reference
-line at zero marks the no-effect value:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>slopes <span class="ot">&lt;-</span> est[est<span class="sc">$</span>term <span class="sc">!=</span> <span class="st">&quot;b_Intercept&quot;</span>, ]</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>slopes <span class="ot">&lt;-</span> slopes[<span class="fu">order</span>(slopes<span class="sc">$</span>term), ]</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>y    <span class="ot">&lt;-</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(slopes))</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>xlim <span class="ot">&lt;-</span> <span class="fu">range</span>(<span class="fu">c</span>(slopes<span class="sc">$</span>conf_low, slopes<span class="sc">$</span>conf_high, <span class="dv">0</span>))</span>
-<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a></span>
-<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">4.5</span>, <span class="dv">7</span>, <span class="dv">1</span>, <span class="dv">1</span>))</span>
-<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="fu">plot</span>(</span>
-<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>  slopes<span class="sc">$</span>estimate, y,</span>
-<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>  <span class="at">xlim =</span> xlim, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fu">nrow</span>(slopes) <span class="sc">+</span> <span class="fl">0.5</span>),</span>
-<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  <span class="at">yaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;&quot;</span>,</span>
-<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;Coefficient (synthetic reading-score points)&quot;</span>,</span>
-<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a>  <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.4</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span></span>
-<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a>)</span>
-<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>, <span class="at">col =</span> <span class="st">&quot;grey50&quot;</span>)</span>
-<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="fu">segments</span>(slopes<span class="sc">$</span>conf_low, y, slopes<span class="sc">$</span>conf_high, y, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span>)</span>
-<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="fu">points</span>(slopes<span class="sc">$</span>estimate, y, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.4</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span>)</span>
-<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">2</span>, <span class="at">at =</span> y, <span class="at">labels =</span> slopes<span class="sc">$</span>term, <span class="at">las =</span> <span class="dv">1</span>)</span></code></pre></div>
+<div id="a-plot-of-the-slopes" class="section level3">
+<h3>A plot of the slopes</h3>
+<p>The plot shows the two slopes with their intervals. The intercept is
+left out, since at about 458 points it would stretch the axis, and a
+dashed line marks zero:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>slopes <span class="ot">&lt;-</span> est[est<span class="sc">$</span>term <span class="sc">!=</span> <span class="st">&quot;b_Intercept&quot;</span>, ]</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>slopes <span class="ot">&lt;-</span> slopes[<span class="fu">order</span>(slopes<span class="sc">$</span>term), ]</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>y    <span class="ot">&lt;-</span> <span class="fu">seq_len</span>(<span class="fu">nrow</span>(slopes))</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>xlim <span class="ot">&lt;-</span> <span class="fu">range</span>(<span class="fu">c</span>(slopes<span class="sc">$</span>conf_low, slopes<span class="sc">$</span>conf_high, <span class="dv">0</span>))</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="fl">4.5</span>, <span class="dv">7</span>, <span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">plot</span>(</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>  slopes<span class="sc">$</span>estimate, y,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>  <span class="at">xlim =</span> xlim, <span class="at">ylim =</span> <span class="fu">c</span>(<span class="fl">0.5</span>, <span class="fu">nrow</span>(slopes) <span class="sc">+</span> <span class="fl">0.5</span>),</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  <span class="at">yaxt =</span> <span class="st">&quot;n&quot;</span>, <span class="at">ylab =</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>  <span class="at">xlab =</span> <span class="st">&quot;Coefficient (synthetic reading-score points)&quot;</span>,</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>  <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.4</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span></span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>)</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> <span class="dv">0</span>, <span class="at">lty =</span> <span class="dv">2</span>, <span class="at">col =</span> <span class="st">&quot;grey50&quot;</span>)</span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a><span class="fu">segments</span>(slopes<span class="sc">$</span>conf_low, y, slopes<span class="sc">$</span>conf_high, y, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span>)</span>
+<span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a><span class="fu">points</span>(slopes<span class="sc">$</span>estimate, y, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">1.4</span>, <span class="at">col =</span> <span class="st">&quot;#1f6f9c&quot;</span>)</span>
+<span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a><span class="fu">axis</span>(<span class="dv">2</span>, <span class="at">at =</span> y, <span class="at">labels =</span> slopes<span class="sc">$</span>term, <span class="at">las =</span> <span class="dv">1</span>)</span></code></pre></div>
 <div class="figure" style="text-align: center">
-<img role="img" aria-label="A horizontal dot-and-interval plot of two slope coefficients from the synthetic fixture fit. The coefficient on x is about 47 score points with a narrow interval well to the right of zero. The coefficient on female is about 2 score points with a wide interval spanning zero from roughly minus 42 to plus 46. A dashed vertical reference line is drawn at zero." src="data:image/png;base64,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6/ezq2z1w6709yPPv8Pemj6rRmtMtRBAIIoCNROAlgp3zJgx1tTUZM8995xNnjy5VNmSDwIIIFB2gQEDBtguu+yS9ThPv/GR7XXR3Tb10zm2dFngt9P92zO+tF0uuNNea2zKui8rEEAAgVIKEICmaX755Ze24YYb2vDhw2311VdPW8tTBBBAILoCXbp0sb59+2Ys4PNvT7fDr7on47pw4Z4XjjP1kJIQQACBcgvUXAA6evRoW2eddXzweNxxx9l3331XsOG+++5r9913n33wwQe2+eab2z33/Oef9dtvv20777yzrbrqqqYehvPOO8++//77RL6XXHKJXXDBBXbbbbfZkCFD/AfAKaecYkEQmMqz/vrr2+DBg+2aa65J7KMHH3/8se23337+lL8+OIYOHWp33313yjbpT8aOHWubbbaZafstt9zSHnroofRNeI4AAgi0EDjtTxNaLMu04JSbHsm0mGUIIIBASQXqSppbG2f2+uuv21dffWWXXnqpLViwwM455xybMWOGTZw4saCSHX744TZnzhzTBUgnn3yyDxrff/99H+htsMEGdtVVV/lJnhVsKt9wvj09fuSRR6xr166mwPOtt96yG264wd577z379NNP7fjjj7d3333XzjjjDPvJT35im2yyiTU3N/uAU/n++te/tiVLlvgA9tBDD7WNN97Y98KmF/rqq6+2s88+2/bff38f8D777LO29957+0B5n332Sd88Es+XLltmj/7rQ1uwaHEkykMhEIijgE6zz5q3oKCqz/jyGxv/3FsFbctGCCBQHoGuK3W0kUMHWPv27cpzgAjkWlMBqHol77zzTtt22209ba9evUyB2SuvvOKDyHze2nbChAm2cOFCO/LII/3mBxxwgK200ko2adIkW3HFFRP5avlZZ53lg0kt1BXzTz/9tCmgVHriiSfsqaeessbGRt8jq2UKhB9++GG/j/JbZZVVfI/nmmuuqdU+OF1vvfXshRdeaBGAfvPNN6ae1sMOO8xuv/12v716bD///HMflBYagB599NG+XD6DLH8WL15sy1zgWIo0wQWfx1//YCmyIg8EEKiQwBljCvvSXqHicBgEYilw11n72Q4br12zda+pAFQ9kFtvvXWisfbaay9bYYUV7MUXXywoAE3smPRAvYzbbbedvfPOO4mlvXv3dt9K2vtAUb2ZSloWBp96vtFG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7bvvvjZnzpyUbXhSXoH//d//tcGDB1vHjh19Gxx00EH26aefphz0jjvusO23395WXnll23LLLe0f//hHynqeVEaA90tlnFtzlHfffdd2220369q1q6200kq2+eab2xNPPJGSBe2WwtHmT0499VTr06dPi3Lwf64FSUkWEICWhJFMihFYsGCBjRo1yjJ9qzzvvPPs3nvvtZtvvtkeeugh+/jjj23EiBEZty3m2OyTW0DmhxxyiA8qn376abvyyivt1Vdf9R+oixcv9jvrS8Oxxx5rBx54oL300ku2xRZb+PVTpkzJnTlrSy7A+6XkpMuV4ddff2077bSTffXVVzZmzBh75JFHrG/fvv79ofdRmGi3UKLt75955hm74YYbWhSE/3MtSEq3wH34kxBoE4ETTzwx2HDDDXV+PXA9oYkyuAAmcL2iwf33359Y9t577/ntHn300cQyHpRPYOTIkcFaa62VcoDx48entNUGG2wQHHrooSnbuB7TwH2pSFnGk/IK8H4pr28xuf/5z3/275VXXnklsXtzc3PQuXPn4OSTT/bLaLcETZs/mD9/vv9/p8+j3r17p5SH/3MpHCV9Qg9o6WJ5cmqFgHrVdIr32muvbbHXU089ZfX19bbrrrsm1q2//vq23nrr2YQJExLLeFA+gZ///Od20003pRzABaT++TfffONPxbsvBbbPPvukbLP33nvTRiki5X/C+6X8xq09wqabbmo33nijPysQ7tulSxfr2bOnzZs3zy+i3UKZtr//5S9/aYMGDfJnc5JLoyFH/J9LFint47rSZkduCOQXcN82/al3ndbVaan09OGHH1qvXr18EJq8TtvOmjUreRGPyySw3377tch53LhxVldXZ0OHDrUPPvjAr1999dVTtlMb6bSjLrrQ2F5S+QV4v5TfuLVHUACqW3J64YUXbPr06XbmmWf6xbRbsk7bPdYXgbvvvtvefvttGzt2bEpBGhsb/XP+z6WwlOwJnxAloySjQgX0D3jddde1o48+OuMuClB14VF66t69OwFoOkqFnmuMp8bjnnbaaf5Lgzud6I/co0ePlBKojZYuXcoFYykq5X3C+6W8vqXIXePdTzrpJH9R5THHHOOzpN1KIbt8eagN9Dl0+eWX2xprrNEiM/7PtSAp6QJ6QEvKSWahwJIlS3xPWPhc9+rV1FXS+rb55ptvJq9Kedyh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BgJ1MagjVUQgFgL77befffDBB/b666/73sew0nvssYd99tlndvzxx9s777xjXbt2DVct971O8W+44YY2fPjwRF6zZs2yI444wtZff32/7IYbbkisy/dg0KBBNnbs2HybtXq9emrUs5ovnXPOOT5oK2TbfHkVur7QshWaX7id8k1O5bJNPkY5H1d7+ctpU4q8i/FNf40VUo6f//zntsYaa9gpp5xia665ZiG7sE2NCtADWqMNS7XiJdDc3GxPP/20/eY3v0kJPkOFm2++2c477zxbvHhxuMj++c9/2o9//GN/unzAgAF29tlnp6zXhm+//bbtvPPOtuqqq5q2UR4a36m077772n333eeDXvV4KtDU/bfffutP/eqxyqUe2DvuuMPvoz9af9ppp/lhAmGeCpCVXn75ZZ9H+FzLFJButtlmvld0yy239L26Wh4m1eHxxx/3H2j/9V//ZbqdeeaZiXLqlPozzzzj66syff755+GuKffqxdXp77322iuxXOVXj2xDQ4M3UF1URiX1MCs/BfzJSXlstdVWfvzrJZdc4och3H333X6IgoYj7LrrrjZjxgy/S66y6cvETjvtZOo12nrrrVvUO1fbPPjgg3bBBRf4Y+jLgYZFZLJVr/VBBx3kh2qobjplny2o0OvlRz/6kelUrQKI7bff3sJTqfnaSK+7c88914YMGWKdOnWy9dZbz/7nf/7HvvvuuwSdjnvxxRf73nIN6dBrObks6eXPZxtmrJ7/3XbbzbefPNXOardcQxxytXuYbz67fO8vnR349a9/7d93Gi6j95/SggUL/JegtdZay3r16mU//elP845J1nvg/vvv92cbevbs6b8Qpg85UU/4H//4R1OgqTMMei/p/Rum1vpmeo0prxtvvNEGDhzo23mTTTaxa6+9NjyEv1955ZVtu+2283VPWcGT+AkEJAQQqHoBF3wG7r9X4D70CqrLa6+9FnTo0CFwvaPBvffeG1xzzTWB6xkNdt9998T+7hR6sNJKKwUu+Av+/Oc/B+6DJXCBaOBO7/tttJ/7IAncB2Vw2223Be4DzN9rHxfU+Mdu/GHgAqjgsssu8/u4D8Fgzz33DFwAE7igJbj11lsDN1Y02Hvvvf16F0j6ergLmPzzq666ypdT+d1zzz2BC9gC1zvpy+w3cH9UbuXngiNfRtfD4vO48sorE3mqDi748WVy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" alt="A horizontal dot-and-interval plot of two slope coefficients from the synthetic fixture fit. The coefficient on x is about 47 score points with a narrow interval well to the right of zero. The coefficient on female is about 2 score points with a wide interval spanning zero from roughly minus 42 to plus 46. A dashed vertical reference line is drawn at zero." width="85%" />
+<img role="img" aria-label="Dot-and-interval plot of the two slopes of the example fit, on a horizontal axis in synthetic reading-score points. b_x, at the top, is about 47 with a short interval from about 44 to 49, well to the right of zero. b_female, at the bottom, is about 2 with a long interval from about minus 42 to 46, which contains zero. A dashed vertical line marks zero." src="data:image/png;base64,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6/ezq2z1w6709yPPv8Pemj6rRmtMtRBAIIoCNROAlgp3zJgx1tTUZM8995xNnjy5VNmSDwIIIFB2gQEDBtguu+yS9ThPv/GR7XXR3Tb10zm2dFngt9P92zO+tF0uuNNea2zKui8rEEAAgVIKEICmaX755Ze24YYb2vDhw2311VdPW8tTBBBAILoCXbp0sb59+2Ys4PNvT7fDr7on47pw4Z4XjjP1kJIQQACBcgvUXAA6evRoW2eddXzweNxxx9l3331XsOG+++5r9913n33wwQe2+eab2z33/Oef9dtvv20777yzrbrqqqYehvPOO8++//77RL6XXHKJXXDBBXbbbbfZkCFD/AfAKaecYkEQmMqz/vrr2+DBg+2aa65J7KMHH3/8se23337+lL8+OIYOHWp33313yjbpT8aOHWubbbaZafstt9zSHnroofRNeI4AAgi0EDjtTxNaLMu04JSbHsm0mGUIIIBASQXqSppbG2f2+uuv21dffWWXXnqpLViwwM455xybMWOGTZw4saCSHX744TZnzhzTBUgnn3yyDxrff/99H+htsMEGdtVVV/lJnhVsKt9wvj09fuSRR6xr166mwPOtt96yG264wd577z379NNP7fjjj7d3333XzjjjDPvJT35im2yyiTU3N/uAU/n++te/tiVLlvgA9tBDD7WNN97Y98KmF/rqq6+2s88+2/bff38f8D777LO29957+0B5n332Sd88Es+XLltmj/7rQ1uwaHEkykMhEIijgE6zz5q3oKCqz/jyGxv/3FsFbctGCCBQHoGuK3W0kUMHWPv27cpzgAjkWlMBqHol77zzTtt22209ba9evUyB2SuvvOKDyHze2nbChAm2cOFCO/LII/3mBxxwgK200ko2adIkW3HFFRP5avlZZ53lg0kt1BXzTz/9tCmgVHriiSfsqaeessbGRt8jq2UKhB9++GG/j/JbZZVVfI/nmmuuqdU+OF1vvfXshRdeaBGAfvPNN6ae1sMOO8xuv/12v716bD///HMflBYagB599NG+XD6DLH8WL15sy1zgWIo0wQWfx1//YCmyIg8EEKiQwBljCvvSXqHicBgEYilw11n72Q4br12zda+pAFQ9kFtvvXWisfbaay9bYYUV7MUXXywoAE3smPRAvYzbbbedvfPOO4mlvXv3dt9K2vtAUb2ZSloWBp96vtFG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7bvvvjZnzpyUbXhSXoH//d//tcGDB1vHjh19Gxx00EH26aefphz0jjvusO23395WXnll23LLLe0f//hHynqeVEaA90tlnFtzlHfffdd2220369q1q6200kq2+eab2xNPPJGSBe2WwtHmT0499VTr06dPi3Lwf64FSUkWEICWhJFMihFYsGCBjRo1yjJ9qzzvvPPs3nvvtZtvvtkeeugh+/jjj23EiBEZty3m2OyTW0DmhxxyiA8qn376abvyyivt1Vdf9R+oixcv9jvrS8Oxxx5rBx54oL300ku2xRZb+PVTpkzJnTlrSy7A+6XkpMuV4ddff2077bSTffXVVzZmzBh75JFHrG/fvv79ofdRmGi3UKLt75955hm74YYbWhSE/3MtSEq3wH34kxBoE4ETTzwx2HDDDXV+PXA9oYkyuAAmcL2iwf33359Y9t577/ntHn300cQyHpRPYOTIkcFaa62VcoDx48entNUGG2wQHHrooSnbuB7TwH2pSFnGk/IK8H4pr28xuf/5z3/275VXXnklsXtzc3PQuXPn4OSTT/bLaLcETZs/mD9/vv9/p8+j3r17p5SH/3MpHCV9Qg9o6WJ5cmqFgHrVdIr32muvbbHXU089ZfX19bbrrrsm1q2//vq23nrr2YQJExLLeFA+gZ///Od20003pRzABaT++TfffONPxbsvBbbPPvukbLP33nvTRiki5X/C+6X8xq09wqabbmo33nijPysQ7tulSxfr2bOnzZs3zy+i3UKZtr//5S9/aYMGDfJnc5JLoyFH/J9LFint47rSZkduCOQXcN82/al3ndbVaan09OGHH1qvXr18EJq8TtvOmjUreRGPyySw3377tch53LhxVldXZ0OHDrUPPvjAr1999dVTtlMb6bSjLrrQ2F5S+QV4v5TfuLVHUACqW3J64YUXbPr06XbmmWf6xbRbsk7bPdYXgbvvvtvefvttGzt2bEpBGhsb/XP+z6WwlOwJnxAloySjQgX0D3jddde1o48+OuMuClB14VF66t69OwFoOkqFnmuMp8bjnnbaaf5Lgzud6I/co0ePlBKojZYuXcoFYykq5X3C+6W8vqXIXePdTzrpJH9R5THHHOOzpN1KIbt8eagN9Dl0+eWX2xprrNEiM/7PtSAp6QJ6QEvKSWahwJIlS3xPWPhc9+rV1FXS+rb55ptvJq9Kedyh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BgJ1MagjVUQgFgL77befffDBB/b666/73sew0nvssYd99tlndvzxx9s777xjXbt2DVct971O8W+44YY2fPjwRF6zZs2yI444wtZff32/7IYbbkisy/dg0KBBNnbs2HybtXq9emrUs5ovnXPOOT5oK2TbfHkVur7QshWaX7id8k1O5bJNPkY5H1d7+ctpU4q8i/FNf40VUo6f//zntsYaa9gpp5xia665ZiG7sE2NCtADWqMNS7XiJdDc3GxPP/20/eY3v0kJPkOFm2++2c477zxbvHhxuMj++c9/2o9//GN/unzAgAF29tlnp6zXhm+//bbtvPPOtuqqq5q2UR4a36m077772n333eeDXvV4KtDU/bfffutP/eqxyqUe2DvuuMPvoz9af9ppp/lhAmGeCpCVXn75ZZ9H+FzLFJButtlmvld0yy239L26Wh4m1eHxxx/3H2j/9V//ZbqdeeaZiXLqlPozzzzj66syff755+GuKffqxdXp77322iuxXOVXj2xDQ4M3UF1URiX1MCs/BfzJSXlstdVWfvzrJZdc4och3H333X6IgoYj7LrrrjZjxgy/S66y6cvETjvtZOo12nrrrVvUO1fbPPjgg3bBBRf4Y+jLgYZFZLJVr/VBBx3kh2qobjplny2o0OvlRz/6kelUrQKI7bff3sJTqfnaSK+7c88914YMGWKdOnWy9dZbz/7nf/7HvvvuuwSdjnvxxRf73nIN6dBrObks6eXPZxtmrJ7/3XbbzbefPNXOardcQxxytXuYbz67fO8vnR349a9/7d93Gi6j95/SggUL/JegtdZay3r16mU//elP845J1nvg/vvv92cbevbs6b8Qpg85UU/4H//4R1OgqTMMei/p/Rum1vpmeo0prxtvvNEGDhzo23mTTTaxa6+9NjyEv1955ZVtu+2283VPWcGT+AkEJAQQqHoBF3wG7r9X4D70CqrLa6+9FnTo0CFwvaPBvffeG1xzzTWB6xkNdt9998T+7hR6sNJKKwUu+Av+/Oc/B+6DJXCBaOBO7/tttJ/7IAncB2Vw2223Be4DzN9rHxfU+Mdu/GHgAqjgsssu8/u4D8Fgzz33DFwAE7igJbj11lsDN1Y02Hvvvf16F0j6ergLmPzzq666ypdT+d1zzz2BC9gC1zvpy+w3cH9UbuXngiNfRtfD4vO48sorE3mqDi748WVy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" alt="Dot-and-interval plot of the two slopes of the example fit, on a horizontal axis in synthetic reading-score points. b_x, at the top, is about 47 with a short interval from about 44 to 49, well to the right of zero. b_female, at the bottom, is about 2 with a long interval from about minus 42 to 46, which contains zero. A dashed vertical line marks zero." width="85%" />
 <p class="caption">
-Slope coefficients from the cached synthetic stack_direct fit, with 95%
-descriptive intervals. The intercept is omitted because its scale (~458
-score points) would dominate the axis. The dashed line marks zero (no
-effect). These are illustrative synthetic values, not real PISA
-estimates.
+Slopes of the example fit, from synthetic data, with their 95%
+descriptive intervals. The intercept, about 458 points, is not shown.
+The dashed line marks zero.
 </p>
 </div>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
-<p>The slope on <code>x</code> is clearly separated from zero; the
-<code>female</code> coefficient is small and its interval comfortably
-spans zero — unsurprising in a 12-row synthetic toy.</p>
-<p>For completeness: this fit retained no posterior draws, so the draw
-accessor returns <code>NULL</code>. That is expected for a cached
-<code>stack_direct</code> object and does not affect the fixed-effect
-report:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">get_draws</span>(fit)</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div>
+<p>The interval of <code>b_x</code>, from about 44 to 49, lies well to
+the right of zero; the interval of <code>b_female</code>, from about −42
+to 46, contains zero. Both are descriptive intervals; <a href="#intervals">Reading the intervals</a> explains what that means and
+why the intervals of this example are wide.</p>
+</div>
+<div id="the-draws" class="section level3">
+<h3>The draws</h3>
+<p>The example fit was saved without its calibrated draws, so
+<code>get_draws()</code> returns <code>NULL</code>:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">get_draws</span>(fit)</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; NULL</span></span></code></pre></div>
+<p>A fit made with the default, <code>return_draws = TRUE</code>, keeps
+them. The estimate table does not use the draws, because its values are
+the target’s.</p>
 </div>
 </div>
-<div id="how-to-read-the-intervals-honestly" class="section level2">
-<h2>7. How to read the intervals honestly</h2>
-<p>pvstackr never hides whether an interval can bear a coverage claim —
-it records the answer in the table so you do not have to remember a
-rule. Read it directly:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>est[, <span class="fu">c</span>(<span class="st">&quot;term&quot;</span>, <span class="st">&quot;interval_role&quot;</span>, <span class="st">&quot;coverage_claim_allowed&quot;</span>)]</span></code></pre></div>
-<div class="kable-table">
-<table>
-<thead>
-<tr class="header">
-<th align="left">term</th>
-<th align="left">interval_role</th>
-<th align="left">coverage_claim_allowed</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">b_Intercept</td>
-<td align="left">descriptive_classic_rubin</td>
-<td align="left">FALSE</td>
-</tr>
-<tr class="even">
-<td align="left">b_x</td>
-<td align="left">descriptive_classic_rubin</td>
-<td align="left">FALSE</td>
-</tr>
-<tr class="odd">
-<td align="left">b_female</td>
-<td align="left">descriptive_classic_rubin</td>
-<td align="left">FALSE</td>
-</tr>
-</tbody>
-</table>
-</div>
-<p>For this fixture every row shows
-<code>interval_role == &quot;descriptive_classic_rubin&quot;</code> and
-<code>coverage_claim_allowed == FALSE</code>. The intervals are still
-useful for <em>describing</em> the spread of the estimate — but they are
-<strong>not</strong> to be reported as calibrated confidence
-intervals.</p>
-<p><strong>The rule</strong> is simple and is enforced by the metadata,
-not by trust:</p>
-<blockquote>
-<p>A row is <code>coverage_claim_allowed = TRUE</code>
-<strong>only</strong> when the fit is <code>stack_direct</code>
-<em>and</em> it was calibrated against an external
-<strong>Barnard–Rubin</strong> BRR–Fay target <span class="citation">(Barnard and Rubin 1999; Rubin 1987)</span>. The
-<code>per_pv</code> and <code>stack_psis</code> methods are always
-descriptive. The bundled fixture, although <code>stack_direct</code>,
-uses <strong>classic</strong> Rubin degrees of freedom
-(<code>df_method == &quot;classic&quot;</code>) rather than the Barnard–Rubin
-small-sample df, so it stays descriptive by design — a faithful
-demonstration of the object surface, not a coverage-claimable
-result.</p>
-</blockquote>
-<p>Two practical consequences are visible in the table above:</p>
-<ul>
-<li><strong>Read the column, do not assume.</strong>
-<code>coverage_claim_allowed</code> is the single field that licenses
-(or withholds) a confidence claim for each row. Let it decide.</li>
-<li><strong>Tiny <span class="math inline">\(M\)</span> means tiny df
-means wide intervals.</strong> With only <span class="math inline">\(M =
-2\)</span> plausible values, the between-imputation degrees of freedom
-are near 1, so the <span class="math inline">\(t\)</span>-multiplier is
-enormous and the intervals — most visibly for <code>b_female</code> in
-the figure — are very wide. This is the MI machinery being honest about
-how little information two imputations carry, not a bug.</li>
-</ul>
-<p>One related quantity worth a sentence: the <strong>fraction of
-missing information</strong> (FMI) measures how much of a coefficient’s
-uncertainty comes from imputation rather than sampling. It drives the
-degrees of freedom and is reported alongside the estimates; its full
-treatment — and how it interacts with
-<code>coverage_claim_allowed</code> — is in <strong>vignette
-A3</strong>.</p>
-</div>
-<div id="where-to-next" class="section level2">
-<h2>8. Where to next</h2>
-<p>You have loaded a fit and read it honestly. From here:</p>
-<ul>
-<li><strong>A2 · The end-to-end workflow</strong> — declare the design
-with <code>pv_design()</code>, assemble the target with
-<code>pv_brr_target()</code>, run
-<code>pv_fit(method = &quot;stack_direct&quot;)</code>, and report; plus the
-conceptual live-backend sketch and why reportable fits need
-<code>center = &quot;target&quot;</code>.</li>
-<li><strong>A3 · Reading results &amp; what to report</strong> — the
-full accessor family, every estimate-table column, the interval metadata
-in depth, the fraction of missing information, and a copy-paste
-reporting checklist.</li>
-<li><strong>A4 · Comparing methods</strong> —
-<code>pv_compare_methods()</code> across <code>stack_direct</code>,
-<code>per_pv</code>, and <code>stack_psis</code>; agreement diagnostics;
-and the two cautions (design variance is not optional; a small
-Pareto-<span class="math inline">\(\hat k\)</span> does not guarantee
-correct variance).</li>
-<li><strong>A5 · Real PISA data guidance</strong> — connecting to
-genuine PISA files without bundling licensed data: licensing and
-non-affiliation, the design declaration, memory and runtime, and a
-reproducibility checklist.</li>
-</ul>
-<p>For the mathematics skipped here — the PV survey setting, the
-notation, and the fixed-effect estimand — start the <strong>Method
-track</strong> with <strong>M1 · Foundations and notation</strong>.</p>
+<div id="intervals" class="section level2">
+<h2>Reading the intervals</h2>
+<p><code>coverage_claim_allowed</code>, the last column of the estimate
+table above, is <code>TRUE</code> when pvstackr’s reporting rule lets
+you read the interval as a confidence interval with nominal coverage (a
+coverage-claimable interval) and <code>FALSE</code> when pvstackr makes
+no statement about its coverage (a descriptive interval).
+<code>interval_role</code>, the column before it, names the case. In the
+example every row is <code>descriptive_classic_rubin</code> with
+<code>coverage_claim_allowed = FALSE</code>, because the target of the
+fit uses the classic Rubin degrees of freedom
+(<code>df_method = &quot;classic&quot;</code>, the default of
+<code>pv_brr_target()</code>); the note in <code>print(fit)</code> says
+the same.</p>
+<p>By pvstackr’s reporting rule, <code>coverage_claim_allowed</code> is
+<code>TRUE</code> only for a <code>stack_direct</code> fit whose target
+was made with <code>df_method = &quot;barnard_rubin&quot;</code> and a positive
+<code>df_complete</code>; every other interval, including every
+<code>per_pv</code> and <code>stack_psis</code> interval, is
+descriptive. Report an interval as a confidence interval only when
+<code>coverage_claim_allowed</code> is <code>TRUE</code>, and as a
+descriptive interval otherwise. <a href="a3-reading-results.html#interval-columns">Reading and reporting
+the results</a> explains the rule and the six values of
+<code>interval_role</code>.</p>
+<p>The intervals of the example are wide compared with their standard
+errors. Each interval is the estimate plus or minus a <span class="math inline">\(t\)</span> quantile with <code>df</code> degrees
+of freedom times <code>se</code>. The classic degrees of freedom of
+<span class="citation">Rubin (1987)</span> are <span class="math inline">\((M - 1)/\lambda^2\)</span>, where <span class="math inline">\(\lambda\)</span>, the fraction of missing
+information (FMI) of the coefficient, is the share of its variance that
+comes from the differences between the plausible values. With <span class="math inline">\(M = 2\)</span> they cannot be smaller than 1, and
+they are close to 1 when <span class="math inline">\(\lambda\)</span> is
+close to 1, as the <code>df</code> column of the estimate table shows
+(1.02, 1.40 and 1.01). With so few degrees of freedom, a 95% interval
+reaches about 12 standard errors on each side of the estimate (6.6 for
+<code>b_x</code>), where an interval based on the normal distribution
+would reach 1.96.</p>
+<p>The FMI is stored in the target as <code>get_target(fit)$fmi</code>,
+not in the estimate table; <a href="a3-reading-results.html#fmi">Reading
+and reporting the results</a> shows its values for the example and
+explains why they are large.</p>
+<p><a href="a2-the-workflow.html">The full analysis workflow</a> goes
+through an analysis of your own data, from checking the columns to
+reading the result, and <a href="a3-reading-results.html">Reading and
+reporting the results</a> describes everything a fit contains and what
+to report. <a href="a4-comparing-methods.html">Comparing the three
+fitting methods</a> compares <code>stack_direct</code> with
+<code>per_pv</code> and <code>stack_psis</code>, and the Method
+articles, starting with <a href="m1-foundations-and-notation.html">Plausible values, survey weights
+and notation</a>, give the formulas and assumptions behind the target,
+the stacked fit and the calibration.</p>
 <p>Bug reports and feature requests: <a href="https://github.com/joonho112/pvstackr/issues" class="uri">https://github.com/joonho112/pvstackr/issues</a>.</p>
-<div id="session-info" class="section level3">
-<h3>Session info</h3>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; R version 4.6.0 (2026-04-24)</span></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co">#&gt; Platform: aarch64-apple-darwin23</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; Running under: macOS Tahoe 26.5.2</span></span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; BLAS:   /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRblas.0.dylib </span></span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; LAPACK: /Library/Frameworks/R.framework/Versions/4.6/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.1</span></span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt; [1] en_US/en_US/en_US/C/en_US/en_US</span></span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt; time zone: America/Chicago</span></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
-<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
-<span id="cb14-18"><a href="#cb14-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-19"><a href="#cb14-19" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
-<span id="cb14-20"><a href="#cb14-20" tabindex="-1"></a><span class="co">#&gt; [1] pvstackr_0.2.0</span></span>
-<span id="cb14-21"><a href="#cb14-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
-<span id="cb14-22"><a href="#cb14-22" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
-<span id="cb14-23"><a href="#cb14-23" tabindex="-1"></a><span class="co">#&gt;  [1] digest_0.6.39   R6_2.6.1        fastmap_1.2.0   xfun_0.57      </span></span>
-<span id="cb14-24"><a href="#cb14-24" tabindex="-1"></a><span class="co">#&gt;  [5] cachem_1.1.0    knitr_1.51      htmltools_0.5.9 rmarkdown_2.31 </span></span>
-<span id="cb14-25"><a href="#cb14-25" tabindex="-1"></a><span class="co">#&gt;  [9] lifecycle_1.0.5 cli_3.6.6       sass_0.4.10     jquerylib_0.1.4</span></span>
-<span id="cb14-26"><a href="#cb14-26" tabindex="-1"></a><span class="co">#&gt; [13] compiler_4.6.0  tools_4.6.0     evaluate_1.0.5  bslib_0.11.0   </span></span>
-<span id="cb14-27"><a href="#cb14-27" tabindex="-1"></a><span class="co">#&gt; [17] yaml_2.3.12     otel_0.2.0      rlang_1.3.0     jsonlite_2.0.0</span></span></code></pre></div>
-</div>
 </div>
 <div id="references" class="section level2 unnumbered">
 <h2 class="unnumbered">References</h2>
 <div id="refs" class="references csl-bib-body hanging-indent">
-<div id="ref-barnard1999small" class="csl-entry">
-Barnard, John, and Donald B. Rubin. 1999. <span>“Small-Sample Degrees of
-Freedom with Multiple Imputation.”</span> <em>Biometrika</em> 86 (4):
-948–55. <a href="https://doi.org/10.1093/biomet/86.4.948">https://doi.org/10.1093/biomet/86.4.948</a>.
-</div>
-<div id="ref-vondavier2009plausible" class="csl-entry">
-Davier, Matthias von, Eugenio Gonzalez, and Robert J. Mislevy. 2009.
-<span>“What Are Plausible Values and Why Are They Useful?”</span>
-<em>IERI Monograph Series</em> 2: 9–36.
-</div>
 <div id="ref-mislevy1991randomization" class="csl-entry">
 Mislevy, Robert J. 1991. <span>“Randomization-Based Inference about
 Latent Variables from Complex Samples.”</span> <em>Psychometrika</em> 56
 (2): 177–96. <a href="https://doi.org/10.1007/BF02294457">https://doi.org/10.1007/BF02294457</a>.
 </div>
+<div id="ref-oecd2024pisa" class="csl-entry">
+OECD. 2024. <em>PISA 2022 Technical Report</em>. PISA. OECD Publishing.
+<a href="https://doi.org/10.1787/01820d6d-en">https://doi.org/10.1787/01820d6d-en</a>.
+</div>
 <div id="ref-rubin1987multiple" class="csl-entry">
 Rubin, Donald B. 1987. <em>Multiple Imputation for Nonresponse in
 Surveys</em>. John Wiley &amp; Sons. <a href="https://doi.org/10.1002/9780470316696">https://doi.org/10.1002/9780470316696</a>.
+</div>
+<div id="ref-vondavier2009plausible" class="csl-entry">
+<span class="nocase">von Davier, Matthias, Eugenio J. Gonzalez, and
+Robert J. Mislevy</span>. 2009. <span>“What Are Plausible Values and Why
+Are They Useful?”</span> <em><span>IERI</span> Monograph Series: Issues
+and Methodologies in Large-Scale Assessments</em> 2: 9–36. <a href="https://www.ets.org/research/policy_research_reports/publications/chapter/2009/hlbj.html">https://www.ets.org/research/policy_research_reports/publications/chapter/2009/hlbj.html</a>.
 </div>
 </div>
 </div>

@@ -3,7 +3,7 @@
 \name{pv_control}
 \alias{pv_control}
 \alias{print.pvstackr_control}
-\title{Construct pvstackr Fitting Controls}
+\title{Settings for the fitting functions}
 \usage{
 pv_control(
   method = "stack_direct",
@@ -27,128 +27,152 @@ pv_control(
 \method{print}{pvstackr_control}(x, ...)
 }
 \arguments{
-\item{method}{Public method identifier. Character scalar; must be one of
-\code{"stack_direct"}, \code{"stack_psis"}, or \code{"per_pv"}. Default \code{"stack_direct"}.
-A control's \code{method} must equal the \code{method} passed to \code{\link[=pv_fit]{pv_fit()}} and to the
-dispatched fitter.}
+\item{method}{The method these settings are for: \code{"stack_direct"}
+(default), \code{"per_pv"} or \code{"stack_psis"}. It must match the method you fit
+with: \code{\link[=pv_fit]{pv_fit()}} stops with an error if it differs from its \code{method}
+argument, and each method function accepts only its own method.}
 
-\item{chains}{Number of MCMC chains requested by a live backend. Integer-valued
-scalar, \verb{>= 1}.}
+\item{chains}{Number of Markov chains, a whole number of at least 1.
+Default \code{4L}.}
 
-\item{iter}{Total iterations per chain. Integer-valued scalar, \verb{>= 2}.}
+\item{iter}{Number of iterations per chain, warmup included, a whole number
+of at least 2. Default \code{2000L}.}
 
-\item{warmup}{Warmup iterations per chain. Integer-valued scalar, \verb{>= 0} and
-strictly less than \code{iter}. If \code{NULL}, defaults to \code{floor(iter / 2)}.}
+\item{warmup}{Number of warmup iterations per chain, a whole number from 0
+to \code{iter - 1}. \code{NULL} (default) uses \code{floor(iter / 2)}, which is 1000 for
+the default \code{iter}.}
 
-\item{cores}{Number of cores requested by a live backend. Integer-valued
-scalar, \verb{>= 1}.}
+\item{cores}{Number of cores the model-fitting function may use, a whole
+number of at least 1. Default \code{1L}.}
 
-\item{seed}{Optional random seed. Integer-valued scalar \verb{>= 0}, or \code{NULL} for
-no fixed seed.}
+\item{seed}{The random seed, a whole number of at least 0, or \code{NULL}
+(default) to leave the seed to the model-fitting function.}
 
-\item{backend}{Backend policy. Character scalar; one of \code{"none"},
-\code{"injected"}, \code{"brms"}, or \code{"cmdstanr"}. Default \code{"none"}. In this package
-stage \code{"brms"} selects the bundled brms adapter (with deterministic
-cmdstanr/rstan resolution), while other live engines use an injected
-\code{fit_function} adapter or precomputed draws.}
+\item{backend}{The engine for \code{"stack_direct"}: \code{"none"} (default),
+\code{"injected"}, \code{"brms"} or \code{"cmdstanr"}. Only \code{"brms"} selects one: when
+you give no \code{fit_function}, \code{"stack_direct"} then uses the bundled brms
+engine (see Details). With any other value, \code{"stack_direct"} needs your
+own \code{fit_function}, \code{draws_function} and \code{diagnose_function} (see
+\code{\link[=pv_fit]{pv_fit()}}). \code{"per_pv"} and \code{"stack_psis"} have no bundled engine and
+always need your own functions or draws computed elsewhere, whatever the
+value.}
 
-\item{conf_level}{Confidence or credible-interval level for report tables.
-Numeric scalar in \verb{(0, 1)}. Default \code{0.95}.}
+\item{conf_level}{The level of the intervals in the estimate table, a
+number strictly between 0 and 1. Default \code{0.95}. It applies to all three
+methods; the \code{conf_level} stored in a \code{\link[=pv_brr_target]{pv_brr_target()}} object does not
+change the reported intervals.}
 
-\item{psis_k_threshold}{Pareto-k reportability threshold for \code{stack_psis}.
-Numeric scalar in \verb{(0, 0.7]}. Default \code{0.7}; values below \code{0.7} may impose
-a stricter gate, but the package-level ceiling cannot be relaxed. Every
-plausible value must have a finite Pareto-k strictly below this threshold.}
+\item{psis_k_threshold}{The cut-off for the Pareto k-hat values (Pareto
+shape estimates) that come with the importance weights of
+\code{"stack_psis"}, a number greater than 0 and at most 0.7. Default \code{0.7}.
+pvstackr blocks a \code{"stack_psis"} fit unless the k-hat of every plausible
+value is finite and below this cut-off, so a smaller value makes the check
+stricter; values above 0.7 are not allowed.}
 
-\item{center}{Calibration centering convention, \code{"target"} or \code{"posterior"}.
-Reportable \code{stack_direct} output requires \code{"target"}. \code{"posterior"} is
-reserved for CCC diagnostic/exploratory checks: it leaves fixed-effect draws
-at the raw stacked posterior mean while still computing target-covariance
-diagnostics against the external target. Default \code{"target"}.}
+\item{center}{Where the calibrated fixed-effect draws are centered:
+\code{"target"} (default) or \code{"posterior"}. With \code{"target"}, the Cholesky
+calibration correction (CCC) gives the draws the mean and covariance of
+the target, whose estimates are the ones reported. \code{"stack_direct"}
+requires this value. \code{"posterior"} would keep the mean of the stacked
+draws and calibrate only their covariance; it is accepted here, but no
+fitting function uses it: \code{\link[=pv_fit_direct]{pv_fit_direct()}} stops with an error for it.
+\code{"per_pv"} and \code{"stack_psis"} ignore \code{center}.}
 
-\item{allow_target_nearpd}{Reserved for future target-covariance repair.
-Logical scalar; must be \code{FALSE}. Automatic target repair is not currently
-supported. Default \code{FALSE}.}
+\item{allow_target_nearpd}{Whether a target covariance matrix that is not
+positive definite may be repaired. pvstackr has no such repair and stops
+with an error on such a target, so the value must be \code{FALSE} (default);
+\code{TRUE} stops with an error.}
 
-\item{return_draws}{Logical scalar. Whether fitted objects retain their
-method-specific fixed-effect draw representation. For \code{stack_direct}, read
-the calibrated matrix via \code{\link[=get_draws]{get_draws()}}. Per-PV matrices and the PSIS
-proposal/weight pair remain in \code{\link[=get_diagnostics]{get_diagnostics()}}. Default \code{TRUE}.}
+\item{return_draws}{Whether a fit keeps its fixed-effect draws (see
+Details). Default \code{TRUE}.}
 
-\item{keep_data}{Logical scalar. Whether fitted objects may retain the user
-data frame. Default \code{FALSE} (fits stay light).}
+\item{keep_data}{Whether a fit keeps the data frame. Default \code{FALSE}: the
+fit then keeps only a description of the data, such as column names and
+checksums.}
 
-\item{keep_backend_fit}{Logical scalar. Whether fitted objects may retain the
-heavy, opaque backend fit object. This requires \code{keep_data = TRUE} on
-public composite fits because a backend object may contain analysis data.
-Default \code{FALSE} (fits stay light).}
+\item{keep_backend_fit}{Whether a fit keeps the object returned by the
+model-fitting function, such as a brms fit (for \code{"per_pv"}, one per
+plausible value). This object may contain the data, so the fitting
+functions stop with an error when \code{keep_backend_fit = TRUE} and
+\code{keep_data = FALSE}. Default \code{FALSE}.}
 
-\item{keep_log_lik}{Logical scalar. Whether fitted objects may retain
-log-likelihood draws. Default \code{FALSE} (fits stay light).}
+\item{keep_log_lik}{Whether a fit keeps the log-likelihood draws. Only
+\code{"stack_direct"} can extract them: \code{\link[=pv_fit_direct]{pv_fit_direct()}} does so when given
+\code{extract_log_lik = TRUE} and a \code{log_lik_function}. Set \code{TRUE} only then:
+otherwise a \code{"stack_direct"} fit, or a \code{"stack_psis"} fit from a
+\code{fit_function}, stops with an error. Default \code{FALSE}.}
 
-\item{verbose}{Logical scalar. Whether functions emit progress messages.
-Default \code{FALSE}.}
+\item{verbose}{Stored in the object but not used by any pvstackr function.
+Default \code{FALSE}. For progress messages while the target is computed, use
+the \code{verbose} argument of \code{\link[=pv_brr_target]{pv_brr_target()}}.}
 
-\item{x}{A \code{pvstackr_control} object.}
+\item{x}{A \code{pvstackr_control} object from \code{pv_control()}.}
 
 \item{...}{Ignored.}
 }
 \value{
-A validated \code{pvstackr_control} object: a named list of the resolved
-options above, with class \code{c("pvstackr_control", "list")}. Pass it to a
-\verb{pv_fit*()} function via the \code{control} argument; print it for a compact
-summary.
+A \code{pvstackr_control} object: a list of the 16 settings in the order
+of the arguments, with \code{warmup} filled in and whole numbers stored as
+integers. Pass it as \code{control} to \code{\link[=pv_fit]{pv_fit()}} or to a method function. To
+change a setting, call \code{pv_control()} again rather than editing the list:
+the fitting functions stop with an error if a value was replaced by one of
+another type, as \code{ctrl$chains <- 2} does (it stores a double). \code{print()}
+shows \code{method}, \code{backend}, \code{iter}, \code{warmup} and \code{chains}, notes that
+target repair is not supported, and returns the object invisibly.
 }
 \description{
-\code{pv_control()} validates package-level options used by the fitting,
-calibration, diagnostics, and object-retention layers, returning a frozen
-\code{pvstackr_control} object that every \verb{pv_fit*()} entry point consumes. It
-centralizes backend policy, interval level, the calibration centering
-convention, and how heavy a fitted object is allowed to be.
+\code{pv_control()} collects the settings used by \code{\link[=pv_fit]{pv_fit()}} and by
+\code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}} and \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}: the
+method, the sampler settings and engine passed to the model-fitting
+function, the interval level, the Pareto k-hat cut-off of \code{"stack_psis"},
+and what a fitted object keeps. It checks each value and returns them in
+one object.
 }
 \details{
-\subsection{Centering and reportable output}{
+\subsection{Which settings each method uses}{
 
-The \code{center} convention decides whether a fit is \emph{reportable} or merely
-\emph{diagnostic}. Reportable \code{stack_direct} output requires \code{center = "target"}:
-fixed-effect draws are CCC-calibrated so their mean and covariance match the
-external Rubin/BRR-Fay target, and the estimate table inherits the target's
-standard errors, degrees of freedom, and interval metadata. \code{center = "posterior"} is diagnostic and exploratory only: it leaves fixed-effect draws
-at the raw stacked posterior mean while still computing target-covariance
-diagnostics against the external target. \code{\link[=pv_fit_direct]{pv_fit_direct()}} rejects a control
-with \code{center = "posterior"} rather than emit a non-reportable \code{stack_direct}
-estimate table; treat \code{"posterior"} as a CCC check, never a deliverable.
+\code{chains}, \code{iter}, \code{warmup}, \code{cores}, \code{seed} and \code{backend} are passed to the
+function that fits the model: the bundled brms engine or your own
+\code{fit_function}. They have no effect when a method starts from draws
+computed elsewhere. For \code{"stack_direct"}, pvstackr also checks that the
+sampler diagnostics report \code{chains} chains with \code{iter - warmup} draws each
+after warmup, and blocks the fit (status \code{"blocked"}) if they do not.
+
+\code{center} is used only by \code{"stack_direct"} and \code{psis_k_threshold} only by
+\code{"stack_psis"}. \code{conf_level} and the settings that decide what a fitted
+object keeps apply to all three methods.
 }
 
-\subsection{Object retention}{
+\subsection{The bundled brms engine}{
 
-The retention flags govern how much a fitted \code{pvstackr_fit} carries, and the
-defaults keep fits light. \code{return_draws} (default \code{TRUE}) retains only the
-method-specific fixed-effect draw representation: calibrated top-level draws
-for \code{stack_direct}, fixed-effect-only per-PV matrices in diagnostics for
-\code{per_pv}, and a fixed-effect proposal matrix paired with normalized PV
-weights in diagnostics for \code{stack_psis}. \code{\link[=get_draws]{get_draws()}} exposes only the
-synthesized top-level \code{stack_direct} matrix; use \code{\link[=get_diagnostics]{get_diagnostics()}} for the
-other two representations. Package-owned raw full stacked draws, nuisance
-draws, and duplicate calibrated matrices are never retained in a final
-composite fit. This does not inspect or override explicitly authorized
-opaque backend objects (\code{keep_backend_fit}) or log-likelihood matrices
-(\code{keep_log_lik}), which have separate retention authorities.
-Blocked fits fail closed and record effective \code{return_draws}, \code{keep_data},
-\code{keep_backend_fit}, and \code{keep_log_lik} values of \code{FALSE}, irrespective of
-the original retention request. \code{keep_data} retains the user data frame in the
-top-level design; otherwise the fit stores a metadata/hash-only design
-snapshot with a base-environment formula. Package-owned stacked-data copies
-are not retained inside composite fits. \code{keep_backend_fit} retains an opaque
-backend object and therefore requires \code{keep_data = TRUE}, because the package
-cannot prove that an arbitrary backend object is data-free. \code{keep_log_lik}
-retains log-likelihood draws. Enable the \code{FALSE}-by-default flags only when
-you need the extra payload (for example, re-extraction or model checking), as
-each materially increases the size of the saved object.
+With \code{backend = "brms"} and no \code{fit_function}, \code{"stack_direct"} fits the
+stacked model with the brms function \code{brm()}, through
+\code{\link[=pv_backend_brms_fit_function]{pv_backend_brms_fit_function()}}. This needs the brms and posterior
+packages. If cmdstanr is installed, CmdStan must be configured, otherwise
+the fit stops with an error; if cmdstanr is not installed, brms uses rstan.
+The other \code{backend} values select no engine: they are passed to your
+\code{fit_function} as its \code{backend} argument and recorded in the fit.
+}
+
+\subsection{What a fitted object keeps}{
+
+With \code{return_draws = TRUE} (the default), a fit keeps its fixed-effect
+draws: for \code{"stack_direct"} the calibrated draws, read with \code{\link[=get_draws]{get_draws()}};
+for \code{"per_pv"} the draws of each plausible value; for \code{"stack_psis"} the
+stacked draws with the normalized weights for each plausible value. The
+last two are in \code{\link[=get_diagnostics]{get_diagnostics()}}, and \code{\link[=get_draws]{get_draws()}} returns \code{NULL} for
+them. Draws of other parameters, such as \code{sigma}, are not kept.
+
+\code{keep_data}, \code{keep_backend_fit} and \code{keep_log_lik} (all \code{FALSE} by
+default) keep the data, the object returned by the model-fitting function
+and the log-likelihood draws; each makes a saved fit larger. A blocked fit
+keeps none of these parts: its \code{control} records all four settings as
+\code{FALSE}, whatever was requested. \link{pvstackr_object_contracts} describes the
+parts of a fitted object.
 }
 }
 \examples{
-# Default controls target reportable stack_direct output.
+# Default settings, for method = "stack_direct".
 ctrl <- pv_control()
 ctrl
 
@@ -156,13 +180,17 @@ ctrl
 ctrl_psis <- pv_control(method = "stack_psis", psis_k_threshold = 0.7)
 ctrl_psis$method
 
-# Retain the heavy backend fit and log-likelihood draws when you need them.
-ctrl_heavy <- pv_control(keep_backend_fit = TRUE, keep_log_lik = TRUE)
-c(ctrl_heavy$keep_backend_fit, ctrl_heavy$keep_log_lik)
+# Settings that make a fit keep more. keep_backend_fit = TRUE needs
+# keep_data = TRUE, and keep_log_lik = TRUE needs extract_log_lik = TRUE
+# and a log_lik_function in pv_fit_direct().
+ctrl_heavy <- pv_control(
+  keep_data = TRUE, keep_backend_fit = TRUE, keep_log_lik = TRUE
+)
+c(ctrl_heavy$keep_data, ctrl_heavy$keep_backend_fit, ctrl_heavy$keep_log_lik)
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}},
-\code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}
+\code{\link[=pv_backend_brms_fit_function]{pv_backend_brms_fit_function()}} for the bundled brms engine;
+\link{pvstackr_object_contracts} for the parts of a fitted object.
 
 Other pvstackr-fitting:
 \code{\link[=pv_fit]{pv_fit()}},

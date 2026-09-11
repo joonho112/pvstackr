@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit-reference.R
 \name{pv_fit_reference}
 \alias{pv_fit_reference}
-\title{Fit the Per-PV Bayesian/Backend Reference Method}
+\title{Combine one fit per plausible value with Rubin's rules}
 \usage{
 pv_fit_reference(
   data = NULL,
@@ -27,112 +27,179 @@ pv_fit_reference(
 )
 }
 \arguments{
-\item{data}{Optional analysis data frame. Required for the injected fitting
-route.}
+\item{data}{A data frame with the plausible-value columns and the
+variables in \code{formula}, or \code{NULL} (default). Required with
+\code{fit_function}, which receives it unchanged. With \code{per_pv_draws} it is
+optional: given together with \code{formula}, it is used only to record the
+design (the fit's \code{design}), and the plausible-value names must then be
+columns of \code{data}.}
 
-\item{formula}{Optional two-sided formula with \code{OUTCOME} on the left-hand
-side. Required for the injected fitting route.}
+\item{formula}{A two-sided formula with the placeholder \code{OUTCOME} on the
+left-hand side, such as \code{OUTCOME ~ x + female} (see \code{\link[=pv_fit]{pv_fit()}}), or
+\code{NULL} (default). Required with \code{fit_function}. A \code{weights()} term stops
+the function with an error; all other terms, random-effect terms
+included, are passed to \code{fit_function} as written.}
 
-\item{pv_cols}{Plausible-value columns. Required for the injected fitting
-route; optional alignment labels for \code{per_pv_draws}.}
+\item{pv_cols}{A character vector with the names of the plausible-value
+columns, at least two, or \code{NULL} (default). Required with
+\code{fit_function}: the columns of \code{data} that are fitted one at a time.
+With \code{per_pv_draws} it is optional and names the elements of the list;
+if the list has names, they must be the same. Without \code{pv_cols}, the
+names of \code{per_pv_draws} are used, or \code{PV1}, \code{PV2}, ... for an unnamed
+list.}
 
-\item{per_pv_draws}{Optional list of per-PV posterior draw matrices.}
+\item{per_pv_draws}{A list of draws computed elsewhere, one element per
+plausible value (at least two), or \code{NULL} (default). Each element is a
+numeric matrix or data frame with one row per posterior draw (at least
+two), finite values and unique column names. The fixed-effect columns
+(see \code{param_map}) must have the same names, in the same order, in every
+element. Give either \code{per_pv_draws} or \code{fit_function}, not both.}
 
-\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "per_pv"}.}
+\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "per_pv"}. The
+default is \code{pv_control(method = "per_pv")}, and \code{NULL} gives the same.
+Its \code{conf_level} sets the interval level; its sampler settings and
+\code{backend} are only passed on to \code{fit_function}.}
 
-\item{family}{Optional backend family object passed to the injected fit
-function.}
+\item{family, prior}{Passed unchanged to \code{fit_function}; pvstackr does not
+check them. Default \code{NULL}.}
 
-\item{prior}{Optional backend prior object passed to the injected fit
-function.}
+\item{fit_function}{Your function that fits the model to one plausible
+value, or \code{NULL} (default) when you give \code{per_pv_draws}. It is called
+once per plausible value with the arguments \code{formula} (with \code{OUTCOME}
+replaced by that plausible-value column), \code{data}, \code{family}, \code{prior},
+\code{chains}, \code{iter}, \code{warmup}, \code{cores}, \code{seed}, \code{backend}, \code{file} and
+\code{file_refit} (the settings from \code{control} and the cache file; see
+\code{cache_dir}), plus the elements of \code{additional_args}. There is no
+\code{weights} argument (see Details). It may return any object that
+\code{draws_function} accepts.}
 
-\item{fit_function}{Injected backend fitting function.}
+\item{draws_function}{Your function that takes the object returned by
+\code{fit_function} and returns its draws, in the form described for
+\code{per_pv_draws}. Required with \code{fit_function}.}
 
-\item{draws_function}{Function extracting posterior draws from each injected
-backend fit.}
+\item{param_map}{\code{NULL} (default) or a named list that says which columns
+of the draws are the fixed effects, by name (\code{fe_names}) or by position
+(\code{fe_idx}), as for \code{\link[=pv_fit_direct]{pv_fit_direct()}}. With \code{NULL}, the columns whose
+names start with \code{b_} are the fixed effects. Only the fixed effects are
+used, and their column names become the terms of the estimate table, so
+they must start with \code{b_}. Give a list to leave out other columns that
+start with \code{b_}, such as distributional parameters named \verb{b_sigma_*}.}
 
-\item{param_map}{Optional explicit draw-column map passed to the fixed-effect
-extraction layer. Use this when backend draw columns do not follow the
-package's automatic \verb{b_*} fixed-effect naming convention. Supply
-\code{fe_names} or \code{fe_idx} to identify fixed-effect columns, and optional
-\code{vc_names} or \code{vc_idx} for nuisance variance-component columns. Use
-\code{vc_names = character()} to drop all nuisance columns, including
-distributional names such as \verb{b_sigma_*}.}
+\item{weight_col}{The name of the final weight column, or \code{NULL}
+(default). When \code{data} is used, pvstackr checks that the weights are
+positive and records the column in the fit's \code{design}, but it does not
+use the weights: they are not passed to \code{fit_function}.}
 
-\item{weight_col}{Optional main weight column recorded in the design object
-and validated when the injected fitting route is used. It is not passed as
-an automatic backend argument.}
+\item{rep_weight_cols, fay_k, id_cols}{Replicate-weight columns, the Fay
+coefficient and row-identifier columns, as in \code{\link[=pv_design]{pv_design()}}. With \code{data}
+and \code{formula}, they are checked and recorded in the fit's \code{design}; the
+calculation does not use them. Defaults \code{NULL}, \code{0.5} and \code{NULL}.}
 
-\item{rep_weight_cols}{Optional replicate-weight columns recorded in the
-design object. They are not used by \code{per_pv} pooling and are not passed as
-automatic backend arguments.}
+\item{df_method}{The rule for the degrees of freedom: \code{"classic"}
+(default) or \code{"barnard_rubin"}, which needs \code{df_complete}. Both rules are
+defined in \code{\link[=pv_brr_target]{pv_brr_target()}}. With either rule the intervals are
+descriptive.}
 
-\item{fay_k}{Fay coefficient recorded in the design object when replicate
-weights are supplied.}
+\item{df_complete}{For \code{df_method = "barnard_rubin"}, the complete-data
+degrees of freedom, which you state: the degrees of freedom that the
+analysis would have if the outcome were observed directly. Give one
+positive number for all fixed effects, or a vector with one value per
+fixed effect, named by the fixed-effect columns (such as \code{b_Intercept});
+an unnamed vector of several values is an error. Default \code{NULL}; giving
+a value with \code{df_method = "classic"} is an error.}
 
-\item{id_cols}{Optional row identifier columns recorded in the design object.}
+\item{cache_dir, cache_stem}{The folder and the start of the file name that
+are passed to \code{fit_function}; defaults \code{"cache"} and
+\code{"pvstackr-per-pv"}. For each plausible value, \code{fit_function} receives
+\code{file = file.path(path.expand(cache_dir), paste0(cache_stem, "-", pv))},
+where \code{pv} is the plausible-value column (such as
+\code{"cache/pvstackr-per-pv-PV1READ"}), and \code{file_refit = "on_change"}; with
+\code{cache_dir = NULL} it receives \code{file = NULL} and \code{file_refit = "never"}.
+They are meant for the arguments of the same names of the brms function
+\code{brm()}. pvstackr does not create the folder.}
 
-\item{df_method}{Rubin degrees-of-freedom method. The default \code{"classic"} is
-descriptive only; \code{"barnard_rubin"} requires \code{df_complete}.}
-
-\item{df_complete}{Complete-data degrees of freedom used when
-\code{df_method = "barnard_rubin"}. Supply a positive scalar for all fixed
-effects or a named numeric vector aligned by fixed-effect name. Unnamed
-length-p vectors are rejected to avoid positional ambiguity.}
-
-\item{cache_dir, cache_stem}{Cache location metadata passed to injected fits.}
-
-\item{additional_args}{Additional named arguments passed to each injected fit.}
+\item{additional_args}{A named list of further arguments passed to
+\code{fit_function} for every plausible value, \code{list()} by default. They may
+not repeat the arguments that pvstackr sets (see \code{fit_function}).}
 }
 \value{
-A \code{pvstackr_fit} object with \code{method = "per_pv"}.
+A \code{pvstackr_fit} object with \code{method = "per_pv"}. Read it with
+\code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}} and \code{\link[=get_diagnostics]{get_diagnostics()}};
+\code{\link[=get_draws]{get_draws()}} returns \code{NULL} for this method, and
+\link{pvstackr_object_contracts} describes every part of the object. The
+estimate table has one row per fixed effect with the combined estimate,
+its standard error and its degrees of freedom; besides the columns of
+every method, it has \code{pooling_source} and \code{pooling_hash}.
+\code{\link[=get_target]{get_target()}} returns the combined result, a list of class
+\code{pvstackr_reference_pool} with \code{beta} (the estimates), \code{U_bar}, \code{B},
+\code{T_MI}, \code{se}, \code{df}, \code{fmi} and related fields as in \code{\link[=pv_brr_target]{pv_brr_target()}},
+and \code{per_pv} (the mean \code{beta} and the covariance \code{U} of the draws of
+each plausible value). \code{\link[=get_diagnostics]{get_diagnostics()}} returns \code{reference} (where
+the draws came from, the plausible values, the numbers of draws and,
+with \code{control$return_draws = TRUE}, the fixed-effect draws of each
+plausible value in \code{per_pv_draws}) and \code{pooling} (the combined
+quantities).
 }
 \description{
-\code{pv_fit_reference()} implements the \code{per_pv} reference path: one backend fit
-or posterior-draw source per plausible value, fixed-effect summary extraction,
-and Rubin pooling with model-based within-PV covariance from the selected
-fixed-effect draws.
+\code{pv_fit_reference()} runs the \code{"per_pv"} method of \code{\link[=pv_fit]{pv_fit()}}. It takes
+the posterior draws of one model fit per plausible value, either computed
+elsewhere (\code{per_pv_draws}) or returned by your own fitting functions
+(\code{fit_function} and \code{draws_function}, called once per plausible value),
+and combines the fixed effects with Rubin's rules. The variance within
+each plausible value is the covariance of that fit's posterior draws, so
+the intervals are always descriptive.
 }
 \details{
-This reference method accepts either already-computed per-PV posterior draws
-via \code{per_pv_draws}, or an injected \code{fit_function}/\code{draws_function} pair. The
-injected route rewrites the \code{OUTCOME} placeholder to each plausible-value
-column and calls the backend once per plausible value. Current reportable
-output is fixed-effect-only, selected from draw columns named like \verb{b_*} or by
-an explicit \code{param_map}. The within-PV variance component is the posterior
-draw covariance of the selected fixed-effect columns in each plausible value.
-\code{weight_col}, \code{rep_weight_cols}, \code{fay_k}, and \code{id_cols} are recorded as design
-metadata for this path; BRR/Fay replicate weights are not used to form that
-within-PV covariance or an external target. These weight arguments are not
-passed automatically to an injected backend. If a backend fit should use
-weights, handle that explicitly inside \code{fit_function}, in the data supplied
-to the backend, or through backend-specific \code{additional_args}.
+\subsection{Calculation}{
 
-\code{per_pv} interval metadata is source-specific. Classic Rubin pooling is
-labeled \code{interval_role = "reference_classic_rubin"}; Barnard-Rubin pooling is
-labeled \code{interval_role = "reference_barnard_rubin"} and uses the explicit
-\code{df_complete} supplied by the user. Both roles set
-\code{coverage_claim_allowed = FALSE} because the within-PV covariance is
-model-based posterior-draw covariance, not an external design replicate
-variance.
-}
-\section{Reportable scope and coverage}{
-
-In this package stage, reportable output is \strong{fixed-effect-only}; variance
-components are fit but not calibrated to the target. Coverage claims are
-enabled \strong{only} for \code{stack_direct} rows backed by the external Rubin/BRR-Fay
-target (\code{interval_role = "coverage_barnard_rubin"},
-\code{coverage_claim_allowed = TRUE}). \code{per_pv} intervals are
-\strong{descriptive/reference} even with Barnard-Rubin degrees of freedom. "One
-stacked fit" describes the computational topology, not a benchmarked speed
-claim. The within-PV variance is the \strong{model-based} posterior covariance of
-the selected fixed-effect draws, not a BRR/Fay replicate variance.
+For each plausible value \eqn{m}, pvstackr takes the fixed-effect columns
+of the draws (see \code{param_map}) and computes their mean
+\eqn{\hat\beta_m}{b_m} and their covariance matrix \eqn{U_m}. Rubin's
+rules then combine the \eqn{M} results as in \code{\link[=pv_brr_target]{pv_brr_target()}}: the
+estimate \eqn{\bar\beta}{beta_bar} is the mean of the
+\eqn{\hat\beta_m}{b_m}, and the total covariance is
+\eqn{T_{\mathrm{MI}} = \bar U + (1 + 1/M) B}{T_MI = U_bar + (1 + 1/M) B},
+where \eqn{\bar U}{U_bar} is the mean of the \eqn{U_m} and \eqn{B} is the
+covariance matrix of the \eqn{\hat\beta_m}{b_m}. The standard errors are
+the square roots of the diagonal of \eqn{T_{\mathrm{MI}}}{T_MI}, and the
+degrees of freedom follow \code{df_method}.
 }
 
+\subsection{What is reported}{
+
+As for every method, only the fixed effects are reported (\code{\link[=pv_fit]{pv_fit()}}
+gives the scope and the full rule for the intervals). Each \eqn{U_m} is
+the model-based posterior covariance of the draws, not a design-based
+variance from replicate weights, so every row of the estimate table has
+\code{interval_role = "reference_classic_rubin"} or
+\code{"reference_barnard_rubin"} and \code{coverage_claim_allowed = FALSE}. The
+replicate weights play no part in this method.
+}
+
+\subsection{Fitting functions and status}{
+
+pvstackr itself fits no model for this method, and there is no bundled
+engine: \code{pv_control(backend = "brms")} does not supply one. With
+\code{fit_function}, pvstackr replaces \code{OUTCOME} in \code{formula} by each
+plausible-value column in turn (for example \code{PV1READ ~ x + female}),
+calls \code{fit_function} once for each, and passes each result to
+\code{draws_function}. It does not check the model further: random-effect
+terms such as \code{(1 | school)}, \code{family} and \code{prior} reach \code{fit_function}
+unchanged. The survey weights are not passed as an argument to
+\code{fit_function}; a weighted fit must take them from \code{data} inside that
+function or from \code{additional_args}.
+
+pvstackr collects no sampler diagnostics (R-hat, effective sample sizes,
+divergent transitions) from these fits and has no other check for this
+method, so the status of a \code{per_pv} fit is always \code{"ok"}. Check the
+convergence of each fit yourself.
+}
+}
 \examples{
-# Injected per-PV draws: one posterior draw matrix per plausible value, with
-# fixed-effect columns named like `b_*` (auto-selected). Real fits would come
-# from a backend; here we use small synthetic draw clouds to show the shape.
+# Draws computed elsewhere: one matrix per plausible value, one row per
+# draw, with the fixed-effect columns b_Intercept and b_x. Real draws
+# would come from a model fitted to each plausible value; these are
+# simulated to show the input.
 set.seed(1)
 make_draws <- function(n, b0, bx) {
   cbind(
@@ -149,8 +216,8 @@ fit_ref <- pv_fit_reference(
   pv_cols      = c("PV1READ", "PV2READ"),
   control      = pv_control(method = "per_pv")
 )
-fit_ref                     # a per_pv pvstackr_fit
-get_estimates(fit_ref)      # interval_role = "reference_*"; coverage_claim_allowed = FALSE
+fit_ref                     # method, status "ok" and interval note
+get_estimates(fit_ref)      # interval_role "reference_classic_rubin"
 }
 \references{
 Rubin, D. B. (1987). \emph{Multiple Imputation for Nonresponse in Surveys.} Wiley.
@@ -159,9 +226,8 @@ Barnard, J., & Rubin, D. B. (1999). Small-sample degrees of freedom with
 multiple imputation. \emph{Biometrika}, 86(4), 948-955.
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}},
-\code{\link[=pv_control]{pv_control()}}; \code{\link[=pv_compare_methods]{pv_compare_methods()}}, \code{\link[=get_estimates]{get_estimates()}},
-\link{pvstackr_object_contracts}.
+\code{\link[=pv_compare_methods]{pv_compare_methods()}} to compare fits, and
+\link{pvstackr_object_contracts} for the parts of a fit.
 
 Other pvstackr-fitting:
 \code{\link[=pv_control]{pv_control()}},

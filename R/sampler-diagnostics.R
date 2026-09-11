@@ -382,8 +382,8 @@ pv_stack_sampler_diagnostics <- function(
         sampler = sampler
       ))
     }
-    # The bundled record always wins. Say so whatever shape the override came
-    # back in, rather than only when it happened to carry a `sampler` element.
+    # The bundled record always wins. Flag that the override was ignored,
+    # whatever shape it came back in.
     return(list(
       custom_sampler_override_ignored = TRUE,
       sampler = sampler

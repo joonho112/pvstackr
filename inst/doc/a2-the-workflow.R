@@ -11,11 +11,11 @@ pisa_tiny <- read.csv(
 
 design <- pv_design(
   pisa_tiny,
-  formula     = OUTCOME ~ x + female,   # OUTCOME is a placeholder (see below)
-  pv_suffix   = "READ",                 # matches PV1READ / PV2READ
-  expected_M  = 2L,                     # assert exactly 2 plausible values
-  expected_R  = 4L,                     # assert exactly 4 replicate weights
-  id_cols     = "CNTSTUID"             # column(s) that identify a unique row
+  formula     = OUTCOME ~ x + female,   # OUTCOME stands for each plausible value
+  pv_suffix   = "READ",                 # finds PV1READ and PV2READ
+  expected_M  = 2L,                     # stop unless 2 plausible values are found
+  expected_R  = 4L,                     # stop unless 4 replicate weights are found
+  id_cols     = "CNTSTUID"             # the column that identifies each row
 )
 
 design
@@ -25,7 +25,7 @@ design$pv_cols
 design$weight_col
 design$rep_weight_cols
 
-## ----detect-helpers-----------------------------------------------------------
+## ----detect-columns-----------------------------------------------------------
 detect_pisa_pv_columns(pisa_tiny, suffix = "READ")
 detect_pisa_brr_replicate_weights(pisa_tiny)
 
@@ -42,7 +42,7 @@ target <- pv_brr_target(
 
 target
 
-## ----target-internals---------------------------------------------------------
+## ----target-fields------------------------------------------------------------
 target$beta
 target$T_MI
 sqrt(diag(target$T_MI))   # these become the reported standard errors
@@ -59,7 +59,7 @@ pv_brr_target(
 )
 })
 
-## ----fit-cached---------------------------------------------------------------
+## ----example-fit--------------------------------------------------------------
 fit <- readRDS(
   system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
               package = "pvstackr")
@@ -67,29 +67,26 @@ fit <- readRDS(
 
 fit
 
-## ----fit-live-bundled, eval = FALSE-------------------------------------------
+## ----fit-bundled-engine, eval = FALSE-----------------------------------------
 # fit <- pv_fit(
 #   data    = pisa_tiny,
 #   formula = OUTCOME ~ x + female,
-#   target  = target,                                         # from Section 3
+#   target  = target,              # from pv_brr_target() above
 #   method  = "stack_direct",
 #   control = pv_control(method = "stack_direct", backend = "brms")
 # )
 
-## ----fit-live-shape, eval = FALSE---------------------------------------------
+## ----fit-own-functions, eval = FALSE------------------------------------------
 # fit <- pv_fit(
 #   data              = pisa_tiny,
 #   formula           = OUTCOME ~ x + female,
 #   target            = target,
 #   method            = "stack_direct",
-#   control           = pv_control(
-#                         method  = "stack_direct",
-#                         backend = "cmdstanr"                # passed to your engine
-#                       ),
-#   fit_function      = your_fit_function,      # estimates the stacked model
-#   draws_function    = your_draws_function,    # extracts posterior draws
-#   diagnose_function = your_diagnose_function, # reports sampler diagnostics
-#   cache_dir         = NULL                    # an injected adapter owns its cache
+#   control           = pv_control(method = "stack_direct"),
+#   fit_function      = your_fit_function,      # fits the stacked model
+#   draws_function    = your_draws_function,    # returns the draws of that fit
+#   diagnose_function = your_diagnose_function, # returns its sampler diagnostics
+#   cache_dir         = NULL                    # no cache file for your function
 # )
 
 ## ----summary------------------------------------------------------------------
@@ -102,47 +99,30 @@ est[, c("term", "estimate", "se", "df",
         "conf_low", "conf_high",
         "interval_role", "coverage_claim_allowed")]
 
-## ----coef-figure, fig.width = 7, fig.height = 3, fig.cap = "Slope coefficients from the cached synthetic stack_direct fit, with 95% descriptive intervals. The intercept is omitted because its scale (~458 score points) would dominate the axis. The dashed line marks zero (no effect). These are illustrative synthetic values, not real PISA estimates.", fig.alt = "A horizontal dot-and-interval plot of two slope coefficients from the synthetic fixture fit. The coefficient on x is about 47 score points with a narrow interval well to the right of zero. The coefficient on female is about 2 score points with a wide interval spanning zero from roughly minus 42 to plus 46. A dashed vertical reference line is drawn at zero."----
-slopes <- est[est$term != "b_Intercept", ]
-slopes <- slopes[order(slopes$term), ]
-
-y    <- seq_len(nrow(slopes))
-xlim <- range(c(slopes$conf_low, slopes$conf_high, 0))
-
-op <- par(mar = c(4.5, 7, 1, 1))
-plot(
-  slopes$estimate, y,
-  xlim = xlim, ylim = c(0.5, nrow(slopes) + 0.5),
-  yaxt = "n", ylab = "",
-  xlab = "Coefficient (synthetic reading-score points)",
-  pch = 19, cex = 1.4, col = "#1f6f9c"
-)
-abline(v = 0, lty = 2, col = "grey50")
-segments(slopes$conf_low, y, slopes$conf_high, y, lwd = 2, col = "#1f6f9c")
-points(slopes$estimate, y, pch = 19, cex = 1.4, col = "#1f6f9c")
-axis(2, at = y, labels = slopes$term, las = 1)
-par(op)
-
-## ----honest-columns-----------------------------------------------------------
-est[, c("term", "interval_role", "coverage_claim_allowed")]
-
-## ----live-backend-sketch, eval = FALSE----------------------------------------
-# # fit_function: fit the stacked model on the prepared (N * M)-row data and return
-# # whatever the backend produces (e.g. a brms or cmdstanr fit object).
-# my_fit_function <- function(formula, data, weights, ...) {
+## ----own-functions-sketch, eval = FALSE---------------------------------------
+# # fit_function: fit the stacked model and return the fitted object. pvstackr
+# # calls it with the named arguments formula, data, family, prior, chains, iter,
+# # warmup, cores, seed, backend, file and file_refit, plus the elements of
+# # additional_args. There is no weights argument: the weights are in the
+# # formula term weights(.pvstackr_weight) and in the data column
+# # .pvstackr_weight.
+# my_fit_function <- function(formula, data, ...) {
 #   # ... call your Bayesian engine here ...
 # }
 # 
-# # draws_function: return a posterior draws matrix whose columns are the
-# # fixed-effect parameters CCC will calibrate (b_* naming, or supply param_map).
+# # draws_function: return the draws of that fit as a numeric matrix with one
+# # row per draw. Name the fixed-effect columns as in target$fe_names
+# # (b_Intercept, b_x, ...) or after the stacked formula (b_pvstackrMM001, ...),
+# # or pass param_map.
 # my_draws_function <- function(backend_fit, ...) {
 #   # ... extract a draws matrix from backend_fit ...
 # }
 # 
-# # diagnose_function: report the sampler diagnostics. Without it the sampler
-# # evidence is incomplete and the fit is blocked rather than reported.
+# # diagnose_function: return the sampler diagnostics as a named list with six
+# # values. If it is missing, fails or leaves out a value, the fit is blocked.
 # my_diagnose_function <- function(backend_fit, ...) {
-#   # ... return R-hat, ESS, and divergences from backend_fit ...
+#   # ... return list(rhat_max = , ess_bulk_min = , ess_tail_min = ,
+#   #                 divergences = , chains = , post_warmup_draws_per_chain = )
 # }
 # 
 # fit <- pv_fit(
@@ -150,13 +130,10 @@ est[, c("term", "interval_role", "coverage_claim_allowed")]
 #   formula           = OUTCOME ~ x + female,
 #   target            = your_target,
 #   method            = "stack_direct",
-#   control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
+#   control           = pv_control(method = "stack_direct"),
 #   fit_function      = my_fit_function,
 #   draws_function    = my_draws_function,
 #   diagnose_function = my_diagnose_function,
 #   cache_dir         = NULL
 # )
-
-## ----session-info-------------------------------------------------------------
-sessionInfo()
 

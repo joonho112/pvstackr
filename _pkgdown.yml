@@ -13,62 +13,67 @@ development:
 
 navbar:
   structure:
-    left: [intro, reference, articles, news]
+    left: [getstarted, reference, articles, news]
     right: [search, github]
   components:
+    getstarted:
+      text: Get started
+      href: articles/a1-getting-started.html
     articles:
       text: Articles
       menu:
-        - text: Applied Track
-        - text: "A1 · Getting started"
+        - text: Applied articles
+        - text: "Getting started with pvstackr"
           href: articles/a1-getting-started.html
-        - text: "A2 · The end-to-end workflow"
+        - text: "The full analysis workflow"
           href: articles/a2-the-workflow.html
-        - text: "A3 · Reading results & what to report"
+        - text: "Reading and reporting the results"
           href: articles/a3-reading-results.html
-        - text: "A4 · Comparing methods"
+        - text: "Comparing the three fitting methods"
           href: articles/a4-comparing-methods.html
-        - text: "A5 · Real PISA data guidance"
+        - text: "Real PISA data: access, memory and reproducibility"
           href: articles/a5-real-pisa-guidance.html
         - text: "---"
-        - text: Method Track
-        - text: "M1 · Foundations and notation"
+        - text: Method articles
+        - text: "Plausible values, survey weights and notation"
           href: articles/m1-foundations-and-notation.html
-        - text: "M2 · The BRR–Fay fixed-effect target"
+        - text: "The design-based target: BRR–Fay replicate weights and Rubin's rules"
           href: articles/m2-brr-fay-target.html
-        - text: "M3 · The stacked fractional bridge"
+        - text: "One stacked fit and the Rubin point estimate"
           href: articles/m3-stacked-bridge.html
-        - text: "M4 · CCC: Cholesky Calibration Correction"
+        - text: "Calibrating the fixed-effect draws (CCC)"
           href: articles/m4-ccc-calibration.html
-        - text: "M5 · Methods, PSIS, and coverage"
+        - text: "Choosing a method and reading its intervals"
           href: articles/m5-methods-and-coverage.html
 
 reference:
   - title: Package overview
     desc: >
-      Orientation plus the formal object and interval contracts.
+      What pvstackr computes, and the objects that its functions return.
     contents:
       - pvstackr-package
       - pvstackr_object_contracts
 
-  - title: Declare the design
+  - title: Check the columns
     desc: >
-      Describe a PISA-style PV design and detect PV / BRR replicate columns.
+      Find and check the plausible-value, final-weight and replicate-weight
+      columns of a PISA-style data set.
     contents:
       - pv_design
       - detect_pisa_pv_columns
       - detect_pisa_brr_replicate_weights
 
-  - title: Assemble the target
+  - title: Compute the target
     desc: >
-      Build the external Rubin / BRR-Fay fixed-effect target.
+      Compute the design-based target for the fixed effects from the BRR-Fay
+      replicate weights and Rubin's rules, and check or rebuild a saved target.
     contents:
       - pv_brr_target
       - pv_revalidate_brr_target
 
-  - title: Fit a method
+  - title: Fit a model
     desc: >
-      The dispatcher, the three method engines, and fitting controls.
+      `pv_fit()`, the functions for the three methods, and their settings.
     contents:
       - pv_fit
       - pv_fit_direct
@@ -76,46 +81,50 @@ reference:
       - pv_fit_stack_psis
       - pv_control
 
-  - title: Attach a backend
+  - title: Fitting engine
     desc: >
-      The bundled brms adapter, exported so an injected adapter can reuse it or
-      replace one piece of it.
+      The fitting functions of the bundled brms engine, which you can reuse
+      when you supply fitting functions of your own.
     contents:
       - pv_backend_brms_fit_function
 
   - title: Compare methods
     desc: >
-      Aligned fixed-effect comparison across methods with agreement diagnostics.
+      Put fits made with different methods side by side, with agreement
+      diagnostics.
     contents:
       - pv_compare_methods
 
   - title: Read results
     desc: >
-      Stable accessors for the reportable estimate table, target, draws, and
-      diagnostics.
+      Read the estimate table, the target, the draws and the diagnostics of a
+      fit.
     contents:
       - get_estimates
       - get_target
       - get_draws
       - get_diagnostics
 
-  - title: Display methods
+  - title: Print and summary
     desc: >
-      Compact console displays for all object types; summary methods for fit and
-      comparison objects.
+      Print methods for all pvstackr objects, and summary methods for fits and
+      comparisons.
     contents:
       - pvstackr_fit_summary
       - pvstackr_method_comparison_summary
 
-  - title: Migration
+  - title: Earlier versions
     desc: >
-      Reading objects written by an earlier release.
+      Read `stack_psis` fits saved by an earlier version of pvstackr.
     contents:
       - pv_migrate_legacy_psis_fit
 
 articles:
-  - title: Applied track
+  - title: Applied articles
     navbar: ~
+    desc: >
+      How to run an analysis on your own data, and how to read and report its
+      result.
     contents:
       - a1-getting-started
       - a2-the-workflow
@@ -123,8 +132,11 @@ articles:
       - a4-comparing-methods
       - a5-real-pisa-guidance
 
-  - title: Method track
+  - title: Method articles
     navbar: ~
+    desc: >
+      The formulas behind pvstackr, their sources, and the assumptions under
+      which they hold.
     contents:
       - m1-foundations-and-notation
       - m2-brr-fay-target

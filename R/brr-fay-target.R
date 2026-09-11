@@ -75,16 +75,16 @@ pv_warn_if_bare_pv_with_subject_families <- function(data, prefix, suffix) {
 }
 
 pv_hash_payload <- function(payload) {
-  # The serialization header records the writing R version, and these hashes are
-  # stored on objects and re-derived later -- the legacy target revalidation
-  # compares them fail-closed -- so the header has to stay out of the digest.
+  # The serialization header records the writing R version. These hashes are
+  # stored on objects and recomputed later, for example when a legacy target's
+  # `design_hash` is checked, so the header has to stay out of the digest.
   bytes <- as.integer(pv_validation_payload_bytes(payload, "Content hash payload"))
   if (length(bytes) == 0L) {
     return("00000000")
   }
 
-  # Adler-32 over canonical R serialization keeps the existing 8-hex contract
-  # while hashing full payload bytes rather than truncated display text.
+  # Adler-32 checksum of the serialized bytes. The result has 8 hex digits,
+  # the format that the validators require for these stored hashes.
   modulus <- 65521
   a <- 1
   b <- 0
@@ -138,30 +138,39 @@ pv_natural_prefixed_cols <- function(data, prefix, suffix, label) {
   hits[order(index)]
 }
 
-#' Detect PISA-Style Plausible-Value Columns
+#' Find PISA-style plausible-value columns
 #'
-#' Modern PISA plausible values are often subject-suffixed, for example
-#' `PV1MATH`, `PV2MATH`, or `PV1READ`, `PV2READ`. Pass the subject/domain
-#' suffix explicitly, such as `suffix = "MATH"` here or
+#' `detect_pisa_pv_columns()` returns the names of the columns that hold the
+#' plausible values of one subject, such as `PV1READ`, `PV2READ`, ...,
+#' `PV10READ`. A column matches when its whole name is `prefix`, a number and
+#' `suffix`; the match is case-sensitive. [pv_design()] and [pv_brr_target()]
+#' call this function when you do not give `pv_cols`.
+#'
+#' @details
+#' PISA files name the plausible values by subject, for example `PV1MATH` or
+#' `PV1READ`, so give the subject as the suffix: `suffix = "MATH"` here, or
 #' `pv_suffix = "MATH"` in [pv_design()] and [pv_brr_target()]. The default
-#' `suffix = ""` is reserved for data whose plausible values are intentionally
-#' named as bare `PV1`, `PV2`, and so on. Detection is anchored, so
-#' `suffix = ""` does not match `PV1MATH`. Use `expected_M` to guard against
-#' selecting the wrong subject or an incomplete plausible-value set.
+#' `suffix = ""` matches only bare names such as `PV1` and `PV2`, never
+#' `PV1MATH`; if the data also contain subject-suffixed plausible values, the
+#' function warns.
 #'
-#' @param data Data frame containing plausible-value columns.
-#' @param prefix Character scalar. Column prefix before the numeric
-#'   plausible-value index. Default `"PV"`.
-#' @param suffix Character scalar. Column suffix after the numeric
-#'   plausible-value index, such as `"MATH"` for columns named `PV1MATH`,
-#'   `PV2MATH`, and so on. Default `""` matches bare `PV1`, `PV2`, ... only;
-#'   detection is anchored, so the default does not match subject-suffixed
-#'   columns.
-#' @param expected_M Optional integer scalar. Expected plausible-value count;
-#'   if supplied, detection errors unless exactly `expected_M` columns are
-#'   found. If `NULL` (default), the count is not checked.
+#' The numbers must run from 1 without gaps or repeats (`PV1` and `PV01` both
+#' count as 1); otherwise the function stops with an error. It also stops
+#' when no column matches, and the error message then lists any subject
+#' suffixes found in the data.
 #'
-#' @returns Character vector of column names in natural numeric order.
+#' @param data A data frame. Only its column names are used.
+#' @param prefix The text before the number. Default `"PV"`.
+#' @param suffix The text after the number, such as `"MATH"` for `PV1MATH`,
+#'   `PV2MATH`, and so on. The default `""` matches only bare names such as
+#'   `PV1`.
+#' @param expected_M The number of plausible-value columns you expect, a whole
+#'   number. If a different number is found, the function stops with an
+#'   error, which catches a wrong suffix or an incomplete set of columns.
+#'   `NULL` (default) skips the check.
+#'
+#' @returns A character vector of column names in numeric order: `PV2READ`
+#'   comes before `PV10READ`, unlike in alphabetical order.
 #' @examples
 #' pisa_tiny <- read.csv(
 #'   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
@@ -169,9 +178,7 @@ pv_natural_prefixed_cols <- function(data, prefix, suffix, label) {
 #' # Subject-suffixed plausible values: pass the subject suffix explicitly.
 #' detect_pisa_pv_columns(pisa_tiny, suffix = "READ", expected_M = 2L)
 #' @family pvstackr-detection
-#' @seealso
-#' [detect_pisa_brr_replicate_weights()]; build a design with [pv_design()] or a
-#' target with [pv_brr_target()].
+#' @seealso [pv_design()] and [pv_brr_target()], which call this function.
 #' @export
 detect_pisa_pv_columns <- function(data, prefix = "PV", suffix = "", expected_M = NULL) {
   cols <- pv_natural_prefixed_cols(data, prefix, suffix, "plausible-value")
@@ -185,33 +192,37 @@ detect_pisa_pv_columns <- function(data, prefix = "PV", suffix = "", expected_M 
   cols
 }
 
-#' Detect PISA-Style BRR Replicate-Weight Columns
+#' Find PISA-style replicate-weight columns
 #'
-#' PISA balanced-repeated-replication (BRR) replicate weights are named as a
-#' prefix followed by a numeric replicate index, for example `W_FSTURWT1`,
-#' `W_FSTURWT2`, and so on. This finds the `<prefix><r>` columns and returns
-#' them in natural numeric order using the default prefix `"W_FSTURWT"`. It is
-#' the replicate-weight companion to [detect_pisa_pv_columns()]. Use
-#' `expected_R` to guard against an incomplete replicate set or the wrong
-#' prefix.
+#' `detect_pisa_brr_replicate_weights()` returns the names of the
+#' replicate-weight columns, such as `W_FSTURWT1`, ..., `W_FSTURWT80` in
+#' PISA 2022 files, where they are balanced repeated replication (BRR)
+#' weights made with Fay's method. A column matches when its whole name is
+#' `prefix` followed by a number; the match is case-sensitive. [pv_design()]
+#' and [pv_brr_target()] call this function when you do not give
+#' `rep_weight_cols`.
 #'
-#' @param data Data frame containing replicate-weight columns.
-#' @param prefix Character scalar. Column prefix before the numeric replicate
-#'   index. Default `"W_FSTURWT"`.
-#' @param expected_R Optional integer scalar. Expected replicate-weight count;
-#'   if supplied, detection errors unless exactly `expected_R` columns are
-#'   found. If `NULL` (default), the count is not checked.
+#' @details
+#' The numbers must run from 1 without gaps or repeats; otherwise, or when no
+#' column matches, the function stops with an error. Only the names are
+#' checked: [pv_design()] and [pv_brr_target()] check the weights themselves.
 #'
-#' @returns Character vector of column names in natural numeric order.
+#' @inheritParams detect_pisa_pv_columns
+#' @param prefix The text before the number. Default `"W_FSTURWT"`, the PISA
+#'   name.
+#' @param expected_R The number of replicate-weight columns you expect, a
+#'   whole number, for example `80` for PISA 2022. If a different number is
+#'   found, the function stops with an error. `NULL` (default) skips the check.
+#'
+#' @returns A character vector of column names in numeric order
+#'   (`W_FSTURWT1`, `W_FSTURWT2`, ..., `W_FSTURWT80`).
 #' @examples
 #' pisa_tiny <- read.csv(
 #'   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 #' )
 #' detect_pisa_brr_replicate_weights(pisa_tiny, expected_R = 4L)
 #' @family pvstackr-detection
-#' @seealso
-#' [detect_pisa_pv_columns()]; build a design with [pv_design()] or a target
-#' with [pv_brr_target()].
+#' @seealso [pv_design()] and [pv_brr_target()], which call this function.
 #' @export
 detect_pisa_brr_replicate_weights <- function(data, prefix = "W_FSTURWT", expected_R = NULL) {
   cols <- pv_natural_prefixed_cols(data, prefix, "", "replicate-weight")
@@ -818,160 +829,209 @@ pv_validate_brr_target <- function(target) {
   pv_abort("BRR-Fay target `schema_version` must be 0.1.0 or 0.2.0.")
 }
 
-#' Assemble a Rubin/BRR-Fay Fixed-Effect Target
+#' Compute the design-based target for the fixed effects
 #'
-#' `pv_brr_target()` assembles the external, design-based fixed-effect covariance
-#' target that `stack_direct` calibrates against. For each plausible value it
-#' forms a BRR-Fay sandwich covariance from the supplied replicate weights, then
-#' Rubin-combines the per-plausible-value estimates and covariances across
-#' plausible values into a single fixed-effect mean, total covariance, standard
-#' errors, and degrees of freedom. The target engine is a dependency-free
-#' weighted least-squares fit; in this package stage the target is
-#' fixed-effect-only.
+#' `pv_brr_target()` estimates the fixed effects of a survey-weighted linear
+#' regression from plausible-value data, with their covariance matrix,
+#' standard errors and degrees of freedom. It fits the regression to each
+#' plausible value with the final weight, estimates the sampling covariance of
+#' the coefficients from the BRR-Fay replicate weights (balanced repeated
+#' replication with Fay's method), and combines the plausible values with
+#' Rubin's rules. The result is the target of a `stack_direct` fit
+#' ([pv_fit()]), which reports the target's estimates, standard errors and
+#' degrees of freedom and calibrates its fixed-effect draws to the target's
+#' mean and covariance.
 #'
 #' @details
-#' The construction follows the canonical equation set (per-plausible-value
-#' BRR-Fay within-covariance, then Rubin combining).
+#' ## Calculation
 #'
-#' ## Per-plausible-value BRR-Fay sandwich
-#' For plausible value \eqn{m}, the design-based within-covariance is the
-#' replicate sandwich
-#' \deqn{\hat U_m = a_d \sum_{r=1}^{R}
-#'   (\hat\beta_m^{(r)} - \hat\beta_m)(\hat\beta_m^{(r)} - \hat\beta_m)^\top,
-#'   \qquad a_d = \frac{1}{R\,(1 - k)^2},}
-#' where \eqn{\hat\beta_m} is the full-sample weighted fixed-effect estimate,
-#' \eqn{\hat\beta_m^{(r)}} is the estimate under replicate weight \eqn{r}, \eqn{R}
-#' is the replicate count, and \eqn{k} is the Fay coefficient (`fay_k`). The
-#' multiplier \eqn{a_d} is returned as `fay_variance_multiplier`.
+#' For each plausible value \eqn{m = 1, \ldots, M}{m = 1, ..., M}, the
+#' function fits the regression in `formula`, with the plausible value as the
+#' outcome, by weighted least squares (`lm.wfit()` from the stats package):
+#' once with the final weight, giving the coefficients \eqn{\hat\beta_m}{b_m},
+#' and once with each replicate weight \eqn{r = 1, \ldots, R}{r = 1, ..., R},
+#' giving \eqn{\hat\beta_m^{(r)}}{b_m^(r)}. That is \eqn{M(R + 1)}{M (R + 1)}
+#' fits in all. The BRR-Fay replicate covariance of \eqn{\hat\beta_m}{b_m} is
+#' \deqn{U_m = \frac{1}{R(1 - k)^2} \sum_{r=1}^{R}
+#'   (\hat\beta_m^{(r)} - \hat\beta_m)(\hat\beta_m^{(r)} - \hat\beta_m)^\top,}{
+#' U_m = sum over r of (b_m^(r) - b_m) (b_m^(r) - b_m)' / (R (1 - k)^2),}
+#' where \eqn{k} is the Fay coefficient `fay_k`. In each replicate, Fay's
+#' method multiplies the weights of one half-sample by \eqn{2 - k} and those of
+#' the other by \eqn{k}, where plain BRR uses 2 and 0; the factor
+#' \eqn{1/(1 - k)^2}{1 / (1 - k)^2} corrects the variance for this smaller
+#' change of the weights (Judkins 1990).
 #'
-#' ## Rubin combining across plausible values
-#' The per-plausible-value estimates and covariances are combined into the Rubin
-#' mean \eqn{\bar\beta}, the within-imputation covariance \eqn{\bar U}, and the
-#' between-imputation covariance \eqn{B},
-#' \deqn{\bar\beta = \frac{1}{M}\sum_{m=1}^{M}\hat\beta_m, \qquad
-#'   \bar U = \frac{1}{M}\sum_{m=1}^{M}\hat U_m, \qquad
-#'   B = \frac{1}{M-1}\sum_{m=1}^{M}
-#'   (\hat\beta_m - \bar\beta)(\hat\beta_m - \bar\beta)^\top,}
-#' giving the Rubin total covariance --- the external target ---
-#' \deqn{T_{\mathrm{MI}} = \bar U + \left(1 + \tfrac{1}{M}\right) B.}
-#' Standard errors are \eqn{\sqrt{\mathrm{diag}(T_{\mathrm{MI}})}}. The fraction
-#' of missing information \eqn{\gamma_k = (1 + 1/M)\,B_{kk}/T_{\mathrm{MI},kk}}
-#' and the related Rubin quantities are returned as `fmi`, `riv`, and `lambda`.
+#' Rubin's rules then combine the \eqn{M} results:
+#' \deqn{\bar\beta = \frac{1}{M} \sum_{m=1}^{M} \hat\beta_m, \qquad
+#'   \bar U = \frac{1}{M} \sum_{m=1}^{M} U_m, \qquad
+#'   B = \frac{1}{M - 1} \sum_{m=1}^{M}
+#'   (\hat\beta_m - \bar\beta)(\hat\beta_m - \bar\beta)^\top,}{
+#' beta_bar = mean of the b_m,  U_bar = mean of the U_m,
+#' B = sum over m of (b_m - beta_bar) (b_m - beta_bar)' / (M - 1),}
+#' \deqn{T_{\mathrm{MI}} = \bar U + (1 + 1/M) B.}{T_MI = U_bar + (1 + 1/M) B.}
+#' \eqn{\bar U}{U_bar} averages the replicate covariances over the plausible
+#' values, and \eqn{B} is the covariance matrix of the \eqn{M} estimates
+#' \eqn{\hat\beta_m}{b_m}. The term \eqn{B/M} is the extra variance of
+#' \eqn{\bar\beta}{beta_bar} that comes from averaging a finite number of
+#' plausible values. The standard errors are the square roots of the diagonal
+#' of \eqn{T_{\mathrm{MI}}}{T_MI}.
 #'
-#' ## Degrees of freedom
-#' The default `df_method = "classic"` uses the classic Rubin imputation degrees
-#' of freedom and is descriptive only. `df_method = "barnard_rubin"` uses the
-#' Barnard-Rubin small-sample degrees of freedom and requires `df_complete` (the
-#' complete-data degrees of freedom); `df_classic` is retained alongside the
-#' active `df` for reference.
+#' The fields `lambda` and `fmi` both hold
+#' \deqn{\lambda = (1 + 1/M) \, \mathrm{diag}(B) /
+#'   \mathrm{diag}(T_{\mathrm{MI}}),}{
+#' lambda = (1 + 1/M) diag(B) / diag(T_MI),}
+#' with the division taken coefficient by coefficient: the share of the total
+#' variance of each coefficient that is due to the variation between
+#' plausible values. Barnard and Rubin (1999) use this ratio as an
+#' approximation to the fraction of missing information. `riv` holds the
+#' relative increase in variance,
+#' \eqn{(1 + 1/M) \, \mathrm{diag}(B) / \mathrm{diag}(\bar U)}{(1 + 1/M)
+#' diag(B) / diag(U_bar)}.
 #'
-#' ## Computation
-#' The target requires on the order of \eqn{M\,(R+1)} weighted fixed-effect fits:
-#' one full-sample fit plus \eqn{R} replicate fits for each of the \eqn{M}
-#' plausible values. This is a description of the computational work, not a
-#' benchmarked performance claim.
+#' ## Degrees of freedom and interval labels
 #'
-#' @section Interval metadata:
-#' The target fixes the interval-policy fields that downstream fits carry on
-#' reportable rows (consistent with [pvstackr_object_contracts]):
-#' \describe{
-#'   \item{`interval_role`}{`"descriptive_classic_rubin"` under the default
-#'     `df_method = "classic"`, or `"coverage_barnard_rubin"` under
-#'     `df_method = "barnard_rubin"` with `df_complete`.}
-#'   \item{`coverage_claim_allowed`}{`FALSE` for the classic-df target;
-#'     `TRUE` only under `"coverage_barnard_rubin"`. A coverage claim is actually
-#'     realized downstream by a `stack_direct` fit backed by this external target;
-#'     this object only declares the policy.}
-#'   \item{`df_method`}{`"classic"` or `"barnard_rubin"`. Selecting
-#'     `"barnard_rubin"` does not by itself make a row coverage-claimable absent
-#'     the `stack_direct` target provenance.}
-#'   \item{`df_complete`}{Complete-data degrees of freedom recorded when
-#'     `df_method = "barnard_rubin"`; otherwise unset.}
-#' }
-#' This is a design-based external target. Coverage is reserved for `stack_direct`
-#' rows under Barnard-Rubin df (see [pv_fit_direct()]); no speed or efficiency
-#' claim attaches to assembling the target.
+#' `df` holds the degrees of freedom of each coefficient by the rule in
+#' `df_method`:
 #'
-#' @param data Data frame containing the outcome, predictors, plausible-value
-#'   columns, weight column, and replicate-weight columns.
-#' @param formula Two-sided formula with `OUTCOME` as the left-hand-side
-#'   placeholder, for example `OUTCOME ~ x + female`. The right-hand side defines
-#'   the fixed-effect design; group terms such as `(1 | school)` are not accepted
-#'   in this fixed-effect-only stage.
-#' @param pv_cols Character vector of plausible-value column names. If `NULL`,
-#'   columns are detected with [detect_pisa_pv_columns()] using `pv_prefix`,
-#'   `pv_suffix`, and `expected_M`.
-#' @param weight_col Character scalar naming the full-sample weight column.
-#'   Required; there is no default.
-#' @param rep_weight_cols Character vector of BRR replicate-weight column names
-#'   (at least two, distinct from `weight_col`). If `NULL`, columns are detected
-#'   with [detect_pisa_brr_replicate_weights()] using `rep_weight_prefix` and
-#'   `expected_R`.
-#' @param fay_k Numeric scalar Fay coefficient \eqn{k} entering
-#'   \eqn{a_d = 1/(R(1-k)^2)}. Must satisfy `0 <= fay_k < 1`. Default `0.5`
-#'   (the PISA convention).
-#' @param pv_prefix,pv_suffix Character scalars giving the prefix and suffix used
-#'   when detecting plausible-value columns. Modern PISA files use
-#'   subject-suffixed plausible values such as `PV1MATH`, so set, for example,
-#'   `pv_suffix = "MATH"` rather than relying on the bare `pv_suffix = ""`
-#'   default with `pv_prefix = "PV"`. Ignored when `pv_cols` is supplied.
-#' @param rep_weight_prefix Character scalar prefix used when detecting replicate
-#'   weights. Default `"W_FSTURWT"`. Ignored when `rep_weight_cols` is supplied.
-#' @param expected_M Optional integer expected plausible-value count. If supplied,
-#'   it is enforced against detected or supplied `pv_cols`. Default `NULL`.
-#' @param expected_R Optional integer expected replicate-weight count. If
-#'   supplied, it is enforced against detected or supplied `rep_weight_cols`.
-#'   Default `NULL`.
-#' @param id_cols Optional character vector of row-identifier columns. If
-#'   supplied, they must jointly identify unique rows. Default `NULL`.
-#' @param conf_level Numeric scalar interval level in `(0, 1)`, passed through to
-#'   Rubin pooling. Default `0.95`.
-#' @param allow_m1 Logical scalar; whether to allow a single plausible value
-#'   (`M = 1`). Default `FALSE`.
-#' @param df_method Degrees-of-freedom rule for Rubin pooling, one of
-#'   `"classic"` or `"barnard_rubin"`. The default `"classic"` is descriptive
-#'   only; `"barnard_rubin"` requires `df_complete`.
-#' @param df_complete Complete-data degrees of freedom used when
-#'   `df_method = "barnard_rubin"`; a positive numeric scalar or a per-term named
-#'   numeric vector. Ignored under `"classic"`. Default `NULL`.
-#' @param engine Character scalar target engine. Only `"lm"` (dependency-free
-#'   weighted least squares) is implemented in this package stage. Default
-#'   `"lm"`.
-#' @param verbose Logical scalar; whether to emit per-plausible-value progress
-#'   messages. Default `FALSE`.
+#' - `"classic"` (default): the rule of Rubin (1987),
+#'   \eqn{\nu = (M - 1) / \lambda^2}{nu = (M - 1) / lambda^2}, which is
+#'   never smaller than \eqn{M - 1}.
+#' - `"barnard_rubin"`: the rule of Barnard and Rubin (1999),
+#'   \deqn{\nu = \left(\frac{1}{\nu_{\mathrm{classic}}} +
+#'   \frac{1}{\nu_{\mathrm{obs}}}\right)^{-1}, \qquad
+#'   \nu_{\mathrm{obs}} = \frac{\nu_{\mathrm{com}} + 1}{\nu_{\mathrm{com}} + 3}
+#'   \, \nu_{\mathrm{com}} \, (1 - \lambda),}{
+#'   nu = 1 / (1 / nu_classic + 1 / nu_obs), with
+#'   nu_obs = nu_com (nu_com + 1) (1 - lambda) / (nu_com + 3),}
+#'   where \eqn{\nu_{\mathrm{com}}}{nu_com} is `df_complete`. This rule corrects
+#'   the classic one when the complete-data degrees of freedom are small. Its
+#'   result is smaller than both the classic value and
+#'   \eqn{\nu_{\mathrm{com}}}{nu_com}; with `df_complete = Inf` it equals the
+#'   classic value.
 #'
-#' @returns A `pvstackr_brr_target` object: a list carrying the external
-#'   fixed-effect target and its provenance, with class `pvstackr_brr_target`.
-#'   Reportable fields include:
+#' `df_classic` holds the classic value under both rules.
+#'
+#' `df_method` also sets the interval labels that the target stores and that
+#' a `stack_direct` fit copies to its estimate table (see
+#' [pvstackr_object_contracts]). `"classic"` gives
+#' `interval_role = "descriptive_classic_rubin"` and
+#' `coverage_claim_allowed = FALSE`. `"barnard_rubin"` gives
+#' `interval_role = "coverage_barnard_rubin"` and
+#' `coverage_claim_allowed = TRUE` for any positive `df_complete`, `Inf`
+#' included. By pvstackr's reporting rule, which [pv_fit()] states in full,
+#' only intervals with `coverage_claim_allowed = TRUE` can be read as
+#' confidence intervals with nominal coverage.
+#'
+#' @param data A data frame with the plausible-value columns, the final and
+#'   replicate weights, and the variables in `formula`. A `stack_direct` fit
+#'   with this target must use the same data ([pv_fit()]).
+#' @param formula A two-sided formula with the placeholder `OUTCOME` on the
+#'   left-hand side, for example `OUTCOME ~ x + female`; `OUTCOME` stands for
+#'   the plausible values. The right-hand side gives the fixed effects, as in
+#'   `lm()`, and its variables must be columns of `data` without missing
+#'   values. A random-effect term such as `(1 | school)` stops the function
+#'   with an error, and so does a `weights()` term: name the weights in
+#'   `weight_col` and `rep_weight_cols`.
+#' @param pv_cols A character vector with the names of the plausible-value
+#'   columns, or `NULL` (default) to find them with [detect_pisa_pv_columns()]
+#'   from `pv_prefix` and `pv_suffix`. At least two are needed unless
+#'   `allow_m1 = TRUE`, and their values must be finite numbers.
+#' @param weight_col The name of the final weight column, whose values must be
+#'   positive. There is no default: give, for example, `design$weight_col`
+#'   from [pv_design()], or `"W_FSTUWT"` for PISA data.
+#' @param rep_weight_cols A character vector with the names of at least two
+#'   replicate-weight columns other than `weight_col`, or `NULL` (default) to
+#'   find them with [detect_pisa_brr_replicate_weights()] from
+#'   `rep_weight_prefix`. The weights must be positive, so plain BRR weights,
+#'   which are zero for half of the sample, are not accepted.
+#' @param fay_k The Fay coefficient \eqn{k} used to make the replicate
+#'   weights, a number with `0 <= fay_k < 1`. Default `0.5`, the PISA value.
+#' @inheritParams pv_design
+#' @param conf_level A confidence level stored in the target, a number
+#'   strictly between 0 and 1. Default `0.95`. The estimates, standard errors
+#'   and degrees of freedom do not depend on it, and it does not set the level
+#'   of the intervals that a fit reports: that is the `conf_level` of
+#'   [pv_control()].
+#' @param allow_m1 Whether one plausible-value column is accepted (`TRUE`); by
+#'   default (`FALSE`) at least two are required. With one plausible value,
+#'   `B` is zero, `T_MI` equals `U_bar`, `fmi` is 0 and the classic degrees
+#'   of freedom are infinite. [pv_fit()] cannot use such a target, because a
+#'   `stack_direct` fit needs at least two plausible values.
+#' @param df_method The rule for the degrees of freedom: `"classic"`
+#'   (default) or `"barnard_rubin"`, which needs `df_complete`. It also sets
+#'   the interval labels `interval_role` and `coverage_claim_allowed`. See
+#'   "Degrees of freedom and interval labels" in Details.
+#' @param df_complete For `df_method = "barnard_rubin"`, the complete-data
+#'   degrees of freedom of the replicate-weight variance, which you state:
+#'   the degrees of freedom that the analysis would have if the outcome were
+#'   observed directly instead of through plausible values. Give one positive
+#'   number for all coefficients, or a vector with one value per coefficient,
+#'   named by the coefficient names (`fe_names`, such as `b_Intercept`). The
+#'   Barnard-Rubin rule matters when this number is small. `Inf` gives the
+#'   classic degrees of freedom, but the target still has
+#'   `coverage_claim_allowed = TRUE`. Default `NULL`. Giving a value with
+#'   `df_method = "classic"` is an error.
+#' @param engine How the regressions are fitted. Only `"lm"` (default),
+#'   weighted least squares with `lm.wfit()` from the stats package, is
+#'   available; other values are an error.
+#' @param verbose If `TRUE`, a message is shown as each plausible value is
+#'   processed. Default `FALSE`.
+#'
+#' @returns A `pvstackr_brr_target` object, a list with these fields:
 #'   \describe{
-#'     \item{`beta_bar`, `U_bar`, `B`, `T_MI`}{The Rubin mean \eqn{\bar\beta},
-#'       within-imputation covariance \eqn{\bar U}, between-imputation covariance
-#'       \eqn{B}, and total (target) covariance \eqn{T_{\mathrm{MI}}} over the
-#'       fixed-effect block.}
-#'     \item{`se`}{Target standard errors,
-#'       \eqn{\sqrt{\mathrm{diag}(T_{\mathrm{MI}})}}.}
-#'     \item{`df`, `df_classic`, `df_method`, `df_complete`}{Active Rubin degrees
-#'       of freedom, the classic-df reference, the df rule (`"classic"` or
-#'       `"barnard_rubin"`), and the complete-data df when Barnard-Rubin is used.}
-#'     \item{`interval_role`, `coverage_claim_allowed`}{Interval-policy fields for
-#'       downstream fits (see the Interval metadata section and
-#'       [pvstackr_object_contracts]).}
-#'     \item{`lambda`, `fmi`, `riv`}{Per-term Rubin missing-information
-#'       quantities: `lambda` (proportion of total variance attributable to the
-#'       between-imputation component), `fmi` (fraction of missing information),
-#'       and `riv` (relative increase in variance).}
-#'     \item{`fe_names`, `M`, `R`, `fay_k`}{Fixed-effect names, number of
-#'       plausible values \eqn{M}, replicate count \eqn{R}, and the Fay
-#'       coefficient \eqn{k}.}
-#'     \item{`fay_variance_multiplier`}{The BRR-Fay multiplier
-#'       \eqn{a_d = 1/(R(1-k)^2)}.}
-#'     \item{`pv_cols`, `weight_col`, `rep_weight_cols`, `id_cols`}{Resolved
-#'       column names defining the plausible values, full-sample weight, replicate
-#'       weights, and row identifiers.}
-#'     \item{`target_source`, `target_hash`, `design_hash`}{Provenance:
-#'       `target_source = "external_brr_fay_rubin"`, and stable content hashes of
-#'       the target and its design manifest.}
+#'     \item{`beta`, `beta_bar`}{The estimates \eqn{\bar\beta}{beta_bar}, one
+#'       per coefficient; the two fields are identical.}
+#'     \item{`U_bar`, `B`, `T_MI`, `total_var`}{The matrices
+#'       \eqn{\bar U}{U_bar}, \eqn{B} and \eqn{T_{\mathrm{MI}}}{T_MI};
+#'       `total_var` repeats `T_MI`.}
+#'     \item{`se`}{The standard errors, `sqrt(diag(T_MI))`.}
+#'     \item{`df`, `df_classic`}{The degrees of freedom by `df_method` and by
+#'       the classic rule.}
+#'     \item{`df_method`, `df_complete`, `conf_level`}{The settings used. With
+#'       `"barnard_rubin"`, `df_complete` has one value per coefficient; with
+#'       `"classic"`, it is `NULL`.}
+#'     \item{`interval_role`, `coverage_claim_allowed`}{The interval labels
+#'       that `df_method` sets (see Details).}
+#'     \item{`lambda`, `fmi`, `riv`}{The ratios defined in Details, one per
+#'       coefficient; `lambda` and `fmi` are identical. The estimate table of
+#'       a fit has no column for them: read them from the target, for example
+#'       `get_target(fit)$fmi`.}
+#'     \item{`fe_names`}{The coefficient names, which also name the vectors
+#'       and matrices above: the column names of the model matrix with the
+#'       prefix `b_`, such as `b_Intercept` and `b_x`.}
+#'     \item{`M`, `R`, `fay_k`, `fay_variance_multiplier`}{The numbers of
+#'       plausible values and replicate weights, the Fay coefficient, and the
+#'       factor \eqn{1/(R(1 - k)^2)}{1 / (R (1 - k)^2)}.}
+#'     \item{`per_pv`}{A list with one element per plausible value: `beta`
+#'       (\eqn{\hat\beta_m}{b_m}), `U` (\eqn{U_m}), `replicate_beta` (the
+#'       replicate estimates, one column per replicate weight),
+#'       `replicate_diff` (their differences from `beta`), `pv_col` (the
+#'       plausible-value column), and copies of `fe_names`, `R`, `fay_k` and
+#'       `fay_variance_multiplier`.}
+#'     \item{`formula`, `formula_string`, `rhs_string`}{The formula, its text
+#'       and the text of its right-hand side.}
+#'     \item{`pv_cols`, `weight_col`, `rep_weight_cols`, `id_cols`}{The
+#'       columns used; `id_cols` is `character(0)` when none were given.}
+#'     \item{`target_source`, `engine`}{Always `"external_brr_fay_rubin"`
+#'       and `"lm"`.}
+#'     \item{`design_hash`, `target_hash`}{SHA-256 checksums of the inputs
+#'       (rows, plausible values, covariates, weights, `fay_k` and formula)
+#'       and of the contents of the target. `design_hash` is not the same
+#'       checksum as the `design_hash` of a [pv_design()] object. The
+#'       estimate table of a fit repeats `target_hash`.}
+#'     \item{`binding_manifest`, `target_content`, `policy`}{The records that
+#'       `design_hash` and `target_hash` cover. With them, [get_target()] and
+#'       [pv_fit()] stop with an error when the target was changed after it
+#'       was created, or when a `stack_direct` fit uses other data than the
+#'       target. `policy` repeats `df_method` and the interval labels, with
+#'       fixed settings such as `fixed_effects_only = TRUE`.}
+#'     \item{`schema_version`, `provenance`, `warnings`}{The format version of
+#'       the object (`"0.2.0"`), a record of how it was made (the function,
+#'       the time in UTC and the package), and warnings, which are empty.}
 #'   }
+#'   `print()` shows the numbers of fixed effects, plausible values and
+#'   replicate weights, `fay_k`, `df_method`, `interval_role` and
+#'   `target_source`, and returns the object invisibly.
 #'
 #' @examples
 #' pisa_tiny <- read.csv(
@@ -999,10 +1059,8 @@ pv_validate_brr_target <- function(target) {
 #' Official Statistics*, 6(3), 223-239.
 #'
 #' @family pvstackr-target
-#' @seealso
-#' Build the design with [pv_design()]; detect columns with
-#' [detect_pisa_pv_columns()] and [detect_pisa_brr_replicate_weights()]. Calibrate
-#' against this target with [pv_fit_direct()] or via the dispatcher [pv_fit()].
+#' @seealso [pv_design()] declares the columns, [pv_fit()] fits a model with
+#'   this target, and [get_target()] returns the target of a fit.
 #' @export
 pv_brr_target <- function(
   data,
@@ -1251,7 +1309,7 @@ pv_brr_target <- function(
 }
 
 #' @rdname pv_brr_target
-#' @param x A `pvstackr_brr_target` object from [pv_brr_target()].
+#' @param x A `pvstackr_brr_target` object from `pv_brr_target()`.
 #' @param ... Ignored.
 #' @export
 print.pvstackr_brr_target <- function(x, ...) {

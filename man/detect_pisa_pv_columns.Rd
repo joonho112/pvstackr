@@ -2,38 +2,47 @@
 % Please edit documentation in R/brr-fay-target.R
 \name{detect_pisa_pv_columns}
 \alias{detect_pisa_pv_columns}
-\title{Detect PISA-Style Plausible-Value Columns}
+\title{Find PISA-style plausible-value columns}
 \usage{
 detect_pisa_pv_columns(data, prefix = "PV", suffix = "", expected_M = NULL)
 }
 \arguments{
-\item{data}{Data frame containing plausible-value columns.}
+\item{data}{A data frame. Only its column names are used.}
 
-\item{prefix}{Character scalar. Column prefix before the numeric
-plausible-value index. Default \code{"PV"}.}
+\item{prefix}{The text before the number. Default \code{"PV"}.}
 
-\item{suffix}{Character scalar. Column suffix after the numeric
-plausible-value index, such as \code{"MATH"} for columns named \code{PV1MATH},
-\code{PV2MATH}, and so on. Default \code{""} matches bare \code{PV1}, \code{PV2}, ... only;
-detection is anchored, so the default does not match subject-suffixed
-columns.}
+\item{suffix}{The text after the number, such as \code{"MATH"} for \code{PV1MATH},
+\code{PV2MATH}, and so on. The default \code{""} matches only bare names such as
+\code{PV1}.}
 
-\item{expected_M}{Optional integer scalar. Expected plausible-value count;
-if supplied, detection errors unless exactly \code{expected_M} columns are
-found. If \code{NULL} (default), the count is not checked.}
+\item{expected_M}{The number of plausible-value columns you expect, a whole
+number. If a different number is found, the function stops with an
+error, which catches a wrong suffix or an incomplete set of columns.
+\code{NULL} (default) skips the check.}
 }
 \value{
-Character vector of column names in natural numeric order.
+A character vector of column names in numeric order: \code{PV2READ}
+comes before \code{PV10READ}, unlike in alphabetical order.
 }
 \description{
-Modern PISA plausible values are often subject-suffixed, for example
-\code{PV1MATH}, \code{PV2MATH}, or \code{PV1READ}, \code{PV2READ}. Pass the subject/domain
-suffix explicitly, such as \code{suffix = "MATH"} here or
+\code{detect_pisa_pv_columns()} returns the names of the columns that hold the
+plausible values of one subject, such as \code{PV1READ}, \code{PV2READ}, ...,
+\code{PV10READ}. A column matches when its whole name is \code{prefix}, a number and
+\code{suffix}; the match is case-sensitive. \code{\link[=pv_design]{pv_design()}} and \code{\link[=pv_brr_target]{pv_brr_target()}}
+call this function when you do not give \code{pv_cols}.
+}
+\details{
+PISA files name the plausible values by subject, for example \code{PV1MATH} or
+\code{PV1READ}, so give the subject as the suffix: \code{suffix = "MATH"} here, or
 \code{pv_suffix = "MATH"} in \code{\link[=pv_design]{pv_design()}} and \code{\link[=pv_brr_target]{pv_brr_target()}}. The default
-\code{suffix = ""} is reserved for data whose plausible values are intentionally
-named as bare \code{PV1}, \code{PV2}, and so on. Detection is anchored, so
-\code{suffix = ""} does not match \code{PV1MATH}. Use \code{expected_M} to guard against
-selecting the wrong subject or an incomplete plausible-value set.
+\code{suffix = ""} matches only bare names such as \code{PV1} and \code{PV2}, never
+\code{PV1MATH}; if the data also contain subject-suffixed plausible values, the
+function warns.
+
+The numbers must run from 1 without gaps or repeats (\code{PV1} and \code{PV01} both
+count as 1); otherwise the function stops with an error. It also stops
+when no column matches, and the error message then lists any subject
+suffixes found in the data.
 }
 \examples{
 pisa_tiny <- read.csv(
@@ -43,8 +52,7 @@ pisa_tiny <- read.csv(
 detect_pisa_pv_columns(pisa_tiny, suffix = "READ", expected_M = 2L)
 }
 \seealso{
-\code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}; build a design with \code{\link[=pv_design]{pv_design()}} or a
-target with \code{\link[=pv_brr_target]{pv_brr_target()}}.
+\code{\link[=pv_design]{pv_design()}} and \code{\link[=pv_brr_target]{pv_brr_target()}}, which call this function.
 
 Other pvstackr-detection:
 \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}

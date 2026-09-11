@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit-direct.R
 \name{pv_fit}
 \alias{pv_fit}
-\title{Fit a pvstackr Method}
+\title{Fit a model to plausible-value data}
 \usage{
 pv_fit(
   data,
@@ -14,63 +14,145 @@ pv_fit(
 )
 }
 \arguments{
-\item{data}{Analysis data frame.}
+\item{data}{A data frame with the plausible-value columns, the weight
+columns and the variables in \code{formula}, or \code{NULL} when the method starts
+from precomputed draws. For \code{"stack_direct"} it must be the data used to
+build \code{target} (the same rows in the same order, with the same plausible
+values, weights and covariates); otherwise \code{pv_fit()} stops with an
+error.}
 
-\item{formula}{Two-sided formula with \code{OUTCOME} on the left-hand side.}
+\item{formula}{A two-sided formula with the placeholder \code{OUTCOME} on the
+left-hand side, for example \code{OUTCOME ~ x + female}. \code{OUTCOME} stands for
+the plausible values, so the model is written once. Use \code{NULL} when the
+method starts from precomputed draws. \code{"stack_direct"} and \code{"stack_psis"}
+stop with an error on random-effect terms such as \code{(1 | school)}. For
+\code{"stack_direct"} it must be the formula used to build \code{target}.}
 
-\item{target}{A method-specific target object. For \code{method = "stack_direct"},
-this must be a \code{pvstackr_brr_target} from \code{\link[=pv_brr_target]{pv_brr_target()}} and is required.
-Ignored for \code{"per_pv"} and \code{"stack_psis"}. Default \code{NULL}.}
+\item{target}{For \code{"stack_direct"}, the \code{pvstackr_brr_target} object
+returned by \code{\link[=pv_brr_target]{pv_brr_target()}}; \code{pv_fit()} stops with an error if it is
+\code{NULL}. Ignored by \code{"per_pv"} and \code{"stack_psis"}. Default \code{NULL}.}
 
-\item{method}{Public method identifier. Character scalar; one of
-\code{"stack_direct"}, \code{"stack_psis"}, or \code{"per_pv"}. Default \code{"stack_direct"}.}
+\item{method}{The fitting method: \code{"stack_direct"} (default), \code{"per_pv"} or
+\code{"stack_psis"}. See Details.}
 
-\item{control}{Optional \code{\link[=pv_control]{pv_control()}} object. If \code{NULL}, one is built with
-\code{pv_control(method = method)}. If supplied, \code{control$method} must equal
-\code{method}. Default \code{NULL}.}
+\item{control}{A \code{\link[=pv_control]{pv_control()}} object, or \code{NULL} (default) to use
+\code{pv_control(method = method)}. That default selects no fitting engine,
+so \code{"stack_direct"} stops with an error unless you set
+\code{pv_control(backend = "brms")} or pass your own \code{fit_function} (see
+Details). \code{pv_fit()} stops with an error if \code{control$method} differs
+from \code{method}.}
 
-\item{...}{Additional arguments forwarded to the dispatched fitter:
-\code{\link[=pv_fit_direct]{pv_fit_direct()}} for \code{"stack_direct"}, \code{\link[=pv_fit_reference]{pv_fit_reference()}} for \code{"per_pv"},
-or \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}} for \code{"stack_psis"}.}
+\item{...}{Further arguments passed unchanged to the method's function (see
+Details).}
 }
 \value{
-A \code{pvstackr_fit} object. Read it with the accessors
-(\code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}, \code{\link[=get_diagnostics]{get_diagnostics()}})
-rather than by \code{$}-indexing; user-facing components include \code{estimates},
-\code{draws}, \code{target}, \code{diagnostics}, \code{status}, \code{reason_codes}, \code{warnings}, and
-\code{method}.
+A \code{pvstackr_fit} object. Read it with \code{\link[=get_estimates]{get_estimates()}},
+\code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}} and \code{\link[=get_diagnostics]{get_diagnostics()}} rather than with
+\code{$}; they stop with an error if the object was changed after it was
+created. Its \code{status} is \code{"ok"}, \code{"warning"} (estimates are returned and
+\code{warnings} says why) or \code{"blocked"} (the estimate table is empty);
+\code{reason_codes} gives the reasons for a warning or a block. A blocked fit
+does not stop with an error; in code, read the status as
+\code{summary(fit)$status} and the reasons as \code{summary(fit)$reason_codes}
+(\code{summary()} checks the fit as the reading functions do).
+\code{\link[=get_estimates]{get_estimates()}} returns one row per fixed effect with columns such as
+\code{term}, \code{estimate}, \code{se}, \code{df}, \code{conf_low}, \code{conf_high}, \code{interval_role}
+and \code{coverage_claim_allowed}.
 }
 \description{
-\code{pv_fit()} is the generic public fitting entry point. In this package stage,
-\code{method = "stack_direct"}, \code{method = "per_pv"}, and
-\code{method = "stack_psis"} are implemented.
+\code{pv_fit()} fits a regression model to assessment data whose outcome is
+given as plausible values, as in PISA, and returns estimates, standard
+errors and intervals for the fixed effects. Each method has its own
+function, whose help page lists the arguments that you pass through \code{...}:
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} for \code{"stack_direct"}, \code{\link[=pv_fit_reference]{pv_fit_reference()}} for
+\code{"per_pv"} and \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}} for \code{"stack_psis"}.
 }
 \details{
-\subsection{Method dispatch}{
-
-\code{pv_fit()} validates \code{method} and \code{control}, then forwards to a
-method-specific fitter:
+\subsection{Methods}{
 \itemize{
-\item \code{"stack_direct"} (default) dispatches to \code{\link[=pv_fit_direct]{pv_fit_direct()}} and \strong{requires}
-a \code{pvstackr_brr_target} \code{target} from \code{\link[=pv_brr_target]{pv_brr_target()}}; \code{pv_fit()} errors
-if \code{target} is \code{NULL}.
-\item \code{"per_pv"} dispatches to \code{\link[=pv_fit_reference]{pv_fit_reference()}} (the orthodox per-PV
-reference); \code{target} is ignored.
-\item \code{"stack_psis"} dispatches to \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}} (the PSIS-reweighted
-stacked path); \code{target} is ignored.
+\item \code{"stack_direct"} (default) fits one model to the stacked data (one copy
+of the data per plausible value), then applies the Cholesky calibration
+correction (CCC): the fixed-effect draws are transformed so that their
+mean and covariance equal those of \code{target}. The target comes from
+\code{\link[=pv_brr_target]{pv_brr_target()}}, which fits a survey-weighted regression to each
+plausible value, estimates the sampling covariance of the coefficients
+with the BRR-Fay replicate weights, and combines the results with
+Rubin's rules.
+\item \code{"per_pv"} fits one model per plausible value and combines the results
+with Rubin's rules.
+\item \code{"stack_psis"} reweights one stacked fit toward each plausible value with
+importance weights and Pareto k-hat values that you supply (pvstackr
+checks them but does not compute them), then combines the reweighted
+results with Rubin's rules.
 }
 
-If \code{control} is \code{NULL} it is constructed with \code{pv_control(method = method)};
-otherwise \code{control$method} \strong{must} equal \code{method} or the call errors. Any
-arguments in \code{...} are forwarded verbatim to the dispatched fitter, so consult
-that fitter's signature for the available extras (for example, the injected
-backend adapters of \code{\link[=pv_fit_direct]{pv_fit_direct()}}, or caller-declared external PSIS weights of
-\code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}).
+Arguments in \code{...} are passed unchanged to the method's function. Besides
+\code{data} and \code{formula}, which a method needs when it fits a model, each
+method needs:
+\itemize{
+\item \code{"stack_direct"}: \code{target} and a model-fitting engine. Either set
+\code{pv_control(backend = "brms")}, which fits the stacked model with brms
+functions bundled with pvstackr (this needs the brms and posterior
+packages; if cmdstanr is installed, CmdStan must be configured or the
+fit stops with an error; without cmdstanr, brms uses rstan), or pass
+your own \code{fit_function},
+\code{draws_function} and \code{diagnose_function} (without \code{diagnose_function}
+the fit is blocked). The plausible-value and weight columns are taken
+from \code{target}. See \code{\link[=pv_fit_direct]{pv_fit_direct()}}, also for \code{cache_dir}.
+\item \code{"per_pv"}: \code{pv_cols} with your own \code{fit_function} and \code{draws_function},
+which are called once per plausible value and do not receive the survey
+weights automatically, or \code{per_pv_draws} computed elsewhere. There is no
+bundled engine for this method. See \code{\link[=pv_fit_reference]{pv_fit_reference()}}.
+\item \code{"stack_psis"}: one source of stacked draws (\code{stacked_draws},
+\code{stack_fit}, or \code{fit_function} with \code{draws_function} and \code{pv_cols});
+importance weights with Pareto k-hat values (\code{psis_weights} and
+\code{pareto_k}, or your \code{psis_function} applied to \code{log_ratios}); and
+\code{psis_producer} with \code{psis_producer_version}, which name the program
+that produced the weights. Without the last two, or when a k-hat value
+is not below \code{control$psis_k_threshold} (default 0.7), the fit is
+blocked. See \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}.
+}
 
-In this package stage, only \code{stack_direct} output is coverage-claimable: its
-intervals are backed by the external Rubin/BRR-Fay target. \code{per_pv} and
-\code{stack_psis} intervals are descriptive/reference, even with Barnard-Rubin
-degrees of freedom.
+When a method starts from draws computed elsewhere, pass \code{data = NULL} and
+\code{formula = NULL} explicitly; \code{pv_fit()} has no defaults for them.
+}
+
+\subsection{What is reported}{
+
+Only the fixed effects are reported: the intercept and the slope
+coefficients. Other model parameters, such as the residual standard
+deviation, are not reported, and \code{"stack_direct"} does not calibrate them.
+\code{"stack_direct"} requires \code{control$center = "target"} (the default): its
+reported estimates, standard errors and degrees of freedom are those of
+the target, and the stacked fit supplies the calibrated draws and the
+diagnostics that compare the fit with the target.
+
+Each row of the estimate table has an interval (\code{conf_low}, \code{conf_high})
+at the level \code{conf_level} of \code{\link[=pv_control]{pv_control()}} (default 0.95): the estimate
+plus or minus a t quantile with \code{df} degrees of freedom times \code{se}.
+\code{coverage_claim_allowed} says whether pvstackr's reporting rule lets you
+read the interval as a confidence interval with nominal coverage (\code{TRUE})
+or labels it descriptive (\code{FALSE}), and \code{interval_role} names the case. The
+label records how the interval was built; it does not certify its
+coverage. pvstackr sets both columns by this rule:
+\itemize{
+\item \code{"stack_direct"} with a target built with Barnard-Rubin degrees of
+freedom (\code{df_method = "barnard_rubin"} and a \code{df_complete} value in
+\code{\link[=pv_brr_target]{pv_brr_target()}}): \code{interval_role = "coverage_barnard_rubin"} and
+\code{coverage_claim_allowed = TRUE}. These are the only intervals that the
+rule lets you read as confidence intervals with nominal coverage.
+\item \code{"stack_direct"} with the classic Rubin degrees of freedom
+(\code{df_method = "classic"}, the default): \code{"descriptive_classic_rubin"}
+and \code{FALSE}. The bundled example fit, computed from synthetic data, is
+of this kind.
+\item \code{"per_pv"} (\code{"reference_classic_rubin"}, \code{"reference_barnard_rubin"})
+and \code{"stack_psis"} (\code{"psis_classic_rubin"}, \code{"psis_barnard_rubin"}):
+always \code{FALSE}, because their variance within each plausible value comes
+from the model's posterior draws, not from the replicate weights.
+}
+
+These labels come from the target and the method, not from the status: a
+fit with status \code{"warning"} keeps them, and a blocked fit has no rows.
 }
 }
 \examples{
@@ -78,7 +160,8 @@ pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
 
-# Build the design and the external BRR-Fay target on the fixture.
+# Declare the columns and build the BRR-Fay target from the bundled
+# synthetic data.
 design <- pv_design(
   pisa_tiny, formula = OUTCOME ~ x + female,
   pv_suffix = "READ", expected_M = 2L, expected_R = 4L, id_cols = "CNTSTUID"
@@ -90,7 +173,8 @@ target <- pv_brr_target(
   id_cols = design$id_cols
 )
 
-# A live stack_direct fit needs a backend. The bundled one needs no adapter:
+# Fit with the bundled brms engine. This samples with Stan, so it is not
+# run here.
 \dontrun{
 fit <- pv_fit(
   data = pisa_tiny, formula = OUTCOME ~ x + female,
@@ -98,30 +182,31 @@ fit <- pv_fit(
   control = pv_control(method = "stack_direct", backend = "brms")
 )
 
-# Injecting an adapter takes all three functions; a fit that arrives without
-# sampler diagnostics is blocked rather than reported.
+# With your own engine, pass all three functions (see ?pv_fit_direct).
+# Without diagnose_function the fit is blocked.
 fit <- pv_fit(
   data = pisa_tiny, formula = OUTCOME ~ x + female,
   target = target, method = "stack_direct",
-  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
-  fit_function = my_backend_adapter, draws_function = my_draws_adapter,
-  diagnose_function = my_diagnose_adapter, cache_dir = NULL
+  fit_function = my_fit_function, draws_function = my_draws_function,
+  diagnose_function = my_diagnose_function, cache_dir = NULL
 )
 }
 
-# Inspect the reportable object surface via the bundled cached fit instead.
+# Read the example fit that ships with pvstackr. It was made from the same
+# data with fitting functions that return draws around the target, not
+# with a sampler.
 path <- system.file(
   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
 )
 if (nzchar(path)) {
-  fit <- readRDS(path)$fit     # a stack_direct pvstackr_fit
-  fit                          # compact console print
-  head(get_estimates(fit))     # reportable fixed-effect table
+  fit <- readRDS(path)$fit     # a stack_direct fit (class pvstackr_fit)
+  print(fit)                   # method, status and interval note
+  head(get_estimates(fit))     # the fixed-effect estimate table
 }
 }
 \seealso{
-\code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}}, \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}},
-\code{\link[=pv_control]{pv_control()}}; \code{\link[=pv_brr_target]{pv_brr_target()}}, \code{\link[=pv_compare_methods]{pv_compare_methods()}}, \code{\link[=get_estimates]{get_estimates()}}
+\code{\link[=pv_brr_target]{pv_brr_target()}} to build the target, \code{\link[=pv_compare_methods]{pv_compare_methods()}} to
+compare fits, and \link{pvstackr_object_contracts} for the parts of a fit.
 
 Other pvstackr-fitting:
 \code{\link[=pv_control]{pv_control()}},

@@ -4,44 +4,70 @@
 \name{pvstackr-package}
 \alias{pvstackr}
 \alias{pvstackr-package}
-\title{pvstackr: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values}
+\title{pvstackr: Bayesian Plausible-Value Analysis with One Calibrated Stacked Fit}
 \description{
-\code{pvstackr} currently implements the \code{stack_direct} path: one stacked
-plausible-value fit plus fixed-effect CCC calibration to a design-based
-external Rubin/BRR-Fay target. It also implements the \code{per_pv} reference
-path: one backend fit or posterior-draw source per plausible value plus
-model-based Rubin pooling, and the \code{stack_psis} diagnostic/reference path:
-one stacked draw source plus caller-declared external PSIS weights, model-based
-Rubin pooling, and Pareto-k gating.
+pvstackr fits survey-weighted linear regression models to assessment data
+whose outcome is given as plausible values, as in PISA, and reports
+estimates, standard errors and intervals for the fixed effects. The default
+method, \code{stack_direct}, fits one Bayesian model to the stacked data (one
+copy of the data per plausible value) and then applies the Cholesky
+calibration correction (CCC): the fixed-effect draws are transformed to
+have the mean and covariance of a design-based target, whose estimates,
+standard errors and degrees of freedom are the ones reported. The other
+methods, \code{per_pv} (one fit per plausible value) and \code{stack_psis} (one
+stacked fit reweighted toward each plausible value), work from draws,
+fitting functions or importance weights that you supply.
 }
 \details{
-\subsection{Typical workflow}{
-
-A reportable analysis moves through the package API in five stages: declare
-the plausible-value design with \code{\link[=pv_design]{pv_design()}}; assemble the external
-Rubin/BRR-Fay fixed-effect target with \code{\link[=pv_brr_target]{pv_brr_target()}}; fit a method with
-\code{\link[=pv_fit]{pv_fit()}} (default \code{method = "stack_direct"}); optionally line the methods
-up side by side with \code{\link[=pv_compare_methods]{pv_compare_methods()}}; and read the results with the
-accessor family \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}, and
-\code{\link[=get_diagnostics]{get_diagnostics()}}.
+\subsection{Workflow}{
+\enumerate{
+\item Optionally, \code{\link[=pv_design]{pv_design()}} checks and records the plausible-value,
+final-weight and replicate-weight columns and the Fay coefficient. By
+default it finds PISA-style column names with \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}
+and \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}. This step can be skipped:
+\code{\link[=pv_brr_target]{pv_brr_target()}} takes the same column arguments and finds the
+PISA-style columns itself.
+\item \code{\link[=pv_brr_target]{pv_brr_target()}} computes the target: a survey-weighted regression for
+each plausible value, the sampling covariance of the coefficients from
+the BRR-Fay replicate weights, and Rubin's rules across plausible values.
+\item \code{\link[=pv_fit]{pv_fit()}} fits a method with settings from \code{\link[=pv_control]{pv_control()}}. Only
+\code{stack_direct} has a bundled engine, brms, selected with
+\code{pv_control(backend = "brms")}.
+\item Optionally, \code{\link[=pv_compare_methods]{pv_compare_methods()}} compares fits made with different
+methods.
+\item \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}} and \code{\link[=get_diagnostics]{get_diagnostics()}}
+read the results. A fit with \code{status} \code{"blocked"} has no estimates;
+\code{reason_codes} says why.
+}
 }
 
-\subsection{Where to learn more}{
+\subsection{Scope}{
 
-The documentation is organized as two vignette tracks. The Applied track is
-workflow-first and starts at
-\code{vignette("a1-getting-started", package = "pvstackr")}. The Method track is
-the rigorous treatment of the notation, target, stacked bridge, and
-calibration, and starts at
-\code{vignette("m1-foundations-and-notation", package = "pvstackr")}.
+pvstackr is built for the fixed effects of a survey-weighted linear model.
+\code{\link[=pv_brr_target]{pv_brr_target()}}, \code{stack_direct} and \code{stack_psis} stop with an error on a
+random-effect term such as \code{(1 | school)}. Only the fixed-effect
+coefficients (intercept and slopes) are reported; other parameters, such as
+the residual standard deviation \code{sigma}, are neither calibrated nor
+reported.
+
+By pvstackr's reporting rule, only a \code{stack_direct} fit whose target uses
+Barnard-Rubin degrees of freedom (\code{df_method = "barnard_rubin"} in
+\code{\link[=pv_brr_target]{pv_brr_target()}}) has coverage-claimable intervals, which can be read as
+confidence intervals with nominal coverage. All other intervals are
+descriptive, including those of a \code{stack_direct} fit whose target uses the
+default classic Rubin degrees of freedom. \code{\link[=pv_fit]{pv_fit()}} gives the full rule.
 }
 
-\subsection{Scope and honesty}{
+\subsection{Articles}{
 
-Reportable output is fixed-effect-only (variance components are fit but not
-calibrated); among the three methods only \code{stack_direct}, whose intervals
-rest on the external Rubin/BRR-Fay target, is coverage-claimable, while
-\code{per_pv} and \code{stack_psis} are descriptive/reference paths.
+The Applied articles, starting with
+\code{vignette("a1-getting-started", package = "pvstackr")}, show how to run an
+analysis and read the results. The Method articles, starting with
+\code{vignette("m1-foundations-and-notation", package = "pvstackr")}, give the
+formulas and assumptions behind the target, the stacked fit and the
+calibration. The companion methods preprint (Lee, Williams and Savitsky
+2026, \doi{10.5281/zenodo.22407935}) describes the stacked fit and its
+calibration.
 }
 }
 \seealso{
@@ -49,8 +75,8 @@ Design: \code{\link[=pv_design]{pv_design()}}, \code{\link[=detect_pisa_pv_colum
 \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}. Target: \code{\link[=pv_brr_target]{pv_brr_target()}}. Fit:
 \code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}}, \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}},
 \code{\link[=pv_control]{pv_control()}}. Compare: \code{\link[=pv_compare_methods]{pv_compare_methods()}}. Read: \code{\link[=get_estimates]{get_estimates()}},
-\code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}. Contracts:
-\link{pvstackr_object_contracts}.
+\code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}. Returned objects and
+their fields: \link{pvstackr_object_contracts}.
 }
 \author{
 \strong{Maintainer}: JoonHo Lee \email{jlee296@ua.edu} (\href{https://orcid.org/0009-0006-4019-8703}{ORCID}) [copyright holder]

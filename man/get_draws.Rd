@@ -5,7 +5,7 @@
 \alias{get_draws.default}
 \alias{get_draws.pvstackr_fit}
 \alias{get_draws.pvstackr_legacy_psis_inspection}
-\title{Access pvstackr Draws}
+\title{Get the calibrated draws of a fit}
 \usage{
 get_draws(x, ...)
 
@@ -16,39 +16,44 @@ get_draws(x, ...)
 \method{get_draws}{pvstackr_legacy_psis_inspection}(x, ...)
 }
 \arguments{
-\item{x}{A pvstackr fit object.}
+\item{x}{A fit (class \code{pvstackr_fit}).}
 
-\item{...}{Reserved for future extensions.}
+\item{...}{Ignored.}
 }
 \value{
-The retained reportable draw matrix, or \code{NULL} when draws were not
-retained or the method does not synthesize top-level reportable draws.
-Per-PV reference draws and the PSIS proposal/weight pair, when retained,
-remain available in diagnostics rather than through this top-level
-reportable-draw accessor. An inspection-only legacy PSIS object fails
-explicitly instead of returning historical draws.
+A numeric matrix with one row per draw of the stacked fit and one
+column per fixed effect, named as in the estimate table (such as
+\code{b_Intercept}). \code{NULL} for a fit made with \code{return_draws = FALSE} (such
+as the bundled example fit), for a blocked fit, and for \code{per_pv} and
+\code{stack_psis} fits.
+
+\code{get_draws()} stops with an error if the fit was changed after it was
+created, and for the inspection object that
+\code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}} makes from a \code{stack_psis} fit of an
+earlier pvstackr version, which has no draws.
 }
 \description{
-Return retained top-level reportable draws from a fit. Methods that do not
-synthesize a single reportable draw matrix, or fits created with
-\code{return_draws = FALSE}, return \code{NULL}.
+\code{get_draws()} returns the calibrated fixed-effect draws of a \code{stack_direct}
+fit: the draws of the stacked fit after the Cholesky calibration
+correction (CCC), which gives them the mean and covariance of the target.
 }
 \details{
-This accessor returns only the synthesized top-level reportable draw matrix.
-Per-PV reference draws (\code{per_pv}) and the PSIS fixed-effect proposal/weight
-pair (\code{stack_psis}), when retained, are not surfaced here; they live in the
-fit's diagnostics (see \code{\link[=get_diagnostics]{get_diagnostics()}}), not in this top-level
-reportable-draw accessor.
+A fit keeps these draws only with \code{return_draws = TRUE}, the default of
+\code{\link[=pv_control]{pv_control()}}. \code{per_pv} and \code{stack_psis} fits keep their draws in
+\code{\link[=get_diagnostics]{get_diagnostics()}} instead; "The fit object" in
+\link{pvstackr_object_contracts} says where.
 }
 \examples{
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
-  get_draws(fit)
+  get_draws(fit)   # NULL: the example fit was saved without its draws
 }
 }
 \seealso{
-\code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}; \code{\link[=pv_fit]{pv_fit()}}.
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} for how the draws are calibrated.
 
 Other pvstackr-accessors:
 \code{\link[=get_diagnostics]{get_diagnostics()}},

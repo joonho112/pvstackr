@@ -1,36 +1,53 @@
-# Accessors verify the current owned payload stamp without repeating the full
-# method-specific semantic recomputation. Opaque-backend fits are marked
-# ineligible and `validate_pvstackr_fit()` automatically falls back to deep.
+# Accessors check the fit's stored checksum instead of repeating every
+# method-specific check. Fits that keep a backend fit object cannot use this
+# shortcut, so `validate_pvstackr_fit()` runs the full check for them.
 pv_validate_fit_for_access <- function(x) {
   validate_pvstackr_fit(x, tier = "cheap")
 }
 
-#' Access pvstackr Estimates
+#' Get the estimate table of a fit
 #'
-#' Return the reportable fixed-effect estimate table for a fit, or the aligned
-#' estimate table for a method comparison. The returned columns depend on the
-#' method contract but keep interval and provenance fields intact.
+#' `get_estimates()` returns the table of fixed-effect estimates of a fit,
+#' with their standard errors, degrees of freedom and intervals. For a method
+#' comparison it returns the table that lines up the estimates of the
+#' compared fits.
 #'
-#' @param x A pvstackr object.
-#' @param ... Reserved for future extensions.
+#' @details
+#' Only the fixed effects are reported. `coverage_claim_allowed` says whether
+#' pvstackr's reporting rule lets you read the interval of a row as a
+#' confidence interval with nominal coverage; [pv_fit()] gives the rule, and [pvstackr_object_contracts]
+#' describes every column.
 #'
-#' @returns A data frame of reportable fixed-effect estimates. Fit estimate
-#'   tables include interval/provenance columns such as `df_method`,
-#'   `df_complete`, `interval_role`, `coverage_claim_allowed`,
-#'   `target_source`, `target_hash`, `pooling_source`, and `pooling_hash` when
-#'   those columns are part of the method contract. An inspection-only legacy
-#'   PSIS object fails explicitly instead of returning historical numeric
-#'   output.
+#' @param x A fit (class `pvstackr_fit`) from [pv_fit()] or a method function,
+#'   or a method comparison from [pv_compare_methods()].
+#' @param ... Ignored.
+#'
+#' @returns A data frame with one row per fixed effect. For a `stack_direct`
+#'   fit it has 17 columns: `term`, `estimate`, `se`, `std.error`, `df`,
+#'   `df_method`, `df_complete`, `conf_level`, `conf_low`, `conf_high`,
+#'   `conf.low`, `conf.high`, `interval_role`, `coverage_claim_allowed`,
+#'   `parameter_scope`, `target_source` and `target_hash`. `per_pv` and
+#'   `stack_psis` fits add further columns. The fraction of missing
+#'   information is not a column; for `stack_direct` and `per_pv` fits it is
+#'   `get_target(fit)$fmi`. A blocked fit gives an empty data frame. For a
+#'   method comparison, the data frame has one row per method and fixed
+#'   effect (see [pv_compare_methods()]).
+#'
+#'   `get_estimates()` stops with an error if the fit or comparison was
+#'   changed after it was created, and for the inspection object that
+#'   [pv_migrate_legacy_psis_fit()] makes from a `stack_psis` fit of an
+#'   earlier pvstackr version, which has no estimates.
 #'
 #' @examples
-#' path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+#' path <- system.file(
+#'   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+#' )
 #' if (nzchar(path)) {
 #'   fit <- readRDS(path)$fit
 #'   head(get_estimates(fit))
 #' }
 #' @family pvstackr-accessors
-#' @seealso [get_target()], [get_draws()], [get_diagnostics()]; [pv_fit()],
-#'   [pv_compare_methods()].
+#' @seealso [pvstackr_object_contracts] for the columns of the estimate table.
 #' @export
 get_estimates <- function(x, ...) {
   UseMethod("get_estimates")
@@ -56,30 +73,42 @@ get_estimates.pvstackr_method_comparison <- function(x, ...) {
   x$estimate_table
 }
 
-#' Access pvstackr Targets
+#' Get the target of a fit
 #'
-#' Return the formal target object carried by a fit. Estimate-row provenance
-#' labels such as `target_source` are separate from this accessor and do not
-#' imply that every method has a formal target object.
+#' `get_target()` returns the target that the estimates of a fit come from.
+#' For a `stack_direct` fit this is the BRR-Fay target from [pv_brr_target()],
+#' to which the stacked fit was calibrated; for a `per_pv` fit it is the
+#' Rubin's-rules combination of the draws of the per-plausible-value fits. A
+#' `stack_psis` fit has no target object.
 #'
-#' @param x A pvstackr fit or target object.
-#' @param ... Reserved for future extensions.
+#' @param x A fit (class `pvstackr_fit`), or a target from [pv_brr_target()].
+#' @param ... Ignored.
 #'
-#' @returns The target object used by a fit, or `NULL` when the method has no
-#'   target component. Estimate-row `target_source` labels are provenance
-#'   metadata and may be present even when a method, such as `stack_psis`, does
-#'   not carry a formal target object. A legacy PSIS inspection object also
-#'   returns `NULL`.
+#' @returns For a `stack_direct` fit, its `pvstackr_brr_target` object, also
+#'   when the fit is blocked. [pv_brr_target()] lists its elements, such as
+#'   `beta`, `T_MI`, `df` and `fmi` (the fraction of missing information,
+#'   which the estimate table does not have). For a `per_pv` fit, a
+#'   `pvstackr_reference_pool` object with the same kind of elements. For a
+#'   `stack_psis` fit, `NULL`: its estimate table has
+#'   `target_source = "stack_psis_rubin_pooling"`, but that is only a label
+#'   for the combined result, not a target object. Given a target,
+#'   `get_target()` checks it and returns it unchanged.
+#'
+#'   `get_target()` stops with an error if the fit or target was changed
+#'   after it was created. For the inspection object that
+#'   [pv_migrate_legacy_psis_fit()] makes from a `stack_psis` fit of an
+#'   earlier pvstackr version, it returns `NULL`.
 #'
 #' @examples
-#' path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+#' path <- system.file(
+#'   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+#' )
 #' if (nzchar(path)) {
 #'   fit <- readRDS(path)$fit
 #'   get_target(fit)
 #' }
 #' @family pvstackr-accessors
-#' @seealso [get_estimates()], [get_draws()], [get_diagnostics()];
-#'   [pv_brr_target()], [pv_fit()].
+#' @seealso [pv_brr_target()] for the elements of a target.
 #' @export
 get_target <- function(x, ...) {
   UseMethod("get_target")
@@ -105,37 +134,42 @@ get_target.pvstackr_brr_target <- function(x, ...) {
   x
 }
 
-#' Access pvstackr Draws
+#' Get the calibrated draws of a fit
 #'
-#' Return retained top-level reportable draws from a fit. Methods that do not
-#' synthesize a single reportable draw matrix, or fits created with
-#' `return_draws = FALSE`, return `NULL`.
+#' `get_draws()` returns the calibrated fixed-effect draws of a `stack_direct`
+#' fit: the draws of the stacked fit after the Cholesky calibration
+#' correction (CCC), which gives them the mean and covariance of the target.
 #'
 #' @details
-#' This accessor returns only the synthesized top-level reportable draw matrix.
-#' Per-PV reference draws (`per_pv`) and the PSIS fixed-effect proposal/weight
-#' pair (`stack_psis`), when retained, are not surfaced here; they live in the
-#' fit's diagnostics (see [get_diagnostics()]), not in this top-level
-#' reportable-draw accessor.
+#' A fit keeps these draws only with `return_draws = TRUE`, the default of
+#' [pv_control()]. `per_pv` and `stack_psis` fits keep their draws in
+#' [get_diagnostics()] instead; "The fit object" in
+#' [pvstackr_object_contracts] says where.
 #'
-#' @param x A pvstackr fit object.
-#' @param ... Reserved for future extensions.
+#' @param x A fit (class `pvstackr_fit`).
+#' @param ... Ignored.
 #'
-#' @returns The retained reportable draw matrix, or `NULL` when draws were not
-#'   retained or the method does not synthesize top-level reportable draws.
-#'   Per-PV reference draws and the PSIS proposal/weight pair, when retained,
-#'   remain available in diagnostics rather than through this top-level
-#'   reportable-draw accessor. An inspection-only legacy PSIS object fails
-#'   explicitly instead of returning historical draws.
+#' @returns A numeric matrix with one row per draw of the stacked fit and one
+#'   column per fixed effect, named as in the estimate table (such as
+#'   `b_Intercept`). `NULL` for a fit made with `return_draws = FALSE` (such
+#'   as the bundled example fit), for a blocked fit, and for `per_pv` and
+#'   `stack_psis` fits.
+#'
+#'   `get_draws()` stops with an error if the fit was changed after it was
+#'   created, and for the inspection object that
+#'   [pv_migrate_legacy_psis_fit()] makes from a `stack_psis` fit of an
+#'   earlier pvstackr version, which has no draws.
 #'
 #' @examples
-#' path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+#' path <- system.file(
+#'   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+#' )
 #' if (nzchar(path)) {
 #'   fit <- readRDS(path)$fit
-#'   get_draws(fit)
+#'   get_draws(fit)   # NULL: the example fit was saved without its draws
 #' }
 #' @family pvstackr-accessors
-#' @seealso [get_estimates()], [get_target()], [get_diagnostics()]; [pv_fit()].
+#' @seealso [pv_fit_direct()] for how the draws are calibrated.
 #' @export
 get_draws <- function(x, ...) {
   UseMethod("get_draws")
@@ -154,43 +188,57 @@ get_draws.pvstackr_fit <- function(x, ...) {
   x$draws
 }
 
-#' Access pvstackr Diagnostics
+#' Get the diagnostics of a fit or comparison
 #'
-#' Return the structured diagnostics list stored on a fit or method comparison.
-#' Diagnostics keep method-specific details that are intentionally not flattened
-#' into the reportable estimate table.
+#' `get_diagnostics()` returns the diagnostics list of a fit or a method
+#' comparison: the results of pvstackr's checks and the details of a method
+#' that are not in the estimate table.
 #'
-#' @details
-#' Diagnostic keys are method-specific; inspect `names(get_diagnostics(x))`. A
-#' current `stack_direct` fit carries top-level `sampler` and `sampler_gate`
-#' records plus `preflight`, `stack_fit`, `stack_fit_warnings`, and `ccc`;
-#' sampler-blocked fits retain only slim preflight/sampler/gate evidence and the
-#' independently valid external target, rebuilt from an exact recursive
-#' allowlist with no formula object in preflight and a safe formula environment
-#' on the target snapshot. A legacy cached stack-direct fit may
-#' predate the sampler keys. A `per_pv` fit carries `reference` and `pooling`;
-#' a `stack_psis` fit
-#' carries `psis` (status and Pareto-k), `pooling`, and `weighted`. A method
-#' comparison instead carries comparison-level keys such as `agreement`,
-#' `method_diagnostics`, `timing`, and `target_overlap` (the shared-provenance
-#' summary).
+#' @param x A fit (class `pvstackr_fit`) or a method comparison from
+#'   [pv_compare_methods()].
+#' @param ... Ignored.
 #'
-#' @param x A pvstackr object.
-#' @param ... Reserved for future extensions.
+#' @returns A named list whose elements depend on the object:
 #'
-#' @returns A structured diagnostics list. For a legacy PSIS inspection object
-#'   this is bounded Pareto-k evidence plus its redaction record; historical
-#'   pooling, weights, estimates, and draws are never returned.
+#' - A `stack_direct` fit: `preflight` (the check that `data`, `formula` and
+#'   `target` match), `sampler` and `sampler_gate` (the sampler diagnostics
+#'   and pvstackr's check of them), `stack_fit` and `stack_fit_warnings`
+#'   (records and notes from the stacked fit) and `ccc` (the calibration
+#'   diagnostics, such as `delta_c_max` and `kappa_A`). A blocked fit has
+#'   only `preflight`, `sampler`, `sampler_gate`, `redaction` (what was
+#'   removed) and, when the calibration check blocked it, `ccc`, with its
+#'   values grouped as `center`, `conditioning`, `residual` and `prior`.
+#' - A `per_pv` fit: `reference` (a record of the per-plausible-value fits
+#'   and, when kept, their draws) and `pooling` (their Rubin's-rules
+#'   combination).
+#' - A `stack_psis` fit: `psis` (the Pareto k-hat values, the decision and
+#'   the weight diagnostics), `pooling` and `weighted` (the weighted result
+#'   of each plausible value and, when kept, the stacked draws and the
+#'   normalized weights). A blocked fit has only `psis` and `redaction`.
+#' - A method comparison: `reference_method`, `methods`, `statuses`,
+#'   `blocked_methods`, `warning_methods`, `agreement`,
+#'   `method_diagnostics`, `timing` and `target_overlap` (see
+#'   [pv_compare_methods()]).
+#' - The inspection object that [pv_migrate_legacy_psis_fit()] makes from a
+#'   `stack_psis` fit of an earlier pvstackr version: `psis` (the Pareto
+#'   k-hat values and the decision) and `redaction` (what was removed).
+#'
+#' `get_diagnostics()` stops with an error if the fit or comparison was
+#' changed after it was created.
 #'
 #' @examples
-#' path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+#' path <- system.file(
+#'   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+#' )
 #' if (nzchar(path)) {
 #'   fit <- readRDS(path)$fit
 #'   names(get_diagnostics(fit))
 #' }
 #' @family pvstackr-accessors
-#' @seealso [get_estimates()], [get_target()], [get_draws()]; [pv_fit()],
-#'   [pv_compare_methods()].
+#' @seealso [pv_fit_direct()] and [pvstackr_object_contracts] for the
+#'   elements of a fit's diagnostics; "Status and checks" in
+#'   [pvstackr_object_contracts] for the thresholds of the checks and their
+#'   reason codes.
 #' @export
 get_diagnostics <- function(x, ...) {
   UseMethod("get_diagnostics")
@@ -548,44 +596,61 @@ pv_validate_fit_summary_for_print <- function(x) {
   invisible(x)
 }
 
-#' Display Methods for pvstackr Fits
+#' Print and summarize a fit
 #'
-#' Compact console `print()` and `summary()` for a [pvstackr_fit][pv_fit]
-#' object. The `print()` method shows the method id, fit status, fixed-effect
-#' count, target source, draw retention, diagnostics keys, and the interval
-#' note (set when reportable intervals are descriptive rather than
-#' coverage-claimable). The `summary()` method builds a structured
-#' `summary.pvstackr_fit` object; its `print()` method adds the compact
-#' estimate columns (`term`, `estimate`, `se`, `df`, `conf_low`, `conf_high`,
-#' where present).
+#' `print()` shows a short overview of a fit (class `pvstackr_fit`, see
+#' [pv_fit()]). `summary()` returns the same overview, together with the
+#' estimate table and the diagnostics, as a list of class
+#' `summary.pvstackr_fit`; its `print()` method also shows the estimates.
 #'
-#' @param object,x A `pvstackr_fit` object (or its summary, for the
-#'   `print.summary.pvstackr_fit` method).
+#' @details
+#' The overview has one line each for the method, the status, the number of
+#' fixed effects, the target (its `target_source` label, or "none" when
+#' [get_target()] returns `NULL`, as for a `stack_psis` fit), the calibrated
+#' draws (their numbers of rows and columns, or "not retained" when
+#' [get_draws()] returns `NULL`) and the names of the diagnostics. A line
+#' beginning "interval note:" follows when some or all intervals are
+#' descriptive, and the reason codes and the number of warnings are shown
+#' when there are any. The `print()` method of the summary adds the columns
+#' `term`, `estimate`, `se`, `df`, `conf_low` and `conf_high` of the
+#' estimate table.
+#'
+#' The three methods stop with an error if the fit or the summary was
+#' changed after it was created, and for a fit saved by pvstackr 0.1.x,
+#' which has to be made again. A summary of a `stack_psis` fit that was saved
+#' by an earlier version of pvstackr also stops with an error when printed
+#' (see [pv_migrate_legacy_psis_fit()]).
+#'
+#' @param object,x A fit (class `pvstackr_fit`); for the `print()` method of
+#'   a summary, the list returned by `summary()`.
 #' @param ... Ignored.
 #'
-#' @returns The `print` methods return their input invisibly. `summary()`
-#'   returns a `summary.pvstackr_fit` list with fields:
-#'   \describe{
-#'     \item{`method`, `status`}{Method id and fit status.}
-#'     \item{`n_terms`, `terms`}{Number and names of reportable fixed-effect
-#'       terms.}
-#'     \item{`has_target`, `target_source`}{Whether a formal target object is
-#'       carried, and the estimate-row target-source provenance label.}
-#'     \item{`has_draws`, `draw_dim`}{Whether reportable draws were retained,
-#'       and their `c(nrow, ncol)` dimension (`c(0L, 0L)` when not retained).}
-#'     \item{`diagnostic_keys`}{Names of the entries in the diagnostics list.}
-#'     \item{`interval_note`}{Set when reportable intervals are descriptive
-#'       rather than coverage-claimable; `NA` otherwise.}
-#'     \item{`reason_codes`, `warnings`}{Status reason codes and any captured
-#'       fit warnings.}
-#'     \item{`estimates`, `diagnostics`}{The reportable fixed-effect estimate
-#'       table and the structured diagnostics list.}
-#'     \item{`summary_schema_version`, `source_validation`,
-#'       `source_reportability_fit`, `validation`}{The current summary schema,
-#'       deep-valid compact source fit and its stamp, and the owned-summary
-#'       SHA-256 record used before printing.}
-#'   }
-#' @seealso [pv_fit()], [get_estimates()], [get_diagnostics()].
+#' @returns `print()` returns its input invisibly. `summary()` returns a list
+#'   of class `summary.pvstackr_fit` with these elements:
+#'
+#'   - `method`, `status`, `reason_codes` and `warnings`: as in the fit.
+#'   - `n_terms` and `terms`: the number and the names of the fixed effects
+#'     in the estimate table (`0` and `character()` for a blocked fit).
+#'   - `has_target` and `target_source`: whether the fit has a target object
+#'     ([get_target()] does not return `NULL`), and its `target_source`
+#'     label, which is `"none"` for a `stack_psis` fit.
+#'   - `has_draws` and `draw_dim`: whether the fit has calibrated draws
+#'     ([get_draws()] does not return `NULL`), and their numbers of rows and
+#'     columns (`c(0L, 0L)` when it has none).
+#'   - `diagnostic_keys`: the names of the list that [get_diagnostics()]
+#'     returns.
+#'   - `interval_note`: the text of the line beginning "interval note:", or
+#'     `NA` when there is no such line.
+#'   - `estimates` and `diagnostics`: the estimate table and the diagnostics
+#'     list.
+#'   - `schema_version`, `summary_schema_version`, `source_validation`,
+#'     `source_reportability_fit` and `validation`: the format versions of
+#'     the fit and of the summary; the checksum of the fit that the summary
+#'     was made from; for a `stack_psis` fit, a copy of the fit without its
+#'     stacked draws and weights, from which `estimates` and `diagnostics`
+#'     are taken (`NULL` for the other methods); and a SHA-256 checksum of
+#'     the summary, which `print()` recomputes to detect changes.
+#' @seealso [get_estimates()] and [get_diagnostics()] to read a fit.
 #' @name pvstackr_fit_summary
 NULL
 
@@ -793,44 +858,57 @@ pv_validate_comparison_summary_for_print <- function(x) {
   invisible(x)
 }
 
-#' Display Methods for pvstackr Method Comparisons
+#' Print and summarize a method comparison
 #'
-#' Compact console `print()` and `summary()` for a
-#' `pvstackr_method_comparison` object. The `print()` method shows the
-#' reference method, the compared method labels, the fixed-effect count, any
-#' blocked or warning methods, the provenance note (the shared-target caveat),
-#' and the interval note. The `summary()` method builds a structured
-#' `summary.pvstackr_method_comparison` object; its `print()` method also
-#' renders the agreement table.
+#' `print()` shows a short overview of a comparison made by
+#' [pv_compare_methods()]. `summary()` returns the same overview, together
+#' with the tables of the comparison, as a list of class
+#' `summary.pvstackr_method_comparison`; its `print()` method also shows the
+#' agreement table.
 #'
-#' @param object,x A `pvstackr_method_comparison` object (or its summary, for
-#'   the `print.summary.pvstackr_method_comparison` method).
+#' @details
+#' The overview shows the label of the reference fit, the label and the
+#' method of each fit (only their number in the summary), the number of
+#' fixed effects, and the labels of blocked fits and of fits with status
+#' `"warning"` when there are any. A line beginning "provenance note:"
+#' follows for every comparison: it says that agreement is descriptive and
+#' that a shared target, combined result or source label is not independent
+#' confirmation ([pv_compare_methods()] explains this). A line beginning
+#' "interval note:" is added when some or all intervals are descriptive.
+#'
+#' The three methods stop with an error if the comparison or the summary was
+#' changed after it was created, and for a comparison saved by pvstackr
+#' 0.1.x, which has to be made again from current fits. A summary that
+#' contains a `stack_psis` fit and was saved by an earlier version of
+#' pvstackr also stops with an error when printed (see
+#' [pv_migrate_legacy_psis_fit()]).
+#'
+#' @param object,x A comparison (class `pvstackr_method_comparison`) from
+#'   [pv_compare_methods()]; for the `print()` method of a summary, the list
+#'   returned by `summary()`.
 #' @param ... Ignored.
 #'
-#' @returns The `print` methods return their input invisibly. `summary()`
-#'   returns a `summary.pvstackr_method_comparison` list with fields:
-#'   \describe{
-#'     \item{`reference_method`}{The method used as the comparison reference.}
-#'     \item{`methods`, `method_labels`, `n_methods`}{The compared method ids,
-#'       their display labels, and the number of compared methods.}
-#'     \item{`n_terms`}{Number of distinct reportable fixed-effect terms.}
-#'     \item{`blocked_methods`, `warning_methods`}{Methods whose reportable
-#'       output was blocked, and methods that fit with warnings.}
-#'     \item{`interval_note`}{Set when reportable intervals are descriptive
-#'       rather than coverage-claimable; `NA` otherwise.}
-#'     \item{`provenance_note`}{Shared-provenance caveat (close agreement is not
-#'       independent corroboration when compared methods share a target source,
-#'       pooling source, or estimand construction); `NA` otherwise.}
-#'     \item{`estimate_table`, `diagnostic_table`}{The aligned cross-method
-#'       estimate table and the per-method diagnostic table.}
-#'     \item{`agreement`}{The descriptive cross-method agreement table.}
-#'     \item{`timing`}{Per-method timing metadata.}
-#'     \item{`summary_schema_version`, `source_validation`,
-#'       `source_reportability_comparison`, `validation`}{The current summary
-#'       schema, deep-valid compact source comparison and its stamp, and the
-#'       owned-summary SHA-256 record used before printing.}
-#'   }
-#' @seealso [pv_compare_methods()], [get_estimates()], [get_diagnostics()].
+#' @returns `print()` returns its input invisibly. `summary()` returns a list
+#'   of class `summary.pvstackr_method_comparison` with these elements:
+#'
+#'   - `reference_method`: the label of the reference fit.
+#'   - `methods`, `method_labels` and `n_methods`: the method of each fit
+#'     (named by label), the labels and the number of fits.
+#'   - `n_terms`: the number of fixed effects in the comparison.
+#'   - `blocked_methods` and `warning_methods`: the labels of the fits with
+#'     status `"blocked"` or `"warning"`.
+#'   - `interval_note` and `provenance_note`: the texts of the two note
+#'     lines; `interval_note` is `NA` when all intervals are
+#'     coverage-claimable.
+#'   - `estimate_table`, `diagnostic_table`, `agreement` and `timing`: the
+#'     tables described in [pv_compare_methods()].
+#'   - `schema_version`, `summary_schema_version`, `source_validation`,
+#'     `source_reportability_comparison` and `validation`: the format
+#'     versions of the comparison and of the summary; a copy of the
+#'     comparison without its fits and the checksum of that copy; and a
+#'     SHA-256 checksum of the summary, which `print()` recomputes to detect
+#'     changes.
+#' @seealso [get_estimates()] and [get_diagnostics()] to read a comparison.
 #' @name pvstackr_method_comparison_summary
 NULL
 

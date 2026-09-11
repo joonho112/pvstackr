@@ -98,8 +98,8 @@ test_that("brms backend smoke uses injected adapter boundary without sampling", 
   expect_s3_class(out$fit, "pvstackr_fit")
   expect_equal(out$fit$status, "ok")
   expect_equal(out$record$backend, "brms")
-  # Phase 2 family/estimand hardening canonicalizes compatible caller families
-  # to the portable stats::family contract before crossing an injected adapter.
+  # Compatible caller families are canonicalized to the portable stats::family
+  # contract before they cross an injected adapter.
   expect_identical(out$record$family_class, "family")
   expect_equal(out$record$extra$sample_prior, "no")
   expect_equal(out$fit$stack_fit$meta$fit_engine, "injected_fit_function")

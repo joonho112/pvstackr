@@ -4,17 +4,17 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out
 ## ----library------------------------------------------------------------------
 library(pvstackr)
 
-## ----fixture-shape------------------------------------------------------------
+## ----example-data-shape-------------------------------------------------------
 pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
 
-dim(pisa_tiny)        # 12 rows x 12 columns
+dim(pisa_tiny)        # 12 students, 12 columns
 names(pisa_tiny)
 
 ## ----detect-design------------------------------------------------------------
-detect_pisa_pv_columns(pisa_tiny, suffix = "READ")   # -> c("PV1READ","PV2READ")  => M = 2
-detect_pisa_brr_replicate_weights(pisa_tiny)         # -> 4 W_FSTURWT* cols        => R = 4
+detect_pisa_pv_columns(pisa_tiny, suffix = "READ")   # the M = 2 plausible values
+detect_pisa_brr_replicate_weights(pisa_tiny)         # the R = 4 replicate weights
 
 ## ----read-target--------------------------------------------------------------
 fit <- readRDS(
@@ -23,9 +23,6 @@ fit <- readRDS(
 )$fit
 tg <- get_target(fit)
 
-c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
-tg$fe_names                               # "b_Intercept" "b_x" "b_female"
-
-## ----session-info-------------------------------------------------------------
-sessionInfo()
+c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # M, R and the Fay coefficient k
+tg$fe_names                               # the p = 3 fixed-effect coefficients
 

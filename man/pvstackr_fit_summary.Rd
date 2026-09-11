@@ -5,7 +5,7 @@
 \alias{print.pvstackr_fit}
 \alias{summary.pvstackr_fit}
 \alias{print.summary.pvstackr_fit}
-\title{Display Methods for pvstackr Fits}
+\title{Print and summarize a fit}
 \usage{
 \method{print}{pvstackr_fit}(x, ...)
 
@@ -16,43 +16,61 @@
 \arguments{
 \item{...}{Ignored.}
 
-\item{object, x}{A \code{pvstackr_fit} object (or its summary, for the
-\code{print.summary.pvstackr_fit} method).}
+\item{object, x}{A fit (class \code{pvstackr_fit}); for the \code{print()} method of
+a summary, the list returned by \code{summary()}.}
 }
 \value{
-The \code{print} methods return their input invisibly. \code{summary()}
-returns a \code{summary.pvstackr_fit} list with fields:
-\describe{
-\item{\code{method}, \code{status}}{Method id and fit status.}
-\item{\code{n_terms}, \code{terms}}{Number and names of reportable fixed-effect
-terms.}
-\item{\code{has_target}, \code{target_source}}{Whether a formal target object is
-carried, and the estimate-row target-source provenance label.}
-\item{\code{has_draws}, \code{draw_dim}}{Whether reportable draws were retained,
-and their \code{c(nrow, ncol)} dimension (\code{c(0L, 0L)} when not retained).}
-\item{\code{diagnostic_keys}}{Names of the entries in the diagnostics list.}
-\item{\code{interval_note}}{Set when reportable intervals are descriptive
-rather than coverage-claimable; \code{NA} otherwise.}
-\item{\code{reason_codes}, \code{warnings}}{Status reason codes and any captured
-fit warnings.}
-\item{\code{estimates}, \code{diagnostics}}{The reportable fixed-effect estimate
-table and the structured diagnostics list.}
-\item{\code{summary_schema_version}, \code{source_validation},
-\code{source_reportability_fit}, \code{validation}}{The current summary schema,
-deep-valid compact source fit and its stamp, and the owned-summary
-SHA-256 record used before printing.}
+\code{print()} returns its input invisibly. \code{summary()} returns a list
+of class \code{summary.pvstackr_fit} with these elements:
+\itemize{
+\item \code{method}, \code{status}, \code{reason_codes} and \code{warnings}: as in the fit.
+\item \code{n_terms} and \code{terms}: the number and the names of the fixed effects
+in the estimate table (\code{0} and \code{character()} for a blocked fit).
+\item \code{has_target} and \code{target_source}: whether the fit has a target object
+(\code{\link[=get_target]{get_target()}} does not return \code{NULL}), and its \code{target_source}
+label, which is \code{"none"} for a \code{stack_psis} fit.
+\item \code{has_draws} and \code{draw_dim}: whether the fit has calibrated draws
+(\code{\link[=get_draws]{get_draws()}} does not return \code{NULL}), and their numbers of rows and
+columns (\code{c(0L, 0L)} when it has none).
+\item \code{diagnostic_keys}: the names of the list that \code{\link[=get_diagnostics]{get_diagnostics()}}
+returns.
+\item \code{interval_note}: the text of the line beginning "interval note:", or
+\code{NA} when there is no such line.
+\item \code{estimates} and \code{diagnostics}: the estimate table and the diagnostics
+list.
+\item \code{schema_version}, \code{summary_schema_version}, \code{source_validation},
+\code{source_reportability_fit} and \code{validation}: the format versions of
+the fit and of the summary; the checksum of the fit that the summary
+was made from; for a \code{stack_psis} fit, a copy of the fit without its
+stacked draws and weights, from which \code{estimates} and \code{diagnostics}
+are taken (\code{NULL} for the other methods); and a SHA-256 checksum of
+the summary, which \code{print()} recomputes to detect changes.
 }
 }
 \description{
-Compact console \code{print()} and \code{summary()} for a \link[=pv_fit]{pvstackr_fit}
-object. The \code{print()} method shows the method id, fit status, fixed-effect
-count, target source, draw retention, diagnostics keys, and the interval
-note (set when reportable intervals are descriptive rather than
-coverage-claimable). The \code{summary()} method builds a structured
-\code{summary.pvstackr_fit} object; its \code{print()} method adds the compact
-estimate columns (\code{term}, \code{estimate}, \code{se}, \code{df}, \code{conf_low}, \code{conf_high},
-where present).
+\code{print()} shows a short overview of a fit (class \code{pvstackr_fit}, see
+\code{\link[=pv_fit]{pv_fit()}}). \code{summary()} returns the same overview, together with the
+estimate table and the diagnostics, as a list of class
+\code{summary.pvstackr_fit}; its \code{print()} method also shows the estimates.
+}
+\details{
+The overview has one line each for the method, the status, the number of
+fixed effects, the target (its \code{target_source} label, or "none" when
+\code{\link[=get_target]{get_target()}} returns \code{NULL}, as for a \code{stack_psis} fit), the calibrated
+draws (their numbers of rows and columns, or "not retained" when
+\code{\link[=get_draws]{get_draws()}} returns \code{NULL}) and the names of the diagnostics. A line
+beginning "interval note:" follows when some or all intervals are
+descriptive, and the reason codes and the number of warnings are shown
+when there are any. The \code{print()} method of the summary adds the columns
+\code{term}, \code{estimate}, \code{se}, \code{df}, \code{conf_low} and \code{conf_high} of the
+estimate table.
+
+The three methods stop with an error if the fit or the summary was
+changed after it was created, and for a fit saved by pvstackr 0.1.x,
+which has to be made again. A summary of a \code{stack_psis} fit that was saved
+by an earlier version of pvstackr also stops with an error when printed
+(see \code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}}).
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}.
+\code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_diagnostics]{get_diagnostics()}} to read a fit.
 }

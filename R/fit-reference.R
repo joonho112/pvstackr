@@ -332,92 +332,162 @@ pv_fit_reference_estimates <- function(target) {
   )
 }
 
-#' Fit the Per-PV Bayesian/Backend Reference Method
+#' Combine one fit per plausible value with Rubin's rules
 #'
-#' `pv_fit_reference()` implements the `per_pv` reference path: one backend fit
-#' or posterior-draw source per plausible value, fixed-effect summary extraction,
-#' and Rubin pooling with model-based within-PV covariance from the selected
-#' fixed-effect draws.
+#' `pv_fit_reference()` runs the `"per_pv"` method of [pv_fit()]. It takes
+#' the posterior draws of one model fit per plausible value, either computed
+#' elsewhere (`per_pv_draws`) or returned by your own fitting functions
+#' (`fit_function` and `draws_function`, called once per plausible value),
+#' and combines the fixed effects with Rubin's rules. The variance within
+#' each plausible value is the covariance of that fit's posterior draws, so
+#' the intervals are always descriptive.
 #'
 #' @details
-#' This reference method accepts either already-computed per-PV posterior draws
-#' via `per_pv_draws`, or an injected `fit_function`/`draws_function` pair. The
-#' injected route rewrites the `OUTCOME` placeholder to each plausible-value
-#' column and calls the backend once per plausible value. Current reportable
-#' output is fixed-effect-only, selected from draw columns named like `b_*` or by
-#' an explicit `param_map`. The within-PV variance component is the posterior
-#' draw covariance of the selected fixed-effect columns in each plausible value.
-#' `weight_col`, `rep_weight_cols`, `fay_k`, and `id_cols` are recorded as design
-#' metadata for this path; BRR/Fay replicate weights are not used to form that
-#' within-PV covariance or an external target. These weight arguments are not
-#' passed automatically to an injected backend. If a backend fit should use
-#' weights, handle that explicitly inside `fit_function`, in the data supplied
-#' to the backend, or through backend-specific `additional_args`.
+#' ## Calculation
 #'
-#' `per_pv` interval metadata is source-specific. Classic Rubin pooling is
-#' labeled `interval_role = "reference_classic_rubin"`; Barnard-Rubin pooling is
-#' labeled `interval_role = "reference_barnard_rubin"` and uses the explicit
-#' `df_complete` supplied by the user. Both roles set
-#' `coverage_claim_allowed = FALSE` because the within-PV covariance is
-#' model-based posterior-draw covariance, not an external design replicate
-#' variance.
+#' For each plausible value \eqn{m}, pvstackr takes the fixed-effect columns
+#' of the draws (see `param_map`) and computes their mean
+#' \eqn{\hat\beta_m}{b_m} and their covariance matrix \eqn{U_m}. Rubin's
+#' rules then combine the \eqn{M} results as in [pv_brr_target()]: the
+#' estimate \eqn{\bar\beta}{beta_bar} is the mean of the
+#' \eqn{\hat\beta_m}{b_m}, and the total covariance is
+#' \eqn{T_{\mathrm{MI}} = \bar U + (1 + 1/M) B}{T_MI = U_bar + (1 + 1/M) B},
+#' where \eqn{\bar U}{U_bar} is the mean of the \eqn{U_m} and \eqn{B} is the
+#' covariance matrix of the \eqn{\hat\beta_m}{b_m}. The standard errors are
+#' the square roots of the diagonal of \eqn{T_{\mathrm{MI}}}{T_MI}, and the
+#' degrees of freedom follow `df_method`.
 #'
-#' @param data Optional analysis data frame. Required for the injected fitting
-#'   route.
-#' @param formula Optional two-sided formula with `OUTCOME` on the left-hand
-#'   side. Required for the injected fitting route.
-#' @param pv_cols Plausible-value columns. Required for the injected fitting
-#'   route; optional alignment labels for `per_pv_draws`.
-#' @param per_pv_draws Optional list of per-PV posterior draw matrices.
-#' @param control A [pv_control()] object with `method = "per_pv"`.
-#' @param family Optional backend family object passed to the injected fit
-#'   function.
-#' @param prior Optional backend prior object passed to the injected fit
-#'   function.
-#' @param fit_function Injected backend fitting function.
-#' @param draws_function Function extracting posterior draws from each injected
-#'   backend fit.
-#' @param param_map Optional explicit draw-column map passed to the fixed-effect
-#'   extraction layer. Use this when backend draw columns do not follow the
-#'   package's automatic `b_*` fixed-effect naming convention. Supply
-#'   `fe_names` or `fe_idx` to identify fixed-effect columns, and optional
-#'   `vc_names` or `vc_idx` for nuisance variance-component columns. Use
-#'   `vc_names = character()` to drop all nuisance columns, including
-#'   distributional names such as `b_sigma_*`.
-#' @param weight_col Optional main weight column recorded in the design object
-#'   and validated when the injected fitting route is used. It is not passed as
-#'   an automatic backend argument.
-#' @param rep_weight_cols Optional replicate-weight columns recorded in the
-#'   design object. They are not used by `per_pv` pooling and are not passed as
-#'   automatic backend arguments.
-#' @param fay_k Fay coefficient recorded in the design object when replicate
-#'   weights are supplied.
-#' @param id_cols Optional row identifier columns recorded in the design object.
-#' @param df_method Rubin degrees-of-freedom method. The default `"classic"` is
-#'   descriptive only; `"barnard_rubin"` requires `df_complete`.
-#' @param df_complete Complete-data degrees of freedom used when
-#'   `df_method = "barnard_rubin"`. Supply a positive scalar for all fixed
-#'   effects or a named numeric vector aligned by fixed-effect name. Unnamed
-#'   length-p vectors are rejected to avoid positional ambiguity.
-#' @param cache_dir,cache_stem Cache location metadata passed to injected fits.
-#' @param additional_args Additional named arguments passed to each injected fit.
+#' ## What is reported
 #'
-#' @returns A `pvstackr_fit` object with `method = "per_pv"`.
-#' @section Reportable scope and coverage:
-#' In this package stage, reportable output is **fixed-effect-only**; variance
-#' components are fit but not calibrated to the target. Coverage claims are
-#' enabled **only** for `stack_direct` rows backed by the external Rubin/BRR-Fay
-#' target (`interval_role = "coverage_barnard_rubin"`,
-#' `coverage_claim_allowed = TRUE`). `per_pv` intervals are
-#' **descriptive/reference** even with Barnard-Rubin degrees of freedom. "One
-#' stacked fit" describes the computational topology, not a benchmarked speed
-#' claim. The within-PV variance is the **model-based** posterior covariance of
-#' the selected fixed-effect draws, not a BRR/Fay replicate variance.
+#' As for every method, only the fixed effects are reported ([pv_fit()]
+#' gives the scope and the full rule for the intervals). Each \eqn{U_m} is
+#' the model-based posterior covariance of the draws, not a design-based
+#' variance from replicate weights, so every row of the estimate table has
+#' `interval_role = "reference_classic_rubin"` or
+#' `"reference_barnard_rubin"` and `coverage_claim_allowed = FALSE`. The
+#' replicate weights play no part in this method.
+#'
+#' ## Fitting functions and status
+#'
+#' pvstackr itself fits no model for this method, and there is no bundled
+#' engine: `pv_control(backend = "brms")` does not supply one. With
+#' `fit_function`, pvstackr replaces `OUTCOME` in `formula` by each
+#' plausible-value column in turn (for example `PV1READ ~ x + female`),
+#' calls `fit_function` once for each, and passes each result to
+#' `draws_function`. It does not check the model further: random-effect
+#' terms such as `(1 | school)`, `family` and `prior` reach `fit_function`
+#' unchanged. The survey weights are not passed as an argument to
+#' `fit_function`; a weighted fit must take them from `data` inside that
+#' function or from `additional_args`.
+#'
+#' pvstackr collects no sampler diagnostics (R-hat, effective sample sizes,
+#' divergent transitions) from these fits and has no other check for this
+#' method, so the status of a `per_pv` fit is always `"ok"`. Check the
+#' convergence of each fit yourself.
+#'
+#' @param data A data frame with the plausible-value columns and the
+#'   variables in `formula`, or `NULL` (default). Required with
+#'   `fit_function`, which receives it unchanged. With `per_pv_draws` it is
+#'   optional: given together with `formula`, it is used only to record the
+#'   design (the fit's `design`), and the plausible-value names must then be
+#'   columns of `data`.
+#' @param formula A two-sided formula with the placeholder `OUTCOME` on the
+#'   left-hand side, such as `OUTCOME ~ x + female` (see [pv_fit()]), or
+#'   `NULL` (default). Required with `fit_function`. A `weights()` term stops
+#'   the function with an error; all other terms, random-effect terms
+#'   included, are passed to `fit_function` as written.
+#' @param pv_cols A character vector with the names of the plausible-value
+#'   columns, at least two, or `NULL` (default). Required with
+#'   `fit_function`: the columns of `data` that are fitted one at a time.
+#'   With `per_pv_draws` it is optional and names the elements of the list;
+#'   if the list has names, they must be the same. Without `pv_cols`, the
+#'   names of `per_pv_draws` are used, or `PV1`, `PV2`, ... for an unnamed
+#'   list.
+#' @param per_pv_draws A list of draws computed elsewhere, one element per
+#'   plausible value (at least two), or `NULL` (default). Each element is a
+#'   numeric matrix or data frame with one row per posterior draw (at least
+#'   two), finite values and unique column names. The fixed-effect columns
+#'   (see `param_map`) must have the same names, in the same order, in every
+#'   element. Give either `per_pv_draws` or `fit_function`, not both.
+#' @param control A [pv_control()] object with `method = "per_pv"`. The
+#'   default is `pv_control(method = "per_pv")`, and `NULL` gives the same.
+#'   Its `conf_level` sets the interval level; its sampler settings and
+#'   `backend` are only passed on to `fit_function`.
+#' @param family,prior Passed unchanged to `fit_function`; pvstackr does not
+#'   check them. Default `NULL`.
+#' @param fit_function Your function that fits the model to one plausible
+#'   value, or `NULL` (default) when you give `per_pv_draws`. It is called
+#'   once per plausible value with the arguments `formula` (with `OUTCOME`
+#'   replaced by that plausible-value column), `data`, `family`, `prior`,
+#'   `chains`, `iter`, `warmup`, `cores`, `seed`, `backend`, `file` and
+#'   `file_refit` (the settings from `control` and the cache file; see
+#'   `cache_dir`), plus the elements of `additional_args`. There is no
+#'   `weights` argument (see Details). It may return any object that
+#'   `draws_function` accepts.
+#' @param draws_function Your function that takes the object returned by
+#'   `fit_function` and returns its draws, in the form described for
+#'   `per_pv_draws`. Required with `fit_function`.
+#' @param param_map `NULL` (default) or a named list that says which columns
+#'   of the draws are the fixed effects, by name (`fe_names`) or by position
+#'   (`fe_idx`), as for [pv_fit_direct()]. With `NULL`, the columns whose
+#'   names start with `b_` are the fixed effects. Only the fixed effects are
+#'   used, and their column names become the terms of the estimate table, so
+#'   they must start with `b_`. Give a list to leave out other columns that
+#'   start with `b_`, such as distributional parameters named `b_sigma_*`.
+#' @param weight_col The name of the final weight column, or `NULL`
+#'   (default). When `data` is used, pvstackr checks that the weights are
+#'   positive and records the column in the fit's `design`, but it does not
+#'   use the weights: they are not passed to `fit_function`.
+#' @param rep_weight_cols,fay_k,id_cols Replicate-weight columns, the Fay
+#'   coefficient and row-identifier columns, as in [pv_design()]. With `data`
+#'   and `formula`, they are checked and recorded in the fit's `design`; the
+#'   calculation does not use them. Defaults `NULL`, `0.5` and `NULL`.
+#' @param df_method The rule for the degrees of freedom: `"classic"`
+#'   (default) or `"barnard_rubin"`, which needs `df_complete`. Both rules are
+#'   defined in [pv_brr_target()]. With either rule the intervals are
+#'   descriptive.
+#' @param df_complete For `df_method = "barnard_rubin"`, the complete-data
+#'   degrees of freedom, which you state: the degrees of freedom that the
+#'   analysis would have if the outcome were observed directly. Give one
+#'   positive number for all fixed effects, or a vector with one value per
+#'   fixed effect, named by the fixed-effect columns (such as `b_Intercept`);
+#'   an unnamed vector of several values is an error. Default `NULL`; giving
+#'   a value with `df_method = "classic"` is an error.
+#' @param cache_dir,cache_stem The folder and the start of the file name that
+#'   are passed to `fit_function`; defaults `"cache"` and
+#'   `"pvstackr-per-pv"`. For each plausible value, `fit_function` receives
+#'   `file = file.path(path.expand(cache_dir), paste0(cache_stem, "-", pv))`,
+#'   where `pv` is the plausible-value column (such as
+#'   `"cache/pvstackr-per-pv-PV1READ"`), and `file_refit = "on_change"`; with
+#'   `cache_dir = NULL` it receives `file = NULL` and `file_refit = "never"`.
+#'   They are meant for the arguments of the same names of the brms function
+#'   `brm()`. pvstackr does not create the folder.
+#' @param additional_args A named list of further arguments passed to
+#'   `fit_function` for every plausible value, `list()` by default. They may
+#'   not repeat the arguments that pvstackr sets (see `fit_function`).
+#'
+#' @returns A `pvstackr_fit` object with `method = "per_pv"`. Read it with
+#'   [get_estimates()], [get_target()] and [get_diagnostics()];
+#'   [get_draws()] returns `NULL` for this method, and
+#'   [pvstackr_object_contracts] describes every part of the object. The
+#'   estimate table has one row per fixed effect with the combined estimate,
+#'   its standard error and its degrees of freedom; besides the columns of
+#'   every method, it has `pooling_source` and `pooling_hash`.
+#'   [get_target()] returns the combined result, a list of class
+#'   `pvstackr_reference_pool` with `beta` (the estimates), `U_bar`, `B`,
+#'   `T_MI`, `se`, `df`, `fmi` and related fields as in [pv_brr_target()],
+#'   and `per_pv` (the mean `beta` and the covariance `U` of the draws of
+#'   each plausible value). [get_diagnostics()] returns `reference` (where
+#'   the draws came from, the plausible values, the numbers of draws and,
+#'   with `control$return_draws = TRUE`, the fixed-effect draws of each
+#'   plausible value in `per_pv_draws`) and `pooling` (the combined
+#'   quantities).
 #'
 #' @examples
-#' # Injected per-PV draws: one posterior draw matrix per plausible value, with
-#' # fixed-effect columns named like `b_*` (auto-selected). Real fits would come
-#' # from a backend; here we use small synthetic draw clouds to show the shape.
+#' # Draws computed elsewhere: one matrix per plausible value, one row per
+#' # draw, with the fixed-effect columns b_Intercept and b_x. Real draws
+#' # would come from a model fitted to each plausible value; these are
+#' # simulated to show the input.
 #' set.seed(1)
 #' make_draws <- function(n, b0, bx) {
 #'   cbind(
@@ -434,17 +504,16 @@ pv_fit_reference_estimates <- function(target) {
 #'   pv_cols      = c("PV1READ", "PV2READ"),
 #'   control      = pv_control(method = "per_pv")
 #' )
-#' fit_ref                     # a per_pv pvstackr_fit
-#' get_estimates(fit_ref)      # interval_role = "reference_*"; coverage_claim_allowed = FALSE
+#' fit_ref                     # method, status "ok" and interval note
+#' get_estimates(fit_ref)      # interval_role "reference_classic_rubin"
 #' @references
 #' Rubin, D. B. (1987). *Multiple Imputation for Nonresponse in Surveys.* Wiley.
 #'
 #' Barnard, J., & Rubin, D. B. (1999). Small-sample degrees of freedom with
 #' multiple imputation. *Biometrika*, 86(4), 948-955.
 #' @family pvstackr-fitting
-#' @seealso [pv_fit()], [pv_fit_direct()], [pv_fit_stack_psis()],
-#'   [pv_control()]; [pv_compare_methods()], [get_estimates()],
-#'   [pvstackr_object_contracts].
+#' @seealso [pv_compare_methods()] to compare fits, and
+#'   [pvstackr_object_contracts] for the parts of a fit.
 #' @export
 pv_fit_reference <- function(
   data = NULL,

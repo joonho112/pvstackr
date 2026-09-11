@@ -5,7 +5,7 @@
 \alias{print.pvstackr_legacy_psis_inspection}
 \alias{summary.pvstackr_legacy_psis_inspection}
 \alias{print.summary.pvstackr_legacy_psis_inspection}
-\title{Convert a Legacy PSIS Fit to a Safe Inspection Object}
+\title{Inspect a stack_psis fit saved by an earlier version of pvstackr}
 \usage{
 pv_migrate_legacy_psis_fit(fit)
 
@@ -16,32 +16,71 @@ pv_migrate_legacy_psis_fit(fit)
 \method{print}{summary.pvstackr_legacy_psis_inspection}(x, ...)
 }
 \arguments{
-\item{fit}{A current or historical \code{pvstackr_fit} with
-\code{method = "stack_psis"}.}
+\item{fit}{A fit with \code{method = "stack_psis"}, made by the current or an
+earlier version of pvstackr, or an inspection object made by this
+function, which is checked and returned unchanged.}
 
-\item{x, object}{A \code{pvstackr_legacy_psis_inspection} object, or its summary
-for the summary print method.}
+\item{x, object}{An inspection object; for the \code{print()} method of a
+summary, the list returned by \code{summary()}.}
 
 \item{...}{Ignored.}
 }
 \value{
-The unchanged current fit when full current validation succeeds;
-otherwise a \code{pvstackr_legacy_psis_inspection} object with no reportable
-estimates, draws, pooling, weights, backend, or data payload.
+\code{pv_migrate_legacy_psis_fit()} returns the fit itself when it
+passes the current checks, also when it is blocked. Otherwise it returns
+a list of class \code{pvstackr_legacy_psis_inspection} with the elements
+\code{method} (\code{"stack_psis"}), \code{inspection_only} (\code{TRUE}), \code{reportable}
+(\code{FALSE}), \code{reason_codes} (\code{"legacy_psis_inspection_only"}),
+\code{diagnostics} (\code{psis} and \code{redaction}; see Details), \code{source} (the
+class, format version and status of the old fit, \code{"unknown"} where they
+cannot be read), \code{schema_version} (the format version of the inspection
+object), \code{provenance} (a record of how it was made) and \code{warnings}.
+
+\code{print()} returns its input invisibly; it shows the status of the old
+fit and \code{evidence_status}. \code{summary()} returns a list of class
+\code{summary.pvstackr_legacy_psis_inspection} with \code{method}, \code{status}
+(\code{"inspection_only"}), \code{source_status} (the status of the old fit),
+\code{evidence_status}, \code{bad_pv_cols}, \code{reportable}, \code{diagnostic_keys},
+\code{schema_version} and \code{source_inspection} (the inspection object).
 }
 \description{
-\code{pv_migrate_legacy_psis_fit()} returns a current, fully validated
-\code{stack_psis} fit unchanged. A non-current or invalid historical
-\code{stack_psis} fit is never promoted to reportable status: it is projected to
-a separately allocated inspection-only object containing only bounded
-Pareto-k decision evidence and an explicit redaction record. The source
-object is not modified.
+\code{pv_migrate_legacy_psis_fit()} returns a \code{stack_psis} fit unchanged when it
+passes the checks of the current version of pvstackr. Any other
+\code{stack_psis} fit, such as one saved by an earlier version (for example
+with status \code{"warning"}) or one that was changed after it was created,
+becomes an object for inspection only (class
+\code{pvstackr_legacy_psis_inspection}). It keeps the Pareto k-hat values and
+their check, but no estimates, weights or draws. The fit that you pass is
+not modified.
 }
 \details{
-Inspection objects allow \code{\link[=get_diagnostics]{get_diagnostics()}} and compact print/summary
-methods. \code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_draws]{get_draws()}} fail explicitly, because an
-historical warning, blocked, unevaluated, incomplete, or \code{k >= 0.7} result
-cannot be grandfathered into current reportable output. When historical
-diagnostic and control thresholds differ, the effective inspection gate is
-the minimum of both valid declarations and the immutable \code{0.7} ceiling.
+Earlier versions of pvstackr gave estimates for some \code{stack_psis} fits
+that the current version blocks, so the inspection object does not carry
+any numbers over: \code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_draws]{get_draws()}} stop with an error
+on it, and \code{\link[=get_target]{get_target()}} returns \code{NULL}. To get estimates, fit the model
+again with \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}. \code{\link[=get_diagnostics]{get_diagnostics()}}, \code{print()} and
+\code{summary()} work on the inspection object.
+
+\code{get_diagnostics(x)$psis} holds the k-hat values found in the old fit
+(\code{pareto_k}), the largest of them (\code{pareto_k_max}), the plausible values
+whose k-hat is not finite or not below the cut-off (\code{bad_pv_cols}), and
+the result of the check (\code{evidence_status}):
+\itemize{
+\item \code{"not_evaluated"}: the old fit does not hold a finite k-hat value for
+each of at least two plausible values (\code{complete} is \code{FALSE}).
+\item \code{"failed"}: a k-hat value is not below the cut-off.
+\item \code{"legacy_unsafe"}: all k-hat values are below the cut-off, but the fit
+does not pass the current checks for another reason.
+}
+
+The cut-off, \code{effective_threshold}, is the smallest of 0.7
+(\code{hard_threshold}) and the thresholds, where present, recorded in the old
+fit's diagnostics (\code{diagnostic_threshold}) and settings
+(\code{control_threshold}), so an old fit is never judged against a threshold
+above 0.7. \code{fallback_requested} is the old \code{fallback} setting (\code{"block"},
+\code{"warn"} or \code{"unknown"}). \code{get_diagnostics(x)$redaction} lists what was
+removed.
+
+\code{pv_migrate_legacy_psis_fit()} stops with an error for a fit of another
+method.
 }

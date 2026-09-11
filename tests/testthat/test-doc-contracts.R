@@ -13,7 +13,7 @@ doc_contract_flat <- function(text) {
   gsub("[[:space:]]+", " ", text)
 }
 
-test_that("interval and source vocabulary are documented in source contracts", {
+test_that("help pages keep the interval and source vocabulary", {
   object_contracts <- doc_contract_read(file.path("R", "object-contracts.R"))
   fit_direct <- doc_contract_read(file.path("R", "fit-direct.R"))
   fit_reference <- doc_contract_read(file.path("R", "fit-reference.R"))
@@ -33,62 +33,66 @@ test_that("interval and source vocabulary are documented in source contracts", {
   }
   expect_match(object_contracts, "coverage_claim_allowed = FALSE", fixed = TRUE)
   expect_match(object_contracts, "coverage_claim_allowed = TRUE", fixed = TRUE)
-  expect_match(object_contracts, "formal external", fixed = TRUE)
+  expect_match(object_contracts, "`\"external_brr_fay_rubin\"` (`stack_direct`): the target that", fixed = TRUE)
   expect_match(object_contracts, "self_normalized_log_ratios", fixed = TRUE)
   expect_match(object_contracts, "weight_ess_iid", fixed = TRUE)
 
-  expect_match(fit_direct, "describe the external target policy", fixed = TRUE)
-  expect_match(fit_direct, "not a residual", fixed = TRUE)
-  expect_match(fit_direct, "estimated by the stacked backend fit", fixed = TRUE)
+  expect_match(fit_direct, "are copied from `target`", fixed = TRUE)
+  expect_match(fit_direct, "not residual degrees of freedom", fixed = TRUE)
+  expect_match(fit_direct, "estimated from the stacked fit", fixed = TRUE)
   expect_match(fit_direct, "requires `control$center = \"target\"`", fixed = TRUE)
-  expect_match(fit_direct, "diagnostic and", fixed = TRUE)
-  expect_match(fit_direct, "exploratory:", fixed = TRUE)
+  expect_match(fit_direct, "would keep the", fixed = TRUE)
+  expect_match(fit_direct, "calibrate only their covariance", fixed = TRUE)
   expect_match(fit_direct, "b_sigma_*", fixed = TRUE)
   expect_match(fit_reference, "not passed as", fixed = TRUE)
-  expect_match(fit_reference, "automatic backend argument", fixed = TRUE)
+  expect_match(fit_reference, "survey weights are not passed as an argument", fixed = TRUE)
   expect_match(fit_reference, "b_sigma_*", fixed = TRUE)
   expect_match(fit_psis, "b_sigma_*", fixed = TRUE)
   expect_match(accessors, "pisa_tiny_stack_direct.rds", fixed = TRUE)
-  expect_match(accessors, "Return the reportable fixed-effect", fixed = TRUE)
-  expect_match(accessors, "formal target object", fixed = TRUE)
-  expect_match(object_contracts, "diagnostic/exploratory only", fixed = TRUE)
+  expect_match(accessors, "returns the table of fixed-effect estimates", fixed = TRUE)
+  expect_match(accessors, "has no target object", fixed = TRUE)
+  expect_match(object_contracts, "used by no fitting function", fixed = TRUE)
   expect_match(object_contracts, "fits must use `control$center = \"target\"`", fixed = TRUE)
   expect_match(object_contracts, "not automatically", fixed = TRUE)
   expect_match(object_contracts, "additional_args", fixed = TRUE)
-  expect_match(fit_reference, "external design replicate", fixed = TRUE)
+  expect_match(fit_reference, "posterior covariance of the draws, not a design-based", fixed = TRUE)
   expect_match(fit_reference, "coverage_claim_allowed = FALSE", fixed = TRUE)
   expect_match(fit_psis, "does not run Pareto smoothing", fixed = TRUE)
-  expect_match(fit_psis, "caller declaration", fixed = TRUE)
+  expect_match(fit_psis, "how the weights were made, but it does not check them", fixed = TRUE)
   expect_match(fit_psis, "owned_stamp_bounded_projection", fixed = TRUE)
-  expect_match(accessors, "Estimate-row `target_source` labels are provenance", fixed = TRUE)
+  expect_match(accessors, "but that is only a label", fixed = TRUE)
   expect_match(compare, "only when all available", fixed = TRUE)
-  expect_match(compare, "formal target object", fixed = TRUE)
+  expect_match(compare, "has no target object", fixed = TRUE)
 })
 
-test_that("public CCC docs name delta_c_max as the reportable center gate", {
-  paths <- c(
+test_that("public CCC docs say delta_c_max sets the center status and delta_c_rel does not", {
+  public_paths <- c(
     file.path("vignettes", "m4-ccc-calibration.Rmd"),
     file.path("vignettes", "a3-reading-results.Rmd"),
-    file.path("dev", "facts-and-notation.md"),
-    file.path("dev", "method-track-outline.md"),
     file.path("R", "object-contracts.R")
+  )
+  paths <- c(
+    public_paths,
+    file.path("dev", "facts-and-notation.md"),
+    file.path("dev", "method-track-outline.md")
   )
 
   all_text <- paste(vapply(paths, doc_contract_read, character(1)), collapse = "\n")
-  flat <- doc_contract_flat(all_text)
+  public_flat <- doc_contract_flat(
+    paste(vapply(public_paths, doc_contract_read, character(1)), collapse = "\n")
+  )
 
-  expect_match(flat, "delta_c_max", fixed = TRUE)
+  # The center status is set from delta_c_max (thresholds 0.01 and 0.05);
+  # delta_c_rel is the root mean square of the same ratios and is only recorded.
+  expect_match(public_flat, "delta_c_max", fixed = TRUE)
   expect_true(grepl(
-    paste0(
-      "delta_c_max[^.]{0,180}(reportable|NO-SEND)[^.]{0,120}gate|",
-      "(reportable|NO-SEND)[^.]{0,120}gate[^.]{0,180}delta_c_max"
-    ),
-    flat,
+    "center_status[^.]{0,40}delta_c_max|delta_c_max[^.]{0,200}0\\.01",
+    public_flat,
     perl = TRUE
   ))
   expect_true(grepl(
-    "delta_c_rel[^.]{0,180}(RMS|root-mean-square|descriptive)",
-    flat,
+    "delta_c_rel[^.]{0,180}(RMS|root-mean-square|root mean square|descriptive)",
+    public_flat,
     perl = TRUE
   ))
 
@@ -130,7 +134,9 @@ test_that("public coverage wording is scoped to provenance rather than guarantee
     expect_false(grepl(needle, flat, fixed = TRUE))
   }
 
-  expect_match(flat, "coverage-claimability contract", fixed = TRUE)
+  # The interval rule, stated in the README and in "Getting started".
+  expect_match(flat, "only a `stack_direct` fit whose target uses Barnard", fixed = TRUE)
+  expect_match(flat, "confidence intervals with nominal coverage", fixed = TRUE)
   expect_match(flat, "coverage-claimable only when backed", fixed = TRUE)
   expect_match(flat, "not on CCC arithmetic alone", fixed = TRUE)
 })
@@ -157,7 +163,7 @@ test_that("public docs do not claim standard-error equivalence for package metho
   }
 })
 
-test_that("CCC docs describe fail-fast plain Cholesky and never re-introduce the Tikhonov-regularization claim", {
+test_that("CCC docs describe plain Cholesky without automatic repair and never re-introduce the Tikhonov-regularization claim", {
   m4    <- doc_contract_read(file.path("vignettes", "m4-ccc-calibration.Rmd"))
   facts <- doc_contract_read(file.path("dev", "facts-and-notation.md"))
   spec  <- doc_contract_read(file.path("dev", "docs-spec.md"))
@@ -185,15 +191,16 @@ test_that("CCC docs describe fail-fast plain Cholesky and never re-introduce the
     expect_false(grepl(needle, all_text, fixed = TRUE))
   }
 
-  # REQUIRED. The public M4 vignette must positively describe the fail-fast contract
-  # and retain the genuine kappa_A conditioning diagnostic (the real guardrail that
-  # replaces any ridge), in both its code-token and LaTeX forms.
+  # REQUIRED. The public M4 vignette says that pvstackr uses plain Cholesky
+  # factorizations, stops with an error on a matrix that is not positive definite,
+  # adds no ridge, and reports the kappa_A conditioning diagnostic, in both its
+  # code-token and LaTeX forms.
   m4_flat <- doc_contract_flat(m4)
-  expect_match(m4_flat, "fail-fast", fixed = TRUE)
+  expect_match(m4_flat, "pvstackr stops with an error", fixed = TRUE)
   expect_match(m4_flat, "positive definite", fixed = TRUE)
   expect_match(m4_flat, "automatic Tikhonov or near-PD repair", fixed = TRUE)
-  expect_match(m4_flat, "deterministic fail-fast Cholesky algorithm", fixed = TRUE)
-  expect_match(m4_flat, "never an internal ridge", fixed = TRUE)
+  expect_match(m4_flat, "plain Cholesky factorizations", fixed = TRUE)
+  expect_match(m4_flat, "it adds no ridge", fixed = TRUE)
   expect_match(m4_flat, "kappa_A", fixed = TRUE)
   expect_match(m4_flat, "$\\kappa_A$", fixed = TRUE)
 
@@ -217,12 +224,12 @@ test_that("CCC docs describe fail-fast plain Cholesky and never re-introduce the
   )
 })
 
-test_that("method-comparison interval cell is conditional, not a bare coverage claim (ER071-F3)", {
+test_that("method-comparison interval cell is conditional, not a bare coverage claim", {
   a4    <- doc_contract_read(file.path("vignettes", "a4-comparing-methods.Rmd"))
   m5    <- doc_contract_read(file.path("vignettes", "m5-methods-and-coverage.Rmd"))
   facts <- doc_contract_read(file.path("dev", "facts-and-notation.md"))
 
-  # FORBIDDEN (ER071-F3). The bare bolded interval cell "**coverage-claimable**"
+  # FORBIDDEN. The bare bolded interval cell "**coverage-claimable**"
   # immediately followed by the next column delimiter ("coverage-claimable** |")
   # over-reads: a stack_direct interval is coverage-claimable ONLY against an
   # external Barnard-Rubin BRR-Fay target, and is DESCRIPTIVE under classic Rubin df
@@ -233,11 +240,9 @@ test_that("method-comparison interval cell is conditional, not a bare coverage c
     expect_false(grepl("coverage-claimable** |", txt, fixed = TRUE))
   }
 
-  # REQUIRED. Each file's interval cell must carry the conditional wording. This
-  # substring is cell-specific: the A4 prose (sec. 7) reads "...coverage-claimable
-  # (when calibrated to an external Barnard...", so it does NOT contain the
-  # "coverage-claimable only with an external Barnard" phrase; this REQUIRE check
-  # therefore genuinely tests the table cell and cannot be satisfied by the prose.
+  # REQUIRED. Each file's interval cell must carry the conditional wording. In
+  # these three files the phrase below occurs only in the stack_direct cell of
+  # the method table, so this check tests the table cell.
   for (txt in list(a4, m5, facts)) {
     expect_match(txt, "coverage-claimable only with an external Barnard", fixed = TRUE)
   }
@@ -246,27 +251,27 @@ test_that("method-comparison interval cell is conditional, not a bare coverage c
 test_that("public PSIS comparison vignette keeps placeholder weights blocked", {
   a4 <- doc_contract_read(file.path("vignettes", "a4-comparing-methods.Rmd"))
 
-  expect_match(a4, "fails closed", fixed = TRUE)
+  expect_match(a4, "pvstackr blocks the fit", fixed = TRUE)
   expect_match(a4, "provenance_incomplete", fixed = TRUE)
-  expect_match(a4, "a string label is not evidence", fixed = TRUE)
+  expect_match(a4, "a producer name alone is not evidence that PSIS was run", fixed = TRUE)
   expect_false(grepl("synthetic_vignette_fixture", a4, fixed = TRUE))
   expect_false(grepl("psis_producer =", a4, fixed = TRUE))
   expect_false(grepl("status == \"ok\"", a4, fixed = TRUE))
 })
 
-test_that("M2 prints the Barnard-Rubin (EQ-BARNARD) formula, keeping the classic-df honesty (ER071-F4)", {
+test_that("M2 prints the Barnard-Rubin formula and does not evaluate it on the classic-df example", {
   m2 <- doc_contract_flat(doc_contract_read(file.path("vignettes", "m2-brr-fay-target.Rmd")))
 
-  # The closed form the code implements (R/rubin-pool.R:74-117) must be auditable in
-  # the Method track -- M2 previously only named EQ-BARNARD and declined to print it.
-  expect_match(m2, "nu_{\\text{BR},k}", fixed = TRUE)
-  expect_match(m2, "nu_{\\text{obs},k}", fixed = TRUE)
-  expect_match(m2, "(M-1)/\\lambda_k^{2}", fixed = TRUE)
+  # The closed form that the code implements (R/rubin-pool.R:74-117) is printed in
+  # the Method track, with the coefficient index ell.
+  expect_match(m2, "nu_{\\text{BR},\\ell}", fixed = TRUE)
+  expect_match(m2, "nu_{\\text{obs},\\ell}", fixed = TRUE)
+  expect_match(m2, "(M-1)/\\lambda_\\ell^{2}", fixed = TRUE)
 
-  # The honesty must remain: the formula is DEFINED but NOT numerically evaluated on
-  # the classic-df fixture, and no nu_BR number is fabricated.
+  # The formula is printed but not evaluated on the example target, which uses
+  # classic degrees of freedom, so no Barnard-Rubin value is shown.
   expect_match(m2, "prints the formula but does", fixed = TRUE)
-  expect_match(m2, "The cached fixture carries classic df", fixed = TRUE)
+  expect_match(m2, "The example target uses classic degrees of freedom", fixed = TRUE)
 
   # It must not revert to declining to show the formula.
   expect_false(grepl("neither prints a formula nor", m2, fixed = TRUE))

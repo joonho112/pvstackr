@@ -1,14 +1,15 @@
 test_that("DESCRIPTION records package identity and light dependency policy", {
   desc <- utils::packageDescription("pvstackr")
-  expected_title <- "Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values"
+  expected_title <- "Bayesian Plausible-Value Analysis with One Calibrated Stacked Fit"
 
   expect_identical(desc$Package, "pvstackr")
   expect_identical(gsub("\\s+", " ", desc$Title), expected_title)
   desc_text <- gsub("\\s+", " ", desc$Description)
-  expect_match(desc_text, "Bayesian-backend fixed-effect calibration and reporting", fixed = TRUE)
-  expect_match(desc_text, "one-stacked-fit workflows", fixed = TRUE)
-  expect_match(desc_text, "Rubin/BRR-Fay fixed-effect", fixed = TRUE)
-  expect_match(desc_text, "calibrating fixed-effect draws", fixed = TRUE)
+  expect_match(desc_text, "Fits survey-weighted linear regression models", fixed = TRUE)
+  expect_match(desc_text, "fits one Bayesian model to the data stacked over the plausible values", fixed = TRUE)
+  expect_match(desc_text, "calibrates its fixed-effect draws to a design-based target", fixed = TRUE)
+  expect_match(desc_text, "the reported estimates, standard errors and degrees of freedom are those of the target", fixed = TRUE)
+  expect_false(grepl("Bayesian-backend", desc_text, fixed = TRUE))
   expect_false(grepl("expensive Bayesian sampler", desc_text, fixed = TRUE))
   expect_match(desc$URL, "https://github.com/joonho112/pvstackr", fixed = TRUE)
   expect_identical(desc$BugReports, "https://github.com/joonho112/pvstackr/issues")
@@ -67,6 +68,6 @@ test_that("README source describes survey as optional oracle infrastructure", {
   flat <- gsub("[[:space:]]+", " ", readme)
 
   expect_false(grepl("\\b(relies on|depends on|requires)\\s+\\[?survey\\b", flat, perl = TRUE, ignore.case = TRUE))
-  expect_match(flat, "runtime BRR-Fay target engine is dependency-free", fixed = TRUE)
+  expect_match(flat, "computes the standard analysis itself, without the survey package", fixed = TRUE)
   expect_true(grepl("optional development tests[^.]{0,160}survey", flat, perl = TRUE))
 })

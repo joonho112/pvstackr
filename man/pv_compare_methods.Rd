@@ -2,7 +2,7 @@
 % Please edit documentation in R/compare-methods.R
 \name{pv_compare_methods}
 \alias{pv_compare_methods}
-\title{Compare pvstackr Method Fits}
+\title{Compare fits made with different methods}
 \usage{
 pv_compare_methods(
   ...,
@@ -13,86 +13,179 @@ pv_compare_methods(
 )
 }
 \arguments{
-\item{...}{Two or more \code{pvstackr_fit} objects, or a single list of fits.}
+\item{...}{Two or more fits (class \code{pvstackr_fit}) from \code{\link[=pv_fit]{pv_fit()}} or the
+method functions, optionally named, or a single list of fits.}
 
-\item{fits}{Optional explicit list of \code{pvstackr_fit} objects.}
+\item{fits}{A list of fits, as an alternative to \code{...}; default \code{NULL}.
+Give the fits either in \code{...} or in \code{fits}, not both.}
 
-\item{reference_method}{Optional method label or method id used as the
-comparison reference. Defaults to the first non-blocked \code{per_pv} fit when
-available, otherwise the first non-blocked fit.}
+\item{reference_method}{The label or the method of the reference fit, or
+\code{NULL} (default) to choose it by the rule in Details. It must match
+exactly one fit, and that fit must not be blocked.}
 
-\item{timings}{Optional named numeric vector of elapsed seconds, named by
-method label or method id.}
+\item{timings}{Elapsed times in seconds that you measured for the fits,
+for example with \code{system.time()}: a numeric vector or list named by fit
+label or method, with finite values of 0 or more. pvstackr does not time
+the fits itself. With \code{NULL} (default), and for a fit whose label and
+method are not among the names, the time is \code{NA}.}
 
-\item{include_fits}{Whether to retain the original fit objects in the
-comparison object.}
+\item{include_fits}{\code{TRUE} to keep the compared fits in the element \code{fits}
+of the result; default \code{FALSE}.}
 }
 \value{
-A \code{pvstackr_method_comparison} object with top-level
-\code{estimate_table}, \code{diagnostic_table}, \code{agreement}, and \code{timing} fields.
-\code{estimate_table} includes method-level interval and PSIS provenance
-metadata alongside the aligned fixed-effect estimates. \code{diagnostic_table}
-includes method-level target/pooling provenance, PSIS source and bounded
-weight-concentration summaries, and shared-provenance flags.
+A list of class \code{pvstackr_method_comparison}. Read it with
+\code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_diagnostics]{get_diagnostics()}}; its \code{print()} and \code{summary()}
+methods are described in \link{pvstackr_method_comparison_summary}.
+
+\code{\link[=get_estimates]{get_estimates()}} returns the estimate table, a data frame with one row
+per fit and fixed effect:
+\itemize{
+\item \code{method}, \code{method_label}, \code{term} and \code{status}: the method and the
+label of the fit, the fixed effect and the status of the fit.
+\item \code{estimate}, \code{se} (repeated as \code{std.error}), \code{df}, \code{df_method},
+\code{df_complete}, \code{conf_level}, \code{conf_low}, \code{conf_high}, \code{interval_role}
+and \code{coverage_claim_allowed}: copied from the estimate table of the
+fit (\link{pvstackr_object_contracts} describes them).
+\item \code{psis_source}, \code{pareto_k_source}, \code{weight_method}, \code{psis_producer} and
+\code{psis_producer_version}: how the weights of a \code{stack_psis} fit were
+obtained; \code{NA} for the other methods.
+\item \code{reference_method}, \code{reference_estimate} and \code{reference_se}: the label
+of the reference fit and its estimate and standard error.
+\item \code{estimate_diff}, \code{se_ratio}, \code{abs_z_diff} and \code{agreement_band}: the
+comparison with the reference fit (see "Reading the agreement").
+\item \code{reason_codes}: the reason codes of the fit, separated by commas.
+}
+
+\code{\link[=get_diagnostics]{get_diagnostics()}} returns a list:
+\itemize{
+\item \code{reference_method}: the label of the reference fit.
+\item \code{methods} and \code{statuses}: the method and the status of each fit,
+named by label.
+\item \code{blocked_methods} and \code{warning_methods}: the labels of the fits with
+status \code{"blocked"} or \code{"warning"}.
+\item \code{agreement}: a data frame with one row per fit that gives
+\code{max_abs_z_diff} and \code{max_abs_log_se_ratio} (the largest \code{abs_z_diff}
+and the largest absolute log of \code{se_ratio} over its fixed effects),
+\code{n_terms} (the number of fixed effects in the comparison) and
+\code{n_available} (the number of them with an estimate from this fit).
+\item \code{method_diagnostics}: a data frame with one row per fit. Its columns
+are \code{method}, \code{method_label}, \code{status}, \code{reason_codes} and
+\code{warning_count} (the number of warnings); \code{n_terms} and
+\code{n_available}; \code{df_method}, \code{interval_role}, \code{coverage_claim_allowed}
+and \code{n_descriptive_intervals} (the number of rows with
+\code{coverage_claim_allowed = FALSE}); the source labels and checksums
+\code{target_source}, \code{target_hash}, \code{pooling_source} and \code{pooling_hash}
+(see "Source labels" in \link{pvstackr_object_contracts}); \code{center}
+(\code{"target"} for a \code{stack_direct} fit, \code{NA} otherwise); the five flags
+of \code{target_overlap} for this fit; \code{psis_status}, \code{pareto_k_max}, the
+five weight-source columns of the estimate table,
+\code{weight_ess_iid_min}, \code{weight_ess_fraction_min} and
+\code{max_normalized_weight_max} (the smallest or largest value over the
+plausible values), which describe a \code{stack_psis} fit and are \code{NA} for
+the other methods; and \code{n_fits} and \code{elapsed_seconds}. Here
+\code{coverage_claim_allowed} is \code{TRUE} only when all available rows of the
+fit have \code{TRUE}, \code{FALSE} when any has \code{FALSE}, and \code{NA} for a fit
+without estimates. \code{target_source} is only a label: a \code{stack_psis}
+fit has no target object.
+\item \code{timing}: a data frame with one row per fit that gives \code{n_fits}, the
+number of models fitted (the number of plausible values for \code{per_pv},
+1 for \code{stack_direct} and \code{stack_psis}, \code{NA} for a blocked
+\code{stack_direct} fit), and \code{elapsed_seconds}, the time from \code{timings}
+(\code{NA} without one).
+\item \code{target_overlap}: whether fits share a target or a combined result
+(see "Reading the agreement").
+}
+
+The result also holds this list as \code{diagnostics}; the tables as
+\code{estimate_table} (and \code{table}), \code{diagnostic_table} (the same as
+\code{method_diagnostics}), \code{agreement} and \code{timing}; \code{reference_method},
+\code{methods} and \code{method_labels}; and the compared fits as \code{fits} when
+\code{include_fits = TRUE} (otherwise \code{NULL}). Its other elements are
+described in "Technical details".
 }
 \description{
-\code{pv_compare_methods()} compares already-created \code{pvstackr_fit} objects by
-aligning their fixed-effect estimate tables, computing differences against a
-reference method, and recording agreement and timing diagnostics.
+\code{pv_compare_methods()} lines up the fixed-effect estimates of two or more
+fits, for example a \code{stack_direct} fit and a \code{per_pv} fit of the same
+model, and computes how far each fit's estimates are from those of a
+reference fit. It also records the status, the kind of interval and the
+source labels of each fit, and the time that each fit took if you supply
+it. It does not fit any model itself.
 }
 \details{
-The returned object keeps blocked methods visible. Blocked fits receive rows
-for every aligned fixed-effect term, but their reportable numeric comparison
-fields are \code{NA} and their reason codes remain available.
+Each fit is known by a label: its argument name, such as \code{per_pv} in
+\code{pv_compare_methods(stack_direct = fit_a, per_pv = fit_b)}, or its method
+when it has no name. Repeated labels get a suffix, as in \code{"per_pv_1"}.
+The estimate table has one row per fit and fixed effect, for every fixed
+effect that appears in any of the fits; a fit without that fixed effect
+has \code{NA} in the row.
 
-The comparison estimate table preserves interval metadata from each fit:
-\code{df_method}, \code{df_complete}, \code{conf_level}, \code{interval_role}, and
-\code{coverage_claim_allowed}. Default print methods keep their tables compact and
-emit a one-line note when one or more compared intervals are descriptive
-rather than coverage-claimable. In the method-level diagnostic table,
-\code{coverage_claim_allowed} is \code{TRUE} only when all available reportable rows
-for that method are coverage-claimable, \code{FALSE} when any available row is
-descriptive, and \code{NA} when the method has no available estimate rows.
+Differences are taken from the reference fit, which \code{reference_method}
+names. By default it is the first \code{per_pv} fit that is not blocked or, if
+there is none, the first fit that is not blocked. A blocked fit cannot be
+the reference, but it keeps its rows, with \code{NA} values and its reason
+codes, so that it stays visible in the comparison.
 
-Method diagnostics also carry target and pooling provenance where available:
-\code{target_source}, \code{target_hash}, \code{pooling_source}, \code{pooling_hash}, and shared
-hash flags. The nested \code{diagnostics$target_overlap} summary records whether
-any compared methods share external targets, target hashes, pooling hashes,
-reference-target hashes, or target-source families. Agreement diagnostics are
-descriptive; close agreement is not automatic independent corroboration when
-compared methods share a target hash, pooling hash, target source, or estimand
-construction. \code{target_source} is provenance vocabulary, not necessarily a
-formal target object: \code{stack_psis} rows use \code{stack_psis_rubin_pooling} even
-though \code{\link[=get_target]{get_target()}} returns \code{NULL} for \code{stack_psis} fits.
-For \code{stack_psis}, the aligned estimate rows additionally retain
-\code{psis_source}, \code{pareto_k_source}, \code{weight_method}, \code{psis_producer}, and
-\code{psis_producer_version}. The method diagnostic table adds the minimum
-per-PV Kish-style iid weight ESS and ESS fraction, plus the maximum
-normalized weight. These fields preserve the source fit's bounded
-provenance and concentration diagnostics; they are not MCMC ESS or a
-substitute for Pareto-k gating.
-
-Current comparison objects record deep-valid compact PSIS source fits,
-canonical per-source reportability projections, each source authority's
-validation stamp, and an owned-payload SHA-256 stamp. Derived tables and
-diagnostics are recomputed from those projections during validation. A
-pre-marker serialized comparison containing
-\code{stack_psis} is inspection-only and must be rebuilt from current validated
-fits; its saved numeric table is not grandfathered. Independently of the
-stamp, warning-status PSIS rows are forbidden and blocked PSIS rows must
-carry no reportable numeric or pooling metadata.
+\code{pv_compare_methods()} stops with an error if it gets fewer than two fits,
+an object that is not a fit or a fit that was changed after it was
+created, and when all fits are blocked.
 }
-\section{Interpreting agreement}{
+\section{Reading the agreement}{
 
-Agreement diagnostics are \strong{descriptive}, not independent corroboration.
-Close agreement does \strong{not} confirm a result when the compared methods share
-a target hash, pooling hash, target source, or estimand construction: the
-methods are then reading the same information, so concordance is expected and
-uninformative about correctness. The nested \code{diagnostics$target_overlap}
-summary flags this, and the print methods emit a one-line provenance note when
-overlap is detected. Only \code{stack_direct} rows backed by the external
-Rubin/BRR-Fay target are coverage-claimable; \code{per_pv} and \code{stack_psis} rows
-are descriptive/reference even with Barnard-Rubin degrees of freedom.
+\code{estimate_diff} is the estimate minus the reference estimate, \code{se_ratio}
+is the standard error divided by the reference standard error, and
+\code{abs_z_diff} is the absolute difference divided by
+\code{sqrt(se^2 + reference_se^2)}. \code{agreement_band} groups \code{abs_z_diff} by
+pvstackr's cut-offs: \code{"close"} below 0.1, \code{"moderate"} from 0.1 to below
+0.5, and \code{"different"} from 0.5 on. It is \code{"not_available"} for a blocked
+fit and where either estimate is missing. The rows of the reference fit
+itself have a difference of 0 and are \code{"close"}.
+
+These values describe how far apart the fits are; they are not a
+statistical test. The fits usually come from the same data and plausible
+values, and a \code{stack_psis} fit may reweight the draws of the same stacked
+model, so agreement between them is not independent confirmation of a
+result. Where fits share their numbers, agreement follows by
+construction: a \code{stack_direct} fit reports the estimates and standard
+errors of its target, so two \code{stack_direct} fits calibrated to the same
+target have the same estimates and standard errors, whatever their draws.
+\code{get_diagnostics(x)$target_overlap} records such cases:
+\itemize{
+\item \code{shared_target_hash} and \code{shared_pooling_hash}: \code{TRUE} when two or more
+fits have the same \code{target_hash} (or \code{pooling_hash}).
+\item \code{shared_external_target}: \code{TRUE} only when two or more fits have
+\code{target_source = "external_brr_fay_rubin"} and the same \code{target_hash},
+that is, when they are \code{stack_direct} fits calibrated to the same target
+from \code{\link[=pv_brr_target]{pv_brr_target()}}. A blocked \code{stack_direct} fit keeps its target, so
+it counts as well.
+\item \code{shares_reference_target} and \code{shares_reference_pooling}: \code{TRUE} when a
+fit other than the reference fit has the \code{target_hash} (or
+\code{pooling_hash}) of the reference fit.
+\item \code{shared_target_sources}: the \code{target_source} labels that occur in two or
+more fits.
+\item \code{independence_caveat_required}: \code{TRUE} when any of these flags is \code{TRUE}
+or \code{shared_target_sources} is not empty.
+\item \code{independence_caveat}: the text of the line beginning
+"provenance note:", which \code{print()} shows for every comparison.
+}
+
+Each row keeps the interval columns of its fit, so an interval is read by
+the rule of that fit: only \code{stack_direct} rows whose target uses
+Barnard-Rubin degrees of freedom have \code{coverage_claim_allowed = TRUE}
+(\code{\link[=pv_fit]{pv_fit()}} gives the rule). \code{print()} adds a line beginning
+"interval note:" when some or all intervals are descriptive.
+}
+
+\section{Technical details}{
+
+The result keeps what the comparison uses from each fit
+(\code{source_fit_projection}), with the fit's checksum
+(\code{source_fit_validation}) and, for a \code{stack_psis} fit, a copy of the fit
+without its stacked draws and weights (\code{source_fit_reportability}).
+\code{validation} holds a SHA-256 checksum of the comparison, \code{created_at} the
+time it was made, \code{schema_version} its format version and \code{provenance} a
+record of how it was made; \code{warnings} is empty. The functions that read a
+comparison stop with an error if it was changed after it was created or
+was saved by pvstackr 0.1.x; make it again from current fits.
 }
 
 \examples{
@@ -100,10 +193,11 @@ path <- system.file(
   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
 )
 if (nzchar(path)) {
-  fit_direct <- readRDS(path)$fit          # cached stack_direct pvstackr_fit
+  fit_direct <- readRDS(path)$fit          # the bundled stack_direct fit
 
-  # Build a per_pv reference fit sharing the same fixed-effect names
-  # (b_Intercept, b_x, b_female) from small injected posterior draw clouds.
+  # A per_pv fit made from random draws with the same fixed-effect names
+  # (b_Intercept, b_x, b_female). It is not fitted to any data, so the
+  # differences below only show the layout of the output.
   set.seed(1)
   fe_names <- c("b_Intercept", "b_x", "b_female")
   draw_block <- function() {
@@ -115,12 +209,15 @@ if (nzchar(path)) {
   )
 
   cmp <- pv_compare_methods(stack_direct = fit_direct, per_pv = fit_per_pv)
-  cmp                          # descriptive agreement + provenance notes
-  head(get_estimates(cmp))     # aligned per-method estimate rows
+  print(cmp)                   # reference fit, labels and the two notes
+  get_estimates(cmp)[, c("method_label", "term", "estimate", "se",
+                         "abs_z_diff", "agreement_band")]
 }
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}},
-\code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}}, \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}
+\code{\link[=pv_fit]{pv_fit()}} to make the fits,
+\link{pvstackr_method_comparison_summary} for \code{print()} and \code{summary()}, and
+\code{vignette("a4-comparing-methods", package = "pvstackr")} for a comparison
+of the three methods.
 }
 \concept{pvstackr-comparison}

@@ -1,0 +1,8 @@
+/* On narrow screens a wide display equation scrolls inside its own box
+   instead of making the whole page wider than the screen. */
+mjx-container[display="true"] {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

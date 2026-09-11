@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit-stack-psis.R
 \name{pv_fit_stack_psis}
 \alias{pv_fit_stack_psis}
-\title{Fit the PSIS-Reweighted Stacked Method}
+\title{Reweight stacked draws toward each plausible value}
 \usage{
 pv_fit_stack_psis(
   data = NULL,
@@ -36,149 +36,270 @@ pv_fit_stack_psis(
 )
 }
 \arguments{
-\item{data}{Optional analysis data frame for the injected stacked-fit route.}
+\item{data}{A data frame, or \code{NULL} (default). Required with
+\code{fit_function}, which receives the stacked data (see \code{fit_function}).
+Otherwise it is optional: given together with \code{formula}, it is used only
+to record the design (the fit's \code{design}), and the plausible-value names
+must then be columns of \code{data}.}
 
-\item{formula}{Optional formula with \code{OUTCOME} on the left-hand side for the
-injected stacked-fit route.}
+\item{formula}{A two-sided formula with the placeholder \code{OUTCOME} on the
+left-hand side, such as \code{OUTCOME ~ x + female} (see \code{\link[=pv_fit]{pv_fit()}}), or
+\code{NULL} (default). Required with \code{fit_function}. A random-effect term
+such as \code{(1 | school)} or a \code{weights()} term stops the function with an
+error, also when the formula only serves to record the design.}
 
-\item{pv_cols}{Plausible-value columns.}
+\item{pv_cols}{A character vector with the names of the plausible values,
+at least two, or \code{NULL} (default). Required with \code{fit_function}: the
+plausible-value columns of \code{data}. Otherwise it is optional and names the
+columns of the weights; if the weights have column names, they must be
+the same. Without \code{pv_cols}, the column names of the weights are used,
+or \code{PV1}, \code{PV2}, ... when they have none.}
 
-\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "stack_psis"}.}
+\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "stack_psis"}. The
+default is \code{pv_control(method = "stack_psis")}, and \code{NULL} gives the
+same. Its \code{psis_k_threshold} sets the k-hat cut-off, and its sampler
+settings and \code{backend} are only passed on to \code{fit_function}.}
 
-\item{family, prior}{Optional backend arguments passed to an injected stacked
-fit.}
+\item{family, prior}{Passed unchanged to \code{fit_function}; pvstackr does not
+check them. Default \code{NULL}.}
 
-\item{fit_function, draws_function}{Injected stacked backend fit and draw
-extractor.}
+\item{fit_function}{Your function that fits the model to the stacked
+data, or \code{NULL} (default). pvstackr stacks \code{data} (one copy per
+plausible value, with the plausible value in the column \code{.pvstackr_y})
+and calls the function once with the arguments \code{formula}, \code{data},
+\code{family}, \code{prior}, \code{chains}, \code{iter}, \code{warmup}, \code{cores}, \code{seed},
+\code{backend}, \code{file} and \code{file_refit} (the stacked formula and data, the
+settings from \code{control} and the cache file; see \code{cache_dir}), plus the
+elements of \code{additional_args}. The formula has the right-hand side of
+\code{formula}, for example
+\code{.pvstackr_y | weights(.pvstackr_weight) ~ x + female} for
+\code{OUTCOME ~ x + female}. The row weight
+\code{.pvstackr_weight} is \code{weight_col} divided by its mean and by the number
+of plausible values, or 1/M without \code{weight_col}; a function that
+ignores it fits an unweighted model. There is no bundled engine for this
+method, also with \code{pv_control(backend = "brms")}.}
 
-\item{stack_fit}{Optional existing \code{pvstackr_stack_fit}.}
+\item{draws_function}{Your function that takes the object returned by
+\code{fit_function} and returns its draws: a numeric matrix or data frame with
+one row per draw (at least two), finite values and unique column names.
+Required with \code{fit_function}.}
 
-\item{stacked_draws}{Optional stacked posterior draw matrix.}
+\item{stack_fit}{A stacked-fit object of class \code{pvstackr_stack_fit} that
+holds its stacked draws, or \code{NULL} (default). The \code{stack_fit} component
+of a fit returned by pvstackr keeps no stacked draws and stops the
+function with an error, so in practice give \code{stacked_draws} or
+\code{fit_function} instead.}
 
-\item{param_map}{Optional explicit draw-column map. Supply \code{fe_names} or
-\code{fe_idx} to identify fixed-effect columns, and optional \code{vc_names} or
-\code{vc_idx} for nuisance variance-component columns. Use
-\code{vc_names = character()} to drop all nuisance columns. Explicit maps are
-recommended when backend draw names do not follow the automatic \verb{b_*}
-fixed-effect convention, including distributional names such as
-\verb{b_sigma_*}.}
+\item{stacked_draws}{Posterior draws of a model fitted to the stacked
+data, computed elsewhere, or \code{NULL} (default): a numeric matrix or data
+frame with one row per draw (at least two), finite values and unique
+column names.}
 
-\item{psis_weights}{Optional normalized or unnormalized external weight
-matrix, one column per plausible value. The numeric matrix alone does not
-establish that PSIS smoothing occurred.}
+\item{param_map}{\code{NULL} (default) or a named list that says which columns
+of the stacked draws are the fixed effects, by name (\code{fe_names}) or by
+position (\code{fe_idx}), as for \code{\link[=pv_fit_direct]{pv_fit_direct()}}. With \code{NULL}, the columns
+whose names start with \code{b_} are the fixed effects; with \code{stack_fit}, the
+selection recorded in \code{stack_fit} is used. Only the fixed effects are
+used, and their column names become the terms of the estimate table, so
+they must start with \code{b_}. Give a list to leave out other columns that
+start with \code{b_}, such as distributional parameters named \verb{b_sigma_*}.
+With \code{fit_function} or \code{stack_fit}, give the columns by name
+(\code{fe_names}), because positions can point to other columns there.}
 
-\item{pareto_k}{Pareto-k diagnostics aligned to plausible values.}
+\item{psis_weights}{A numeric matrix of importance weights, one row per
+stacked draw and one column per plausible value, or \code{NULL} (default).
+The values must be finite and not negative, and every column must have a
+positive sum; pvstackr divides each column by its sum. Give it with
+\code{pareto_k}.}
 
-\item{log_ratios}{Optional log-ratio matrix used with \code{psis_function}, or
-self-normalized when \code{pareto_k} is supplied.}
+\item{pareto_k}{The Pareto k-hat values, one per plausible value: a
+numeric vector named by plausible value, or in the order of the weight
+columns. Required with \code{psis_weights}, and with \code{log_ratios} when there
+is no \code{psis_function}; leave it \code{NULL} (default) with \code{psis_function},
+which returns it.}
 
-\item{psis_function}{Optional function returning \code{weights} and \code{pareto_k}.}
+\item{log_ratios}{A numeric matrix of log importance ratios for
+reweighting the stacked draws toward the posterior of each plausible
+value, with one row per stacked draw, one column per plausible value and
+finite values; or \code{NULL} (default). With \code{psis_function}, pvstackr passes
+it to that function. With \code{pareto_k} alone, pvstackr turns the ratios
+into normalized weights without smoothing and the fit is blocked
+(\code{psis_smoothing_not_applied}), so this gives only the diagnostics in
+\code{get_diagnostics(fit)$psis}.}
 
-\item{psis_producer, psis_producer_version}{Optional bounded scalar strings
-identifying the external PSIS producer and its version. Both are required
-together for supplied or injected weights to be reportable. They record a
-caller declaration; package-verified \code{loo} execution is deferred.}
+\item{psis_function}{Your function that takes \code{log_ratios} and returns a
+list with \code{weights} (a matrix of the same dimensions, with the columns in
+the same order) and \code{pareto_k}, or \code{NULL} (default). For example, a
+function that applies the function \code{psis()} of the loo package to each
+column.}
 
-\item{fallback}{Requested behavior when Pareto-k fails: \code{"block"} or the
-legacy \code{"warn"}. Both choices now fail closed; \code{"warn"} cannot make failed
-PSIS output reportable.}
+\item{psis_producer, psis_producer_version}{The name and the version of
+the program that produced the weights and the k-hat values, such as
+\code{"loo"} and \code{as.character(packageVersion("loo"))}: single strings of at
+most 128 and 64 bytes, without leading or trailing spaces or control
+characters. Give both or neither; without them the fit is blocked
+(\code{psis_weight_provenance_incomplete}). pvstackr records them in the
+estimate table and in \code{get_diagnostics(fit)$psis} as your statement of
+how the weights were made, but it does not check them. They cannot be
+given with weights that pvstackr makes from \code{log_ratios} without
+\code{psis_function}.}
 
-\item{weight_col, rep_weight_cols, fay_k, id_cols}{Optional design metadata.}
+\item{fallback}{\code{"block"} (default) or \code{"warn"}. Both block a fit that
+fails the check (see Details). \code{"warn"} is kept so that older code still
+runs: it gives a deprecation warning and is only recorded, as
+\code{fallback_requested} in \code{get_diagnostics(fit)$psis}.}
 
-\item{df_method, df_complete, allow_m1}{Rubin pooling options.}
+\item{weight_col, rep_weight_cols, fay_k, id_cols}{The final weight column,
+the replicate-weight columns, the Fay coefficient and the row-identifier
+columns, as in \code{\link[=pv_design]{pv_design()}}. \code{weight_col} sets the row weights for
+\code{fit_function} (see there). With \code{data} and \code{formula}, all four are
+checked and recorded in the fit's \code{design}; the replicate weights and
+\code{fay_k} are not used in the calculation. Defaults \code{NULL}, \code{NULL}, \code{0.5}
+and \code{NULL}.}
 
-\item{cache_dir, cache_stem}{Cache metadata for injected stacked fits.}
+\item{df_method}{The rule for the degrees of freedom: \code{"classic"}
+(default) or \code{"barnard_rubin"}, which needs \code{df_complete}. Both rules are
+defined in \code{\link[=pv_brr_target]{pv_brr_target()}}. With either rule the intervals are
+descriptive.}
 
-\item{additional_args}{Additional named arguments passed to injected fits.}
+\item{df_complete}{For \code{df_method = "barnard_rubin"}, the complete-data
+degrees of freedom, which you state: one positive number for all fixed
+effects, or one value per fixed effect, preferably named by the
+fixed-effect columns (such as \code{b_Intercept}); an unnamed vector is taken
+in the order of the fixed-effect columns. Leave it \code{NULL} (default) with
+\code{"classic"}: a value there changes nothing but the \code{df_complete} column
+of the estimate table.}
+
+\item{allow_m1}{Has no effect: a \code{stack_psis} fit needs weights and k-hat
+values for at least two plausible values. Default \code{FALSE}.}
+
+\item{cache_dir, cache_stem}{The folder and the file name that are passed
+to \code{fit_function}; defaults \code{"cache"} and \code{"pvstackr-stack-psis"}. It
+receives \code{file = file.path(path.expand(cache_dir), cache_stem)} and
+\code{file_refit = "on_change"}, or \code{file = NULL} and \code{file_refit = "never"}
+when \code{cache_dir = NULL}. pvstackr does not create the folder.}
+
+\item{additional_args}{A named list of further arguments passed to
+\code{fit_function}, \code{list()} by default. They may not repeat the arguments
+that pvstackr sets (see \code{fit_function}).}
 }
 \value{
-A \code{pvstackr_fit} object with \code{method = "stack_psis"}.
+A \code{pvstackr_fit} object with \code{method = "stack_psis"}. Read it
+with \code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_diagnostics]{get_diagnostics()}}; \code{\link[=get_target]{get_target()}} and
+\code{\link[=get_draws]{get_draws()}} return \code{NULL} for this method, and
+\link{pvstackr_object_contracts} describes every part of the object. The
+estimate table has one row per fixed effect with the combined estimate,
+its standard error and its degrees of freedom; besides the columns of
+every method, it has \code{pooling_source}, \code{pooling_hash} and the columns
+\code{psis_status}, \code{pareto_k_max}, \code{psis_k_threshold}, \code{psis_source},
+\code{pareto_k_source}, \code{weight_method}, \code{psis_producer} and
+\code{psis_producer_version}. \code{\link[=get_diagnostics]{get_diagnostics()}} returns \code{psis} (the k-hat
+values and their check, the sources of the weights and the
+weight-concentration values), \code{pooling} (the Rubin's-rules combination,
+such as \code{U_bar}, \code{B} and \code{T_MI}) and \code{weighted} (the weighted estimate
+and covariance of each plausible value and, with
+\code{control$return_draws = TRUE}, the fixed-effect draws and the normalized
+weights). For a blocked fit the estimate table is empty, and
+\code{\link[=get_diagnostics]{get_diagnostics()}} returns only \code{psis} and \code{redaction}, which lists what
+was removed.
 }
 \description{
-\code{pv_fit_stack_psis()} implements the \code{stack_psis} API for this package stage:
-one stacked draw source, externally produced per-plausible-value weights and
-Pareto-k diagnostics, model-based Rubin pooling of weighted fixed-effect
-summaries, and explicit provenance and diagnostic gates.
+\code{pv_fit_stack_psis()} runs the \code{"stack_psis"} method of \code{\link[=pv_fit]{pv_fit()}}. It
+takes one set of posterior draws from a model fitted to the stacked data
+(one copy of the data per plausible value) and, for each plausible value,
+importance weights for these draws and a Pareto k-hat value, computed
+outside pvstackr, for example by Pareto smoothed importance sampling
+(PSIS) with the loo package. It reweights the draws toward the
+posterior of each plausible value and combines the weighted results with
+Rubin's rules. pvstackr checks the weights and the k-hat values but does
+not compute them.
 }
 \details{
-This function does not depend on \code{loo}, \code{brms}, or \code{cmdstanr} directly and
-does not run a live PSIS routine from the \code{loo} package by default. Users may
-supply weights plus Pareto-k values, or inject a
-\code{psis_function(log_ratios)} that returns \code{weights} and \code{pareto_k}. Numeric
-weights or a function name cannot prove that Pareto smoothing occurred.
-Reportable output therefore also requires both \code{psis_producer} and
-\code{psis_producer_version}; these fields are caller-declared provenance, not
-package verification. In v0.2, reportable output is fixed-effect-only; group terms such as
-\code{(1 | school)} and \code{(1 || school)} are rejected.
+\subsection{Inputs}{
 
-\code{stack_psis} interval metadata is diagnostic/reference vocabulary, not a
-design-coverage claim. Classic Rubin pooling is labeled
-\code{interval_role = "psis_classic_rubin"}; Barnard-Rubin pooling is labeled
-\code{interval_role = "psis_barnard_rubin"} and uses the supplied \code{df_complete}.
-Both roles set \code{coverage_claim_allowed = FALSE} because the pooled covariance
-is model-based weighted covariance of the stacked draws. The pooling
-provenance is labeled \code{stack_psis_rubin_pooling}. Diagnostics separate the
-input route (\code{supplied_psis_weights}, \code{injected_psis_function}, or
-\code{self_normalized_log_ratios}), the Pareto-k source, and the weight method.
-The self-normalized path does not run Pareto smoothing and is always blocked
-from estimates. Supplied or injected weights without producer/version
-provenance are likewise diagnostic-only.
+The stacked draws come from exactly one of \code{stacked_draws},
+\code{fit_function} with \code{draws_function}, or \code{stack_fit}. The weights come
+from \code{psis_weights} with \code{pareto_k}, or from your \code{psis_function}, which
+pvstackr calls on \code{log_ratios} and which returns both. The weights have
+one row per stacked draw and one column per plausible value. Name the
+program that produced them with \code{psis_producer} and
+\code{psis_producer_version}: the numbers alone cannot show that the weights
+were Pareto-smoothed.
 
-Every path records per-PV weight-concentration diagnostics after column
-normalization: \code{weight_ess_iid = 1 / sum(w^2)}, its draw-count fraction, and
-the largest normalized weight. This is a Kish-style iid weight diagnostic,
-not MCMC ESS, the \code{loo} relative-efficiency diagnostic, or an autocorrelation-adjusted PSIS
-effective sample size. These quantities explain weight concentration but do
-not relax or replace the Pareto-k gate.
-
-Reportability uses an immutable fail-closed gate: every plausible value must
-have a finite Pareto-k strictly below \code{control$psis_k_threshold}, and that
-threshold cannot exceed \code{0.7}. Failed, unevaluated, unsmoothed, or
-provenance-incomplete input always returns a blocked \code{pvstackr_fit} with no
-reportable estimates, raw weights, or draws; bounded ESS and maximum-weight
-diagnostics remain available. The legacy
-\code{fallback = "warn"} argument remains accepted for call compatibility and
-emits a deprecation warning, but it cannot relax the gate and is recorded
-only as the requested policy.
-
-When \code{control$return_draws = TRUE}, retained normalized weights are used to
-recompute the ESS, maximum-weight, and weighted-summary diagnostics during
-deep validation (\code{weight_diagnostic_authority = "retained_weights_recomputed"}). When weights are intentionally redacted,
-these bounded diagnostics are protected by the package-owned validation
-stamp and cross-field feasibility checks
-(\code{"owned_stamp_bounded_projection"}), but the original weight vector cannot
-be independently reconstructed from the compact object. This is an explicit
-portability and threat-model boundary, not a stronger statistical claim.
-}
-\section{Reportable scope and coverage}{
-
-In this package stage, reportable output is \strong{fixed-effect-only}; variance
-components are fit but not calibrated to the target. Coverage claims are
-enabled \strong{only} for \code{stack_direct} rows backed by the external Rubin/BRR-Fay
-target (\code{interval_role = "coverage_barnard_rubin"},
-\code{coverage_claim_allowed = TRUE}). \code{stack_psis} intervals are
-\strong{descriptive/reference} even with Barnard-Rubin degrees of freedom. "One
-stacked fit" describes the computational topology, not a benchmarked speed
-claim. A small Pareto-\eqn{\hat k} does \strong{not} certify correct variance:
-reusing one draw cloud correlates the per-PV imputations, so intervals can run
-narrow; \eqn{\hat k} is specification-dependent. Treat \code{stack_psis} as a
-cross-check, never the deliverable.
+PSIS stabilizes importance weights with a generalized Pareto distribution
+fitted to the upper tail of the importance ratios; the Pareto k-hat, the
+estimated shape parameter of that distribution, shows how reliable the
+reweighted estimates are (Vehtari et al. 2024). pvstackr itself
+does not run Pareto smoothing or any other part of PSIS: it fits no
+Pareto distribution and estimates no k-hat.
 }
 
+\subsection{Calculation}{
+
+For each plausible value \eqn{m}, pvstackr divides the weights by their
+sum and computes the weighted mean \eqn{\hat\beta_m}{b_m} and the
+weighted covariance matrix \eqn{U_m} of the fixed-effect draws (see
+\code{param_map}), with the covariance divided by
+\eqn{1 - \sum w^2}{1 - sum(w^2)}. Rubin's rules then combine the \eqn{M}
+results as in \code{\link[=pv_brr_target]{pv_brr_target()}}: the total covariance is
+\eqn{T_{\mathrm{MI}} = \bar U + (1 + 1/M) B}{T_MI = U_bar + (1 + 1/M) B},
+the standard errors are the square roots of its diagonal, and the degrees
+of freedom follow \code{df_method}.
+}
+
+\subsection{Checks and status}{
+
+By pvstackr's rule, the fit is blocked (status \code{"blocked"}, with no
+estimates, weights or draws) unless every plausible value has a finite
+k-hat strictly below \code{control$psis_k_threshold} (default 0.7, the largest
+value that \code{\link[=pv_control]{pv_control()}} accepts) and the weights come with
+\code{psis_producer} and \code{psis_producer_version}. The reason code says which
+part failed: \code{psis_k_not_evaluated} (a k-hat is missing or not finite),
+\code{psis_k_too_high}, \code{psis_weight_provenance_incomplete} (no program named)
+or \code{psis_smoothing_not_applied} (weights that pvstackr made from
+\code{log_ratios} without smoothing). Otherwise the status is \code{"ok"}; a
+\code{stack_psis} fit never has status \code{"warning"}, and pvstackr does not check
+the sampler diagnostics of the stacked fit.
+
+Vehtari et al. (2024) recommend the cut-off
+\eqn{\min(1 - 1/\log_{10} S, 0.7)}{min(1 - 1 / log10(S), 0.7)} for
+\eqn{S} draws, for example 0.67 for 1000 draws; to use it, set
+\code{psis_k_threshold} in \code{\link[=pv_control]{pv_control()}}.
+}
+
+\subsection{What is reported}{
+
+As for every method, only the fixed effects are reported (\code{\link[=pv_fit]{pv_fit()}}
+gives the scope and the full rule for the intervals). The variance within
+each plausible value comes from the weighted posterior draws, not from
+replicate weights, so every row of the estimate table has
+\code{interval_role = "psis_classic_rubin"} or \code{"psis_barnard_rubin"} and
+\code{coverage_claim_allowed = FALSE}. A k-hat below the cut-off lets pvstackr
+report the estimates, but the intervals remain descriptive. pvstackr
+provides \code{stack_psis} as a check on a stacked fit, not as a replacement
+for \code{stack_direct}.
+
+\code{get_diagnostics(fit)$psis} also records, for a blocked fit too, how
+concentrated the normalized weights are, and \code{weight_diagnostic_authority}
+says whether the weights were kept (\code{"retained_weights_recomputed"}, for a
+fit with estimates and \code{control$return_draws = TRUE}) or removed
+(\code{"owned_stamp_bounded_projection"}). These values do not change the
+status; \link{pvstackr_object_contracts} explains them.
+}
+}
 \examples{
 set.seed(1)
-# Fail-closed stack_psis demo: equal placeholder weights and arbitrary
-# Pareto-k values do not establish that PSIS ran. This example deliberately
-# omits producer/version, so it remains diagnostic-only.
-# Fixed-effect
-# columns are named like `b_*`; weights have one column per plausible value.
+# Simulated stacked draws with the fixed-effect columns b_Intercept and
+# b_x, equal placeholder weights with one column per plausible value, and
+# k-hat values below the 0.7 cut-off. These weights were not made by
+# PSIS, so no program is named, and pvstackr blocks the fit.
 M <- 2L
 stacked_draws <- matrix(
   rnorm(400 * 2), ncol = 2,
   dimnames = list(NULL, c("b_Intercept", "b_x"))
 )
 psis_weights <- matrix(1 / 400, nrow = 400, ncol = M)  # equal weights
-pareto_k     <- rep(0.2, M)                             # all "good" (< 0.5)
+pareto_k     <- rep(0.2, M)                             # below 0.7
 fit_psis <- pv_fit_stack_psis(
   stacked_draws = stacked_draws,
   pv_cols       = paste0("PV", seq_len(M)),
@@ -186,14 +307,13 @@ fit_psis <- pv_fit_stack_psis(
   pareto_k      = pareto_k,
   control       = pv_control(method = "stack_psis")
 )
-fit_psis                    # blocked: provenance_incomplete
+# Status "blocked", reason code psis_weight_provenance_incomplete:
+fit_psis
+# The PSIS check has status "provenance_incomplete", and weight_method is
+# "unspecified_external" because no program was named:
 get_diagnostics(fit_psis)$psis[c("status", "weight_method")]
 }
 \references{
-Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
-evaluation using leave-one-out cross-validation and WAIC. \emph{Statistics and
-Computing}, 27(5), 1413-1432.
-
 Vehtari, A., Simpson, D., Gelman, A., Yao, Y., & Gabry, J. (2024). Pareto
 smoothed importance sampling. \emph{Journal of Machine Learning Research}, 25(72),
 1-58.
@@ -201,9 +321,10 @@ smoothed importance sampling. \emph{Journal of Machine Learning Research}, 25(72
 Rubin, D. B. (1987). \emph{Multiple Imputation for Nonresponse in Surveys.} Wiley.
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_direct]{pv_fit_direct()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}},
-\code{\link[=pv_control]{pv_control()}}; \code{\link[=pv_compare_methods]{pv_compare_methods()}}, \code{\link[=get_estimates]{get_estimates()}},
-\link{pvstackr_object_contracts}.
+\code{\link[=pv_compare_methods]{pv_compare_methods()}} to compare fits,
+\code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}} for \code{stack_psis} fits saved by earlier
+versions of pvstackr, and \link{pvstackr_object_contracts} for the parts of a
+fit.
 
 Other pvstackr-fitting:
 \code{\link[=pv_control]{pv_control()}},

@@ -6,7 +6,7 @@
 \alias{get_estimates.pvstackr_fit}
 \alias{get_estimates.pvstackr_method_comparison}
 \alias{get_estimates.pvstackr_legacy_psis_inspection}
-\title{Access pvstackr Estimates}
+\title{Get the estimate table of a fit}
 \usage{
 get_estimates(x, ...)
 
@@ -19,34 +19,51 @@ get_estimates(x, ...)
 \method{get_estimates}{pvstackr_legacy_psis_inspection}(x, ...)
 }
 \arguments{
-\item{x}{A pvstackr object.}
+\item{x}{A fit (class \code{pvstackr_fit}) from \code{\link[=pv_fit]{pv_fit()}} or a method function,
+or a method comparison from \code{\link[=pv_compare_methods]{pv_compare_methods()}}.}
 
-\item{...}{Reserved for future extensions.}
+\item{...}{Ignored.}
 }
 \value{
-A data frame of reportable fixed-effect estimates. Fit estimate
-tables include interval/provenance columns such as \code{df_method},
-\code{df_complete}, \code{interval_role}, \code{coverage_claim_allowed},
-\code{target_source}, \code{target_hash}, \code{pooling_source}, and \code{pooling_hash} when
-those columns are part of the method contract. An inspection-only legacy
-PSIS object fails explicitly instead of returning historical numeric
-output.
+A data frame with one row per fixed effect. For a \code{stack_direct}
+fit it has 17 columns: \code{term}, \code{estimate}, \code{se}, \code{std.error}, \code{df},
+\code{df_method}, \code{df_complete}, \code{conf_level}, \code{conf_low}, \code{conf_high},
+\code{conf.low}, \code{conf.high}, \code{interval_role}, \code{coverage_claim_allowed},
+\code{parameter_scope}, \code{target_source} and \code{target_hash}. \code{per_pv} and
+\code{stack_psis} fits add further columns. The fraction of missing
+information is not a column; for \code{stack_direct} and \code{per_pv} fits it is
+\code{get_target(fit)$fmi}. A blocked fit gives an empty data frame. For a
+method comparison, the data frame has one row per method and fixed
+effect (see \code{\link[=pv_compare_methods]{pv_compare_methods()}}).
+
+\code{get_estimates()} stops with an error if the fit or comparison was
+changed after it was created, and for the inspection object that
+\code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}} makes from a \code{stack_psis} fit of an
+earlier pvstackr version, which has no estimates.
 }
 \description{
-Return the reportable fixed-effect estimate table for a fit, or the aligned
-estimate table for a method comparison. The returned columns depend on the
-method contract but keep interval and provenance fields intact.
+\code{get_estimates()} returns the table of fixed-effect estimates of a fit,
+with their standard errors, degrees of freedom and intervals. For a method
+comparison it returns the table that lines up the estimates of the
+compared fits.
+}
+\details{
+Only the fixed effects are reported. \code{coverage_claim_allowed} says whether
+pvstackr's reporting rule lets you read the interval of a row as a
+confidence interval with nominal coverage; \code{\link[=pv_fit]{pv_fit()}} gives the rule, and \link{pvstackr_object_contracts}
+describes every column.
 }
 \examples{
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   head(get_estimates(fit))
 }
 }
 \seealso{
-\code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}; \code{\link[=pv_fit]{pv_fit()}},
-\code{\link[=pv_compare_methods]{pv_compare_methods()}}.
+\link{pvstackr_object_contracts} for the columns of the estimate table.
 
 Other pvstackr-accessors:
 \code{\link[=get_diagnostics]{get_diagnostics()}},

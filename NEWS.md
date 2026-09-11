@@ -1,3 +1,47 @@
+# pvstackr 0.2.1
+
+This release changes the documentation only. The R code, the computations and
+the printed output are the same as in 0.2.0.
+
+* The help pages, the ten articles and the README are rewritten in plain
+  language and checked against the code, the companion methods preprint and the
+  cited literature.
+
+* Statements that did not match the package are corrected:
+  - pvstackr fits a single-level linear regression weighted by the survey
+    weights and reports its fixed effects. A formula with a random-effect term
+    stops `pv_brr_target()`, `stack_direct` and `stack_psis` with an error. The
+    earlier articles presented a two-level model with a school variance.
+  - The likelihood of each plausible value is survey-weighted, and each row of
+    the stacked data has as its weight the final weight divided by its mean and
+    by the number of plausible values. The earlier text called the likelihood
+    unweighted and gave the row weight as one over the number of plausible
+    values.
+  - pvstackr runs no part of Pareto smoothed importance sampling: `stack_psis`
+    takes importance weights and Pareto k-hat values computed elsewhere. The
+    thresholds of Vehtari et al. (2017, 2024) are now stated apart from
+    pvstackr's single threshold, `psis_k_threshold`.
+  - The companion methods paper is cited as its Zenodo preprint
+    (<https://doi.org/10.5281/zenodo.22407935>). Its stacked fixed-effect point
+    identity is Theorem 4.1, with conditions (R1)–(R5). Coverage results that
+    the preprint does not report are no longer attributed to it; the interval
+    labels (`interval_role`, `coverage_claim_allowed`) are pvstackr's
+    reporting rule.
+  - The covariance that `pv_brr_target()` computes from the replicate weights
+    is called the BRR–Fay replicate covariance, not a sandwich estimator.
+
+* The interval label `coverage_claim_allowed` is described as what it is:
+  a record of how an interval was built, by pvstackr's reporting rule. It does
+  not certify the coverage of the interval.
+
+* The package title and description are rewritten in plain words.
+
+* The articles have new titles; their file names and web addresses are
+  unchanged. The website has a "Get started" link to the first article.
+
+* The tests that check phrases in the documentation follow the new wording and
+  check the same facts.
+
 # pvstackr 0.2.0
 
 * Revalidating a legacy target no longer requires its estimates to match

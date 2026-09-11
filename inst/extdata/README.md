@@ -1,14 +1,19 @@
 # pvstackr extdata
 
-These files are package-owned synthetic fixtures for examples and tests.
+These files are small synthetic data made for the examples and tests of
+pvstackr.
 
-- `pisa_tiny.csv` is PISA-shaped but contains no real PISA records.
-- `pisa_tiny_manifest.dcf` records fixture metadata and hashes.
-- `examples/pisa_tiny_stack_direct.rds` is a cached lightweight injected
-  `stack_direct` example fit.
+- `pisa_tiny.csv` has the column layout of a PISA file (12 students, two
+  plausible values, four replicate weights) but contains no real PISA records.
+- `pisa_tiny_manifest.dcf` records how the data and the example fit were made,
+  with checksums.
+- `examples/pisa_tiny_stack_direct.rds` is an example `stack_direct` fit of
+  these data. It was made without a sampler, with fitting functions that return
+  draws built around the target, so it shows what a fit looks like, not how
+  well the method works.
 
-These fixtures are version-controlled here and are regenerated from the
-package's development sources.
+The files are kept under version control and are rebuilt from the package's
+development sources.
 
-The fixtures are for API smoke tests and documentation examples only. They are
-not suitable for real inference, coverage claims, or performance benchmarking.
+They serve the examples and tests only. They are not suitable for real
+inference, coverage claims or performance benchmarking.

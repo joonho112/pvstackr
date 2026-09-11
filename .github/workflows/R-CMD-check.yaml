@@ -66,9 +66,9 @@ jobs:
           upload-snapshots: true
           # The package ships pre-built vignettes (inst/doc) and reference fixtures
           # whose content hashes are validated in the reference environment; it is
-          # checked with --no-build-vignettes by design (see dev/02_check.R). Mirror
-          # that here: do not rebuild vignettes and do not re-run examples on a fresh
-          # machine. Environment-sensitive fixture-parity tests are opt-in
+          # checked with --no-build-vignettes by design. Mirror that here: do not
+          # rebuild vignettes and do not re-run examples on a fresh machine.
+          # Environment-sensitive fixture-parity tests are opt-in
           # (PVSTACKR_RUN_HASH_TESTS), so they skip on CI.
           build_args: 'c("--no-manual","--no-build-vignettes")'
           args: 'c("--no-manual","--ignore-vignettes","--no-examples")'

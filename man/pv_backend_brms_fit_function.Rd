@@ -4,7 +4,7 @@
 \alias{pv_backend_brms_fit_function}
 \alias{pv_backend_brms_draws_function}
 \alias{pv_backend_brms_sampler_diagnostics}
-\title{Bundled brms adapter for the stacked fit}
+\title{Bundled brms engine for the stacked fit}
 \usage{
 pv_backend_brms_fit_function(
   formula,
@@ -32,98 +32,182 @@ pv_backend_brms_sampler_diagnostics(
 )
 }
 \arguments{
-\item{formula}{Prepared stacked model formula, with the stacked outcome and
-weight columns already bound.}
+\item{formula}{The stacked formula built by \code{\link[=pv_fit_direct]{pv_fit_direct()}}, such as
+\code{.pvstackr_y | weights(.pvstackr_weight) ~ 0 + pvstackrMM001 + ...}.}
 
-\item{data}{Prepared stacked data frame.}
+\item{data}{The stacked data built by \code{\link[=pv_fit_direct]{pv_fit_direct()}}: one copy of the
+data per plausible value, with the columns used in \code{formula}.}
 
-\item{family}{Response family, or \code{NULL} for \code{stats::gaussian()}.}
+\item{family}{A family object, or \code{NULL} for \code{stats::gaussian()}.
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} always passes \code{stats::gaussian()}.}
 
-\item{prior}{Prior specification passed through to \code{brms::brm()}, or \code{NULL}.}
+\item{prior}{\code{NULL} or a prior table, passed to \code{brm()} unchanged.
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} describes the priors it accepts.}
 
-\item{chains, iter, warmup, cores, seed}{Sampler settings from \code{\link[=pv_control]{pv_control()}}.}
+\item{chains, iter, warmup, cores, seed}{Sampler settings passed to \code{brm()};
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} takes them from \code{\link[=pv_control]{pv_control()}}.}
 
-\item{backend}{Resolved Stan backend, \code{"cmdstanr"} or \code{"rstan"}.}
+\item{backend}{The Stan backend for \code{brm()}. \code{"cmdstanr"} and \code{"rstan"} are
+used as given; any other value is replaced by the backend that the
+bundled engine would choose (see "Stan backend").}
 
-\item{file, file_refit}{Cache location and refit policy for \code{brms::brm()}.}
+\item{file, file_refit}{The cache file (a path without extension) and the
+refit rule, passed to \code{brm()}. \code{\link[=pv_fit_direct]{pv_fit_direct()}} sets them from
+\code{cache_dir} and \code{cache_stem}: \code{file_refit = "on_change"}, or
+\code{file = NULL} and \code{file_refit = "never"} when caching is off.}
 
-\item{...}{Further arguments passed to \code{brms::brm()} by
-\code{pv_backend_brms_fit_function()}; accepted and ignored by
-\code{pv_backend_brms_draws_function()}.}
+\item{...}{Further arguments. \code{pv_backend_brms_fit_function()} passes them
+to \code{brm()} (\code{\link[=pv_fit_direct]{pv_fit_direct()}} passes the elements of \code{additional_args}
+here); \code{pv_backend_brms_draws_function()} ignores them.}
 
-\item{fit}{The object returned by the fit function.}
+\item{fit}{The object returned by the fitting function: a \code{brmsfit} for
+the functions documented here. With all three replacement functions
+below, \code{pv_backend_brms_sampler_diagnostics()} accepts any object that
+they accept.}
 
-\item{draws_array_function, summary_function, nuts_function}{Optional
-replacements for \code{posterior::as_draws_array()}, the
-\code{posterior::summarise_draws()} call that produces R-hat and ESS, and
-\code{brms::nuts_params()}. Supplying these lets an engine report diagnostics
-without depending on those packages.}
+\item{draws_array_function, summary_function, nuts_function}{Functions that
+replace, in this order, \code{posterior::as_draws_array()}, the
+\code{posterior::summarise_draws()} call and \code{brms::nuts_params()}, or \code{NULL}
+(default) to use those. With all three, the diagnostics can be computed
+without the posterior and brms packages, for example for a fit from
+another program. \code{draws_array_function(fit)} must return an array with
+the dimensions draws, chains and variables; \code{summary_function(draws)} a
+data frame with the columns \code{rhat}, \code{ess_bulk} and \code{ess_tail} and one
+row per variable; and \code{nuts_function(fit)} a data frame with the columns
+\code{Parameter} and \code{Value}, whose rows with \code{Parameter == "divergent__"}
+hold 1 for a divergent transition and 0 otherwise.}
 }
 \value{
-\code{pv_backend_brms_fit_function()} returns a \code{brmsfit}.
-\code{pv_backend_brms_draws_function()} returns a base numeric matrix of the
-\verb{b_*} and \code{sigma} draws.
-\code{pv_backend_brms_sampler_diagnostics()} returns a normalized sampler
-diagnostics record: maximum R-hat, minimum bulk and tail ESS, divergence
-count, chains, post-warmup draws per chain, a completeness flag, and reason
-codes.
+\code{pv_backend_brms_fit_function()} returns the \code{brmsfit} object from \code{brm()}.
+
+\code{pv_backend_brms_draws_function()} returns a base R numeric matrix with one
+row per draw after warmup, over all chains, and one column for each
+variable whose name starts with \code{b_} and for \code{sigma}. For the stacked model
+the \code{b_} columns are the fixed effects of the stacked formula
+(\code{b_pvstackrMM001}, \code{b_pvstackrMM002}, ...), which pvstackr renames to the
+names used in the target, such as \code{b_Intercept}.
+
+\code{pv_backend_brms_sampler_diagnostics()} returns the list that a fit made
+with the bundled engine keeps as \code{get_diagnostics(fit)$sampler}:
+\code{rhat_max}, \code{ess_bulk_min}, \code{ess_tail_min}, \code{ess_bulk_per_chain_min} and
+\code{ess_tail_per_chain_min} (the two ESS values divided by \code{chains}),
+\code{divergences}, \code{chains}, \code{post_warmup_draws_per_chain},
+\code{diagnostic_source} (\code{"bundled_brms_posterior_and_nuts"}),
+\code{diagnostic_complete} (\code{TRUE} when every value was extracted) and
+\code{diagnostic_reason_codes} (the reasons when it is \code{FALSE}).
 }
 \description{
-The three functions that \code{pv_control(backend = "brms")} installs when no
-adapter is injected: \code{pv_backend_brms_fit_function()} fits the prepared
-stacked model, \code{pv_backend_brms_draws_function()} extracts its draws, and
-\code{pv_backend_brms_sampler_diagnostics()} reports its sampler diagnostics.
+These three functions are the brms engine that \code{\link[=pv_fit_direct]{pv_fit_direct()}} uses when
+\code{pv_control(backend = "brms")} is set and no \code{fit_function} is given:
+\code{pv_backend_brms_fit_function()} fits the stacked model with \code{brms::brm()},
+\code{pv_backend_brms_draws_function()} returns the draws of that fit, and
+\code{pv_backend_brms_sampler_diagnostics()} returns the sampler diagnostics
+that pvstackr checks. They are exported so that you can pass them to
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} yourself and replace one of them with your own function.
 }
 \details{
-They are exported so that an injected adapter and the bundled backend run the
-same fitting, extraction, and diagnostic code rather than two implementations
-that have to be kept in step. Given the same data and seed, the two routes
-produce the same fit, the same draws matrix, and the same sampler numbers.
+\subsection{Replacing one of the functions}{
 
-Injecting the three is not the same as selecting the bundled backend, and the
-recorded provenance says so. An injected fit records
-\code{adapter_source = "injected"}, \code{resolved_backend = "injected"},
-\code{engine_id = "injected_fit_function"}, an empty \code{package_versions}, and a
-\code{cmdstan_state} that was never evaluated; its sampler evidence is labelled
-\code{injected_diagnose_function} rather than \code{bundled_brms_posterior_and_nuts}.
-Two things the bundled route does for you are the adapter's own
-responsibility when injected: checking that brms, posterior, and a usable
-Stan backend are present before sampling starts, and creating the cache
-directory. \code{cache_dir} is passed through as given, so create it first or pass
-\code{cache_dir = NULL}.
+To change one step (fitting the stacked model, extracting its draws or
+computing its sampler diagnostics), pass all three functions to
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} as \code{fit_function}, \code{draws_function} and
+\code{diagnose_function}: your own function for that step and the functions
+documented here for the others. \code{\link[=pv_fit_direct]{pv_fit_direct()}} describes what each
+function receives and returns, and what happens when one is missing. The
+draws and diagnostics functions here expect a \code{brmsfit}; for a fit from
+another program, \code{pv_backend_brms_sampler_diagnostics()} can still
+compute the diagnostics with its three replacement functions. With
+\code{pv_control(backend = "brms")} and no \code{fit_function}, only the draws
+function can be replaced: a \code{diagnose_function} that you pass is not
+used, and the fit records that it was ignored.
 
-A reportable injected fit needs all three. An adapter that supplies only a
-fit and a draws function leaves the sampler evidence incomplete, and the fit
-is blocked rather than reported.
-
-Under \code{pv_control(backend = "brms")} a supplied \code{draws_function} replaces the
-bundled one, but a supplied \code{diagnose_function} does not: the bundled sampler
-record always wins, and the fit records that the override was ignored.
-Supplying \code{fit_function} switches to the injected route as a whole.
-
-\code{pv_backend_brms_draws_function()} returns the fixed-effect (\verb{b_*}) and
-residual-scale (\code{sigma}) draws as a plain base matrix, the draw format the
-calibration layer expects. A \code{posterior::draws_matrix} is converted rather
-than passed through, because the calibration validator compares draw blocks
-by value and a classed matrix would fail that comparison on class alone.
-
-\code{pv_backend_brms_sampler_diagnostics()} reports maximum R-hat, minimum bulk
-and tail ESS, divergence count, chains, and post-warmup draws per chain. When
-a required namespace is missing or the extraction fails, it returns an
-explicit incomplete record instead of silently omitting the evidence, and the
-fit is blocked downstream.
-}
-\section{Backend resolution}{
-
-cmdstanr is used only when both its namespace and a configured CmdStan are
-available, and rstan is selected only when cmdstanr is absent. A fit failure
-is not retried against the other backend. The bundled route resolves this
-before calling the fit function; reached through an injected adapter, the fit
-function applies the same policy itself, so \code{pv_control(backend = )} may name
-any accepted value.
+When you pass the functions yourself, pvstackr checks no package and
+creates no cache folder before it calls \code{fit_function}. A missing
+posterior package is found only after sampling, when the draws are
+extracted; create \code{cache_dir} first or set \code{cache_dir = NULL}. A fit made
+this way has \code{get_diagnostics(fit)$sampler$diagnostic_source} equal to
+\code{"injected_diagnose_function"}, also when your \code{diagnose_function} is
+\code{pv_backend_brms_sampler_diagnostics()}.
 }
 
+\subsection{Stan backend}{
+
+\code{pv_backend_brms_fit_function()} passes \code{backend} to \code{brm()}. For the
+bundled engine, pvstackr chooses it before sampling: \code{"cmdstanr"} when the
+cmdstanr package is installed and CmdStan is configured, and \code{"rstan"} when
+cmdstanr is not installed. If cmdstanr is installed but CmdStan is not
+configured, the fit stops with an error instead of using rstan. When you
+pass the function yourself, it receives the \code{backend} value of
+\code{\link[=pv_control]{pv_control()}}: \code{"cmdstanr"} is passed to \code{brm()} unchanged, and any other
+value is replaced by the choice described above. A fit that fails is not
+repeated with the other backend.
+}
+
+\subsection{Sampler diagnostics}{
+
+\code{pv_backend_brms_sampler_diagnostics()} computes R-hat and the bulk and
+tail effective sample sizes (ESS) of every variable of the fit with
+\code{posterior::summarise_draws()}, and reports the largest R-hat and the
+smallest ESS values, which are totals over all chains. The number of
+divergent transitions comes from \code{brms::nuts_params()}, and \code{chains} and
+\code{post_warmup_draws_per_chain} from the dimensions of the draws. When the
+posterior or brms package is missing, or a value cannot be extracted, it
+does not stop with an error: it returns the list with missing values,
+\code{diagnostic_complete = FALSE} and reason codes such as
+\code{posterior_namespace_unavailable}, and \code{\link[=pv_fit_direct]{pv_fit_direct()}} then blocks the
+fit. The limits that pvstackr applies to these values are listed under
+"Status and checks" in \link{pvstackr_object_contracts}.
+}
+}
+\examples{
+pisa_tiny <- read.csv(
+  system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
+)
+design <- pv_design(
+  pisa_tiny, formula = OUTCOME ~ x + female,
+  pv_suffix = "READ", expected_M = 2L, expected_R = 4L, id_cols = "CNTSTUID"
+)
+target <- pv_brr_target(
+  pisa_tiny, formula = OUTCOME ~ x + female,
+  pv_cols = design$pv_cols, weight_col = design$weight_col,
+  rep_weight_cols = design$rep_weight_cols, fay_k = design$fay_k,
+  id_cols = design$id_cols
+)
+
+# Pass the three functions yourself and replace any one of them with your
+# own. A live fit samples with Stan, so it is not run here.
+\dontrun{
+fit <- pv_fit_direct(
+  data = pisa_tiny, formula = OUTCOME ~ x + female, target = target,
+  fit_function = pv_backend_brms_fit_function,
+  draws_function = pv_backend_brms_draws_function,
+  diagnose_function = pv_backend_brms_sampler_diagnostics,
+  cache_dir = NULL
+)
+}
+
+# The sampler diagnostics record. Stand-in functions replace the posterior
+# and brms functions, so this runs without those packages.
+diagnostics <- pv_backend_brms_sampler_diagnostics(
+  fit = NULL,
+  draws_array_function = function(fit) array(0, dim = c(1000, 4, 3)),
+  summary_function = function(draws) {
+    data.frame(
+      rhat = c(1.001, 1.004, 1.002),
+      ess_bulk = c(3900, 4100, 3700),
+      ess_tail = c(2900, 3100, 3000)
+    )
+  },
+  nuts_function = function(fit) {
+    data.frame(Parameter = "divergent__", Value = rep(0, 4000))
+  }
+)
+str(diagnostics, digits.d = 4)
+
+}
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}} and \code{\link[=pv_control]{pv_control()}} for how an adapter is selected.
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} for the arguments \code{fit_function},
+\code{draws_function} and \code{diagnose_function}, and \code{\link[=pv_control]{pv_control()}} for
+\code{backend}.
 }
-\concept{backend adapters}
+\concept{pvstackr-backends}

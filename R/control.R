@@ -1,102 +1,126 @@
-#' Construct pvstackr Fitting Controls
+#' Settings for the fitting functions
 #'
-#' `pv_control()` validates package-level options used by the fitting,
-#' calibration, diagnostics, and object-retention layers, returning a frozen
-#' `pvstackr_control` object that every `pv_fit*()` entry point consumes. It
-#' centralizes backend policy, interval level, the calibration centering
-#' convention, and how heavy a fitted object is allowed to be.
+#' `pv_control()` collects the settings used by [pv_fit()] and by
+#' [pv_fit_direct()], [pv_fit_reference()] and [pv_fit_stack_psis()]: the
+#' method, the sampler settings and engine passed to the model-fitting
+#' function, the interval level, the Pareto k-hat cut-off of `"stack_psis"`,
+#' and what a fitted object keeps. It checks each value and returns them in
+#' one object.
 #'
 #' @details
-#' ## Centering and reportable output
-#' The `center` convention decides whether a fit is *reportable* or merely
-#' *diagnostic*. Reportable `stack_direct` output requires `center = "target"`:
-#' fixed-effect draws are CCC-calibrated so their mean and covariance match the
-#' external Rubin/BRR-Fay target, and the estimate table inherits the target's
-#' standard errors, degrees of freedom, and interval metadata. `center =
-#' "posterior"` is diagnostic and exploratory only: it leaves fixed-effect draws
-#' at the raw stacked posterior mean while still computing target-covariance
-#' diagnostics against the external target. [pv_fit_direct()] rejects a control
-#' with `center = "posterior"` rather than emit a non-reportable `stack_direct`
-#' estimate table; treat `"posterior"` as a CCC check, never a deliverable.
+#' ## Which settings each method uses
 #'
-#' ## Object retention
-#' The retention flags govern how much a fitted `pvstackr_fit` carries, and the
-#' defaults keep fits light. `return_draws` (default `TRUE`) retains only the
-#' method-specific fixed-effect draw representation: calibrated top-level draws
-#' for `stack_direct`, fixed-effect-only per-PV matrices in diagnostics for
-#' `per_pv`, and a fixed-effect proposal matrix paired with normalized PV
-#' weights in diagnostics for `stack_psis`. [get_draws()] exposes only the
-#' synthesized top-level `stack_direct` matrix; use [get_diagnostics()] for the
-#' other two representations. Package-owned raw full stacked draws, nuisance
-#' draws, and duplicate calibrated matrices are never retained in a final
-#' composite fit. This does not inspect or override explicitly authorized
-#' opaque backend objects (`keep_backend_fit`) or log-likelihood matrices
-#' (`keep_log_lik`), which have separate retention authorities.
-#' Blocked fits fail closed and record effective `return_draws`, `keep_data`,
-#' `keep_backend_fit`, and `keep_log_lik` values of `FALSE`, irrespective of
-#' the original retention request. `keep_data` retains the user data frame in the
-#' top-level design; otherwise the fit stores a metadata/hash-only design
-#' snapshot with a base-environment formula. Package-owned stacked-data copies
-#' are not retained inside composite fits. `keep_backend_fit` retains an opaque
-#' backend object and therefore requires `keep_data = TRUE`, because the package
-#' cannot prove that an arbitrary backend object is data-free. `keep_log_lik`
-#' retains log-likelihood draws. Enable the `FALSE`-by-default flags only when
-#' you need the extra payload (for example, re-extraction or model checking), as
-#' each materially increases the size of the saved object.
+#' `chains`, `iter`, `warmup`, `cores`, `seed` and `backend` are passed to the
+#' function that fits the model: the bundled brms engine or your own
+#' `fit_function`. They have no effect when a method starts from draws
+#' computed elsewhere. For `"stack_direct"`, pvstackr also checks that the
+#' sampler diagnostics report `chains` chains with `iter - warmup` draws each
+#' after warmup, and blocks the fit (status `"blocked"`) if they do not.
 #'
-#' @param method Public method identifier. Character scalar; must be one of
-#'   `"stack_direct"`, `"stack_psis"`, or `"per_pv"`. Default `"stack_direct"`.
-#'   A control's `method` must equal the `method` passed to [pv_fit()] and to the
-#'   dispatched fitter.
-#' @param chains Number of MCMC chains requested by a live backend. Integer-valued
-#'   scalar, `>= 1`.
-#' @param iter Total iterations per chain. Integer-valued scalar, `>= 2`.
-#' @param warmup Warmup iterations per chain. Integer-valued scalar, `>= 0` and
-#'   strictly less than `iter`. If `NULL`, defaults to `floor(iter / 2)`.
-#' @param cores Number of cores requested by a live backend. Integer-valued
-#'   scalar, `>= 1`.
-#' @param seed Optional random seed. Integer-valued scalar `>= 0`, or `NULL` for
-#'   no fixed seed.
-#' @param backend Backend policy. Character scalar; one of `"none"`,
-#'   `"injected"`, `"brms"`, or `"cmdstanr"`. Default `"none"`. In this package
-#'   stage `"brms"` selects the bundled brms adapter (with deterministic
-#'   cmdstanr/rstan resolution), while other live engines use an injected
-#'   `fit_function` adapter or precomputed draws.
-#' @param conf_level Confidence or credible-interval level for report tables.
-#'   Numeric scalar in `(0, 1)`. Default `0.95`.
-#' @param psis_k_threshold Pareto-k reportability threshold for `stack_psis`.
-#'   Numeric scalar in `(0, 0.7]`. Default `0.7`; values below `0.7` may impose
-#'   a stricter gate, but the package-level ceiling cannot be relaxed. Every
-#'   plausible value must have a finite Pareto-k strictly below this threshold.
-#' @param center Calibration centering convention, `"target"` or `"posterior"`.
-#'   Reportable `stack_direct` output requires `"target"`. `"posterior"` is
-#'   reserved for CCC diagnostic/exploratory checks: it leaves fixed-effect draws
-#'   at the raw stacked posterior mean while still computing target-covariance
-#'   diagnostics against the external target. Default `"target"`.
-#' @param allow_target_nearpd Reserved for future target-covariance repair.
-#'   Logical scalar; must be `FALSE`. Automatic target repair is not currently
-#'   supported. Default `FALSE`.
-#' @param return_draws Logical scalar. Whether fitted objects retain their
-#'   method-specific fixed-effect draw representation. For `stack_direct`, read
-#'   the calibrated matrix via [get_draws()]. Per-PV matrices and the PSIS
-#'   proposal/weight pair remain in [get_diagnostics()]. Default `TRUE`.
-#' @param keep_data Logical scalar. Whether fitted objects may retain the user
-#'   data frame. Default `FALSE` (fits stay light).
-#' @param keep_backend_fit Logical scalar. Whether fitted objects may retain the
-#'   heavy, opaque backend fit object. This requires `keep_data = TRUE` on
-#'   public composite fits because a backend object may contain analysis data.
-#'   Default `FALSE` (fits stay light).
-#' @param keep_log_lik Logical scalar. Whether fitted objects may retain
-#'   log-likelihood draws. Default `FALSE` (fits stay light).
-#' @param verbose Logical scalar. Whether functions emit progress messages.
-#'   Default `FALSE`.
+#' `center` is used only by `"stack_direct"` and `psis_k_threshold` only by
+#' `"stack_psis"`. `conf_level` and the settings that decide what a fitted
+#' object keeps apply to all three methods.
 #'
-#' @returns A validated `pvstackr_control` object: a named list of the resolved
-#'   options above, with class `c("pvstackr_control", "list")`. Pass it to a
-#'   `pv_fit*()` function via the `control` argument; print it for a compact
-#'   summary.
+#' ## The bundled brms engine
+#'
+#' With `backend = "brms"` and no `fit_function`, `"stack_direct"` fits the
+#' stacked model with the brms function `brm()`, through
+#' [pv_backend_brms_fit_function()]. This needs the brms and posterior
+#' packages. If cmdstanr is installed, CmdStan must be configured, otherwise
+#' the fit stops with an error; if cmdstanr is not installed, brms uses rstan.
+#' The other `backend` values select no engine: they are passed to your
+#' `fit_function` as its `backend` argument and recorded in the fit.
+#'
+#' ## What a fitted object keeps
+#'
+#' With `return_draws = TRUE` (the default), a fit keeps its fixed-effect
+#' draws: for `"stack_direct"` the calibrated draws, read with [get_draws()];
+#' for `"per_pv"` the draws of each plausible value; for `"stack_psis"` the
+#' stacked draws with the normalized weights for each plausible value. The
+#' last two are in [get_diagnostics()], and [get_draws()] returns `NULL` for
+#' them. Draws of other parameters, such as `sigma`, are not kept.
+#'
+#' `keep_data`, `keep_backend_fit` and `keep_log_lik` (all `FALSE` by
+#' default) keep the data, the object returned by the model-fitting function
+#' and the log-likelihood draws; each makes a saved fit larger. A blocked fit
+#' keeps none of these parts: its `control` records all four settings as
+#' `FALSE`, whatever was requested. [pvstackr_object_contracts] describes the
+#' parts of a fitted object.
+#'
+#' @param method The method these settings are for: `"stack_direct"`
+#'   (default), `"per_pv"` or `"stack_psis"`. It must match the method you fit
+#'   with: [pv_fit()] stops with an error if it differs from its `method`
+#'   argument, and each method function accepts only its own method.
+#' @param chains Number of Markov chains, a whole number of at least 1.
+#'   Default `4L`.
+#' @param iter Number of iterations per chain, warmup included, a whole number
+#'   of at least 2. Default `2000L`.
+#' @param warmup Number of warmup iterations per chain, a whole number from 0
+#'   to `iter - 1`. `NULL` (default) uses `floor(iter / 2)`, which is 1000 for
+#'   the default `iter`.
+#' @param cores Number of cores the model-fitting function may use, a whole
+#'   number of at least 1. Default `1L`.
+#' @param seed The random seed, a whole number of at least 0, or `NULL`
+#'   (default) to leave the seed to the model-fitting function.
+#' @param backend The engine for `"stack_direct"`: `"none"` (default),
+#'   `"injected"`, `"brms"` or `"cmdstanr"`. Only `"brms"` selects one: when
+#'   you give no `fit_function`, `"stack_direct"` then uses the bundled brms
+#'   engine (see Details). With any other value, `"stack_direct"` needs your
+#'   own `fit_function`, `draws_function` and `diagnose_function` (see
+#'   [pv_fit()]). `"per_pv"` and `"stack_psis"` have no bundled engine and
+#'   always need your own functions or draws computed elsewhere, whatever the
+#'   value.
+#' @param conf_level The level of the intervals in the estimate table, a
+#'   number strictly between 0 and 1. Default `0.95`. It applies to all three
+#'   methods; the `conf_level` stored in a [pv_brr_target()] object does not
+#'   change the reported intervals.
+#' @param psis_k_threshold The cut-off for the Pareto k-hat values (Pareto
+#'   shape estimates) that come with the importance weights of
+#'   `"stack_psis"`, a number greater than 0 and at most 0.7. Default `0.7`.
+#'   pvstackr blocks a `"stack_psis"` fit unless the k-hat of every plausible
+#'   value is finite and below this cut-off, so a smaller value makes the check
+#'   stricter; values above 0.7 are not allowed.
+#' @param center Where the calibrated fixed-effect draws are centered:
+#'   `"target"` (default) or `"posterior"`. With `"target"`, the Cholesky
+#'   calibration correction (CCC) gives the draws the mean and covariance of
+#'   the target, whose estimates are the ones reported. `"stack_direct"`
+#'   requires this value. `"posterior"` would keep the mean of the stacked
+#'   draws and calibrate only their covariance; it is accepted here, but no
+#'   fitting function uses it: [pv_fit_direct()] stops with an error for it.
+#'   `"per_pv"` and `"stack_psis"` ignore `center`.
+#' @param allow_target_nearpd Whether a target covariance matrix that is not
+#'   positive definite may be repaired. pvstackr has no such repair and stops
+#'   with an error on such a target, so the value must be `FALSE` (default);
+#'   `TRUE` stops with an error.
+#' @param return_draws Whether a fit keeps its fixed-effect draws (see
+#'   Details). Default `TRUE`.
+#' @param keep_data Whether a fit keeps the data frame. Default `FALSE`: the
+#'   fit then keeps only a description of the data, such as column names and
+#'   checksums.
+#' @param keep_backend_fit Whether a fit keeps the object returned by the
+#'   model-fitting function, such as a brms fit (for `"per_pv"`, one per
+#'   plausible value). This object may contain the data, so the fitting
+#'   functions stop with an error when `keep_backend_fit = TRUE` and
+#'   `keep_data = FALSE`. Default `FALSE`.
+#' @param keep_log_lik Whether a fit keeps the log-likelihood draws. Only
+#'   `"stack_direct"` can extract them: [pv_fit_direct()] does so when given
+#'   `extract_log_lik = TRUE` and a `log_lik_function`. Set `TRUE` only then:
+#'   otherwise a `"stack_direct"` fit, or a `"stack_psis"` fit from a
+#'   `fit_function`, stops with an error. Default `FALSE`.
+#' @param verbose Stored in the object but not used by any pvstackr function.
+#'   Default `FALSE`. For progress messages while the target is computed, use
+#'   the `verbose` argument of [pv_brr_target()].
+#'
+#' @returns A `pvstackr_control` object: a list of the 16 settings in the order
+#'   of the arguments, with `warmup` filled in and whole numbers stored as
+#'   integers. Pass it as `control` to [pv_fit()] or to a method function. To
+#'   change a setting, call `pv_control()` again rather than editing the list:
+#'   the fitting functions stop with an error if a value was replaced by one of
+#'   another type, as `ctrl$chains <- 2` does (it stores a double). `print()`
+#'   shows `method`, `backend`, `iter`, `warmup` and `chains`, notes that
+#'   target repair is not supported, and returns the object invisibly.
 #' @examples
-#' # Default controls target reportable stack_direct output.
+#' # Default settings, for method = "stack_direct".
 #' ctrl <- pv_control()
 #' ctrl
 #'
@@ -104,12 +128,16 @@
 #' ctrl_psis <- pv_control(method = "stack_psis", psis_k_threshold = 0.7)
 #' ctrl_psis$method
 #'
-#' # Retain the heavy backend fit and log-likelihood draws when you need them.
-#' ctrl_heavy <- pv_control(keep_backend_fit = TRUE, keep_log_lik = TRUE)
-#' c(ctrl_heavy$keep_backend_fit, ctrl_heavy$keep_log_lik)
+#' # Settings that make a fit keep more. keep_backend_fit = TRUE needs
+#' # keep_data = TRUE, and keep_log_lik = TRUE needs extract_log_lik = TRUE
+#' # and a log_lik_function in pv_fit_direct().
+#' ctrl_heavy <- pv_control(
+#'   keep_data = TRUE, keep_backend_fit = TRUE, keep_log_lik = TRUE
+#' )
+#' c(ctrl_heavy$keep_data, ctrl_heavy$keep_backend_fit, ctrl_heavy$keep_log_lik)
 #' @family pvstackr-fitting
-#' @seealso [pv_fit()], [pv_fit_direct()], [pv_fit_reference()],
-#'   [pv_fit_stack_psis()]
+#' @seealso [pv_backend_brms_fit_function()] for the bundled brms engine;
+#'   [pvstackr_object_contracts] for the parts of a fitted object.
 #' @export
 pv_control <- function(
   method = "stack_direct",
@@ -186,7 +214,7 @@ pv_fit_blocked_control <- function(control) {
 }
 
 #' @rdname pv_control
-#' @param x A `pvstackr_control` object.
+#' @param x A `pvstackr_control` object from `pv_control()`.
 #' @param ... Ignored.
 #' @export
 print.pvstackr_control <- function(x, ...) {

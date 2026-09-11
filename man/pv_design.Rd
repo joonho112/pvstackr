@@ -3,7 +3,7 @@
 \name{pv_design}
 \alias{pv_design}
 \alias{print.pvstackr_design}
-\title{Declare a PISA-Style Plausible-Value Design}
+\title{Declare the plausible-value and weight columns}
 \usage{
 pv_design(
   data,
@@ -24,80 +24,137 @@ pv_design(
 \method{print}{pvstackr_design}(x, ...)
 }
 \arguments{
-\item{data}{Data frame containing plausible-value, weight, and replicate
-weight columns. Must have unique, non-empty column names.}
+\item{data}{A data frame with unique, non-empty column names that contains
+the plausible-value and weight columns.}
 
-\item{formula}{Formula using \code{OUTCOME} as the plausible-value placeholder,
-for example \code{OUTCOME ~ x + female}. Do not embed \code{weights()}; pass weight
-columns explicitly.}
+\item{formula}{A two-sided formula with the placeholder \code{OUTCOME} on the
+left-hand side, for example \code{OUTCOME ~ x + female}; \code{OUTCOME} stands for
+the plausible values. Do not put \code{weights()} in it; name the weights in
+\code{weight_col} and \code{rep_weight_cols}.}
 
-\item{pv_cols}{Optional character vector of plausible-value columns. If
-\code{NULL} (default), columns are detected with \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}
-using \code{pv_prefix}/\code{pv_suffix}.}
+\item{pv_cols}{A character vector with the names of at least two
+plausible-value columns, or \code{NULL} (default) to find them with
+\code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} from \code{pv_prefix} and \code{pv_suffix}.}
 
-\item{weight_col}{Character scalar naming the final survey-weight column.
-Defaults to PISA's \code{"W_FSTUWT"}.}
+\item{weight_col}{The name of the final weight column. Default
+\code{"W_FSTUWT"}, the PISA name.}
 
-\item{rep_weight_cols}{Optional character vector of BRR replicate-weight
-columns. If \code{NULL} (default), columns are detected with
-\code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}} using \code{rep_weight_prefix}.}
+\item{rep_weight_cols}{A character vector with the names of at least two
+replicate-weight columns, or \code{NULL} (default) to find them with
+\code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}} from \code{rep_weight_prefix}. The
+weights must be positive, so plain BRR weights, which are zero for half
+of the sample, are not accepted.}
 
-\item{fay_k}{Numeric scalar Fay coefficient used by the BRR replicate design.
-Must satisfy \verb{0 <= fay_k < 1}. Default \code{0.5}.}
+\item{fay_k}{The Fay coefficient used to make the replicate weights, a
+number with \verb{0 <= fay_k < 1}. Default \code{0.5}, the PISA value.
+\code{\link[=pv_brr_target]{pv_brr_target()}} multiplies the replicate variance by
+\code{1 / (1 - fay_k)^2}.}
 
-\item{pv_prefix, pv_suffix}{Character scalars giving the prefix and suffix
-used when detecting plausible values. Modern PISA files commonly use
-subject-suffixed plausible values such as \code{PV1MATH}; set
-\code{pv_suffix = "MATH"} or the relevant subject suffix instead of relying on
-the bare \code{PV1}, \code{PV2}, ... default. Defaults \code{"PV"} and \code{""}.}
+\item{pv_prefix, pv_suffix}{The text before and after the number in the
+names of the plausible-value columns, used only when \code{pv_cols} is \code{NULL}.
+For PISA data give the subject as the suffix, for example
+\code{pv_suffix = "READ"} for \code{PV1READ}, \code{PV2READ}, and so on. The defaults,
+\code{"PV"} and \code{""}, match only bare names such as \code{PV1} and \code{PV2}.}
 
-\item{rep_weight_prefix}{Character scalar prefix used when detecting
-replicate weights. Default \code{"W_FSTURWT"}.}
+\item{rep_weight_prefix}{The text before the number in the names of the
+replicate-weight columns, used only when \code{rep_weight_cols} is \code{NULL}.
+Default \code{"W_FSTURWT"}, which matches the PISA names \code{W_FSTURWT1},
+\code{W_FSTURWT2}, and so on.}
 
-\item{expected_M}{Optional integer scalar. Expected plausible-value count;
-checked against detected or supplied \code{pv_cols}. If \code{NULL} (default), the
-count is not checked.}
+\item{expected_M, expected_R}{The numbers of plausible-value and
+replicate-weight columns you expect, as whole numbers (10 and 80 for
+PISA 2022). Each is compared with the columns found or given in
+\code{pv_cols} and \code{rep_weight_cols}, and a different number stops the
+function with an error. \code{NULL} (default) skips the check.}
 
-\item{expected_R}{Optional integer scalar. Expected replicate-weight count;
-checked against detected or supplied \code{rep_weight_cols}. If \code{NULL}
-(default), the count is not checked.}
+\item{id_cols}{A character vector of columns that together identify each
+row, such as a student ID; their combined values must be unique and not
+missing. \code{NULL} (default) identifies the rows by their position.}
 
-\item{id_cols}{Optional character vector of columns that jointly identify
-unique rows. If \code{NULL} (default), row support is tracked by row number.}
+\item{roles}{A named list of extra entries for the \code{roles} field of the
+result; an entry with the same name as one recorded by \code{pv_design()}
+replaces it. Default \code{list()}.}
 
-\item{roles}{Optional named list of extra design roles, merged over the
-defaults recorded by the wrapper. Default \code{list()}.}
-
-\item{x}{A \code{pvstackr_design} object.}
+\item{x}{A \code{pvstackr_design} object from \code{pv_design()}.}
 
 \item{...}{Ignored.}
 }
 \value{
-A \code{pvstackr_design} object: a list recording the declared design and
-its provenance. User-facing fields include:
+A \code{pvstackr_design} object, a list with these fields:
 \describe{
-\item{\code{n}, \code{M}, \code{R}}{Row count, number of plausible values, and number
-of BRR replicate weights.}
-\item{\code{formula}, \code{formula_string}}{The design formula (with the \code{OUTCOME}
-placeholder) and its string form.}
-\item{\code{pv_cols}, \code{weight_col}, \code{rep_weight_cols}}{Resolved
-plausible-value, final-weight, and replicate-weight column names.}
-\item{\code{fay_k}}{Fay coefficient for the BRR replicate design.}
-\item{\code{id_cols}, \code{row_support}}{Row-identifier columns and the
-row-support descriptor.}
+\item{\code{data}}{The data frame as supplied.}
+\item{\code{n}, \code{M}, \code{R}}{The numbers of rows, plausible values and
+replicate weights.}
+\item{\code{formula}, \code{formula_string}}{The formula and its text.}
+\item{\code{pv_cols}, \code{weight_col}, \code{rep_weight_cols}}{The column names, as
+given or found.}
+\item{\code{fay_k}, \code{id_cols}}{The Fay coefficient and the row-identifier
+columns.}
+\item{\code{row_support}}{How the rows are identified: a list with \code{type}
+(\code{"id_cols"} or \code{"row_number"}), \code{id_cols}, \code{n} and \code{hash}.}
 \item{\code{design_hash}, \code{row_support_hash}, \code{pv_value_hash},
-\code{weight_design_hash}}{Stable content hashes of the design and its
-components.}
-\item{\code{roles}, \code{provenance}}{Design roles and wrapper provenance.}
+\code{weight_design_hash}}{Checksums of the whole design, the row
+identifiers, the plausible values, and the weights with \code{fay_k}. They
+do not cover the values of other columns, such as covariates.}
+\item{\code{roles}, \code{provenance}}{How the design was made: the \code{OUTCOME}
+placeholder, the prefixes, suffix and expected counts used to find
+the columns, and whether the columns were found or given.}
+\item{\code{data_manifest}, \code{created_at}, \code{schema_version}, \code{warnings}}{The
+names and classes of the columns of \code{data} with the declared columns,
+the creation time, the format version of the object, and warnings,
+which \code{pv_design()} leaves empty.}
 }
-The compact \code{print()} method shows \code{n}, \code{formula_string}, \code{M},
-\code{weight_col}, \code{R}, \code{fay_k}, and \code{design_hash}.
+\code{print()} shows the number of rows, the formula, \code{M}, the final weight,
+\code{R}, \code{fay_k} and \code{design_hash}, and returns the object invisibly. It
+first checks the object and stops with an error if the plausible values,
+the weights, the row identifiers or the declared columns were changed
+after the object was created.
 }
 \description{
-\code{pv_design()} records plausible-value columns, final weights, BRR replicate
-weights, Fay coefficient, row-support metadata, and stable hashes without
-running a model or assembling a target. It is the applied-user wrapper around
-the internal \code{pvstackr_design} object.
+\code{pv_design()} records which columns of \code{data} hold the plausible values,
+the final weight and the replicate weights, and the Fay coefficient used to
+make the replicate weights. It checks these columns and returns them in one
+object; it fits no model. By default it finds PISA-style column names with
+\code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} and \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}. No
+other pvstackr function takes the design object: pass its columns, such as
+\code{design$pv_cols}, on to \code{\link[=pv_brr_target]{pv_brr_target()}}, as in the examples.
+}
+\details{
+\subsection{PISA data}{
+
+A PISA 2022 student file has ten plausible values per subject, such as
+\code{PV1READ} to \code{PV10READ} for reading, the final weight \code{W_FSTUWT} and 80
+replicate weights \code{W_FSTURWT1} to \code{W_FSTURWT80}, made with Fay's method
+with coefficient 0.5. The defaults \code{weight_col = "W_FSTUWT"},
+\code{rep_weight_prefix = "W_FSTURWT"} and \code{fay_k = 0.5} match these, so only
+the subject needs to be given, as the suffix of the plausible-value names:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{design <- pv_design(pisa, OUTCOME ~ ESCS, pv_suffix = "READ",
+                    expected_M = 10, expected_R = 80)
+}\if{html}{\out{</div>}}
+
+Here \code{pisa} is the student data frame. \code{expected_M} and \code{expected_R} are
+optional: they stop the function when a different number of columns is
+found, for example because the suffix is wrong.
+}
+
+\subsection{Other data}{
+
+To choose the columns yourself, give their names in \code{pv_cols} and
+\code{rep_weight_cols}, the final weight in \code{weight_col} and the Fay coefficient
+of your replicate weights in \code{fay_k}. \code{pv_prefix}, \code{pv_suffix} and
+\code{rep_weight_prefix} are then not used.
+}
+
+\subsection{Checks}{
+
+\code{pv_design()} stops with an error when a named column is not in \code{data},
+when there are fewer than two plausible-value or replicate-weight columns,
+when a plausible value is not a finite number, when a weight is not a
+finite positive number, when \code{weight_col} is also listed as a replicate
+weight, or when \code{id_cols} do not identify the rows. It checks only the form
+of \code{formula}; the variables in it are checked by \code{\link[=pv_brr_target]{pv_brr_target()}}.
+}
 }
 \examples{
 pisa_tiny <- read.csv(
@@ -110,8 +167,8 @@ design <- pv_design(
 design
 }
 \seealso{
-Detect inputs with \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} and
-\code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}; assemble the external target with
-\code{\link[=pv_brr_target]{pv_brr_target()}}; fit a method with \code{\link[=pv_fit]{pv_fit()}}.
+\code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} and
+\code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}} for the column search;
+\code{\link[=pv_brr_target]{pv_brr_target()}} for the next step.
 }
 \concept{pvstackr-design}

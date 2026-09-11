@@ -3,7 +3,7 @@
 \name{pv_brr_target}
 \alias{pv_brr_target}
 \alias{print.pvstackr_brr_target}
-\title{Assemble a Rubin/BRR-Fay Fixed-Effect Target}
+\title{Compute the design-based target for the fixed effects}
 \usage{
 pv_brr_target(
   data,
@@ -29,190 +29,248 @@ pv_brr_target(
 \method{print}{pvstackr_brr_target}(x, ...)
 }
 \arguments{
-\item{data}{Data frame containing the outcome, predictors, plausible-value
-columns, weight column, and replicate-weight columns.}
+\item{data}{A data frame with the plausible-value columns, the final and
+replicate weights, and the variables in \code{formula}. A \code{stack_direct} fit
+with this target must use the same data (\code{\link[=pv_fit]{pv_fit()}}).}
 
-\item{formula}{Two-sided formula with \code{OUTCOME} as the left-hand-side
-placeholder, for example \code{OUTCOME ~ x + female}. The right-hand side defines
-the fixed-effect design; group terms such as \code{(1 | school)} are not accepted
-in this fixed-effect-only stage.}
+\item{formula}{A two-sided formula with the placeholder \code{OUTCOME} on the
+left-hand side, for example \code{OUTCOME ~ x + female}; \code{OUTCOME} stands for
+the plausible values. The right-hand side gives the fixed effects, as in
+\code{lm()}, and its variables must be columns of \code{data} without missing
+values. A random-effect term such as \code{(1 | school)} stops the function
+with an error, and so does a \code{weights()} term: name the weights in
+\code{weight_col} and \code{rep_weight_cols}.}
 
-\item{pv_cols}{Character vector of plausible-value column names. If \code{NULL},
-columns are detected with \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} using \code{pv_prefix},
-\code{pv_suffix}, and \code{expected_M}.}
+\item{pv_cols}{A character vector with the names of the plausible-value
+columns, or \code{NULL} (default) to find them with \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}
+from \code{pv_prefix} and \code{pv_suffix}. At least two are needed unless
+\code{allow_m1 = TRUE}, and their values must be finite numbers.}
 
-\item{weight_col}{Character scalar naming the full-sample weight column.
-Required; there is no default.}
+\item{weight_col}{The name of the final weight column, whose values must be
+positive. There is no default: give, for example, \code{design$weight_col}
+from \code{\link[=pv_design]{pv_design()}}, or \code{"W_FSTUWT"} for PISA data.}
 
-\item{rep_weight_cols}{Character vector of BRR replicate-weight column names
-(at least two, distinct from \code{weight_col}). If \code{NULL}, columns are detected
-with \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}} using \code{rep_weight_prefix} and
-\code{expected_R}.}
+\item{rep_weight_cols}{A character vector with the names of at least two
+replicate-weight columns other than \code{weight_col}, or \code{NULL} (default) to
+find them with \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}} from
+\code{rep_weight_prefix}. The weights must be positive, so plain BRR weights,
+which are zero for half of the sample, are not accepted.}
 
-\item{fay_k}{Numeric scalar Fay coefficient \eqn{k} entering
-\eqn{a_d = 1/(R(1-k)^2)}. Must satisfy \verb{0 <= fay_k < 1}. Default \code{0.5}
-(the PISA convention).}
+\item{fay_k}{The Fay coefficient \eqn{k} used to make the replicate
+weights, a number with \verb{0 <= fay_k < 1}. Default \code{0.5}, the PISA value.}
 
-\item{pv_prefix, pv_suffix}{Character scalars giving the prefix and suffix used
-when detecting plausible-value columns. Modern PISA files use
-subject-suffixed plausible values such as \code{PV1MATH}, so set, for example,
-\code{pv_suffix = "MATH"} rather than relying on the bare \code{pv_suffix = ""}
-default with \code{pv_prefix = "PV"}. Ignored when \code{pv_cols} is supplied.}
+\item{pv_prefix, pv_suffix}{The text before and after the number in the
+names of the plausible-value columns, used only when \code{pv_cols} is \code{NULL}.
+For PISA data give the subject as the suffix, for example
+\code{pv_suffix = "READ"} for \code{PV1READ}, \code{PV2READ}, and so on. The defaults,
+\code{"PV"} and \code{""}, match only bare names such as \code{PV1} and \code{PV2}.}
 
-\item{rep_weight_prefix}{Character scalar prefix used when detecting replicate
-weights. Default \code{"W_FSTURWT"}. Ignored when \code{rep_weight_cols} is supplied.}
+\item{rep_weight_prefix}{The text before the number in the names of the
+replicate-weight columns, used only when \code{rep_weight_cols} is \code{NULL}.
+Default \code{"W_FSTURWT"}, which matches the PISA names \code{W_FSTURWT1},
+\code{W_FSTURWT2}, and so on.}
 
-\item{expected_M}{Optional integer expected plausible-value count. If supplied,
-it is enforced against detected or supplied \code{pv_cols}. Default \code{NULL}.}
+\item{expected_M, expected_R}{The numbers of plausible-value and
+replicate-weight columns you expect, as whole numbers (10 and 80 for
+PISA 2022). Each is compared with the columns found or given in
+\code{pv_cols} and \code{rep_weight_cols}, and a different number stops the
+function with an error. \code{NULL} (default) skips the check.}
 
-\item{expected_R}{Optional integer expected replicate-weight count. If
-supplied, it is enforced against detected or supplied \code{rep_weight_cols}.
-Default \code{NULL}.}
+\item{id_cols}{A character vector of columns that together identify each
+row, such as a student ID; their combined values must be unique and not
+missing. \code{NULL} (default) identifies the rows by their position.}
 
-\item{id_cols}{Optional character vector of row-identifier columns. If
-supplied, they must jointly identify unique rows. Default \code{NULL}.}
+\item{conf_level}{A confidence level stored in the target, a number
+strictly between 0 and 1. Default \code{0.95}. The estimates, standard errors
+and degrees of freedom do not depend on it, and it does not set the level
+of the intervals that a fit reports: that is the \code{conf_level} of
+\code{\link[=pv_control]{pv_control()}}.}
 
-\item{conf_level}{Numeric scalar interval level in \verb{(0, 1)}, passed through to
-Rubin pooling. Default \code{0.95}.}
+\item{allow_m1}{Whether one plausible-value column is accepted (\code{TRUE}); by
+default (\code{FALSE}) at least two are required. With one plausible value,
+\code{B} is zero, \code{T_MI} equals \code{U_bar}, \code{fmi} is 0 and the classic degrees
+of freedom are infinite. \code{\link[=pv_fit]{pv_fit()}} cannot use such a target, because a
+\code{stack_direct} fit needs at least two plausible values.}
 
-\item{allow_m1}{Logical scalar; whether to allow a single plausible value
-(\code{M = 1}). Default \code{FALSE}.}
+\item{df_method}{The rule for the degrees of freedom: \code{"classic"}
+(default) or \code{"barnard_rubin"}, which needs \code{df_complete}. It also sets
+the interval labels \code{interval_role} and \code{coverage_claim_allowed}. See
+"Degrees of freedom and interval labels" in Details.}
 
-\item{df_method}{Degrees-of-freedom rule for Rubin pooling, one of
-\code{"classic"} or \code{"barnard_rubin"}. The default \code{"classic"} is descriptive
-only; \code{"barnard_rubin"} requires \code{df_complete}.}
+\item{df_complete}{For \code{df_method = "barnard_rubin"}, the complete-data
+degrees of freedom of the replicate-weight variance, which you state:
+the degrees of freedom that the analysis would have if the outcome were
+observed directly instead of through plausible values. Give one positive
+number for all coefficients, or a vector with one value per coefficient,
+named by the coefficient names (\code{fe_names}, such as \code{b_Intercept}). The
+Barnard-Rubin rule matters when this number is small. \code{Inf} gives the
+classic degrees of freedom, but the target still has
+\code{coverage_claim_allowed = TRUE}. Default \code{NULL}. Giving a value with
+\code{df_method = "classic"} is an error.}
 
-\item{df_complete}{Complete-data degrees of freedom used when
-\code{df_method = "barnard_rubin"}; a positive numeric scalar or a per-term named
-numeric vector. Ignored under \code{"classic"}. Default \code{NULL}.}
+\item{engine}{How the regressions are fitted. Only \code{"lm"} (default),
+weighted least squares with \code{lm.wfit()} from the stats package, is
+available; other values are an error.}
 
-\item{engine}{Character scalar target engine. Only \code{"lm"} (dependency-free
-weighted least squares) is implemented in this package stage. Default
-\code{"lm"}.}
+\item{verbose}{If \code{TRUE}, a message is shown as each plausible value is
+processed. Default \code{FALSE}.}
 
-\item{verbose}{Logical scalar; whether to emit per-plausible-value progress
-messages. Default \code{FALSE}.}
-
-\item{x}{A \code{pvstackr_brr_target} object from \code{\link[=pv_brr_target]{pv_brr_target()}}.}
+\item{x}{A \code{pvstackr_brr_target} object from \code{pv_brr_target()}.}
 
 \item{...}{Ignored.}
 }
 \value{
-A \code{pvstackr_brr_target} object: a list carrying the external
-fixed-effect target and its provenance, with class \code{pvstackr_brr_target}.
-Reportable fields include:
+A \code{pvstackr_brr_target} object, a list with these fields:
 \describe{
-\item{\code{beta_bar}, \code{U_bar}, \code{B}, \code{T_MI}}{The Rubin mean \eqn{\bar\beta},
-within-imputation covariance \eqn{\bar U}, between-imputation covariance
-\eqn{B}, and total (target) covariance \eqn{T_{\mathrm{MI}}} over the
-fixed-effect block.}
-\item{\code{se}}{Target standard errors,
-\eqn{\sqrt{\mathrm{diag}(T_{\mathrm{MI}})}}.}
-\item{\code{df}, \code{df_classic}, \code{df_method}, \code{df_complete}}{Active Rubin degrees
-of freedom, the classic-df reference, the df rule (\code{"classic"} or
-\code{"barnard_rubin"}), and the complete-data df when Barnard-Rubin is used.}
-\item{\code{interval_role}, \code{coverage_claim_allowed}}{Interval-policy fields for
-downstream fits (see the Interval metadata section and
-\link{pvstackr_object_contracts}).}
-\item{\code{lambda}, \code{fmi}, \code{riv}}{Per-term Rubin missing-information
-quantities: \code{lambda} (proportion of total variance attributable to the
-between-imputation component), \code{fmi} (fraction of missing information),
-and \code{riv} (relative increase in variance).}
-\item{\code{fe_names}, \code{M}, \code{R}, \code{fay_k}}{Fixed-effect names, number of
-plausible values \eqn{M}, replicate count \eqn{R}, and the Fay
-coefficient \eqn{k}.}
-\item{\code{fay_variance_multiplier}}{The BRR-Fay multiplier
-\eqn{a_d = 1/(R(1-k)^2)}.}
-\item{\code{pv_cols}, \code{weight_col}, \code{rep_weight_cols}, \code{id_cols}}{Resolved
-column names defining the plausible values, full-sample weight, replicate
-weights, and row identifiers.}
-\item{\code{target_source}, \code{target_hash}, \code{design_hash}}{Provenance:
-\code{target_source = "external_brr_fay_rubin"}, and stable content hashes of
-the target and its design manifest.}
+\item{\code{beta}, \code{beta_bar}}{The estimates \eqn{\bar\beta}{beta_bar}, one
+per coefficient; the two fields are identical.}
+\item{\code{U_bar}, \code{B}, \code{T_MI}, \code{total_var}}{The matrices
+\eqn{\bar U}{U_bar}, \eqn{B} and \eqn{T_{\mathrm{MI}}}{T_MI};
+\code{total_var} repeats \code{T_MI}.}
+\item{\code{se}}{The standard errors, \code{sqrt(diag(T_MI))}.}
+\item{\code{df}, \code{df_classic}}{The degrees of freedom by \code{df_method} and by
+the classic rule.}
+\item{\code{df_method}, \code{df_complete}, \code{conf_level}}{The settings used. With
+\code{"barnard_rubin"}, \code{df_complete} has one value per coefficient; with
+\code{"classic"}, it is \code{NULL}.}
+\item{\code{interval_role}, \code{coverage_claim_allowed}}{The interval labels
+that \code{df_method} sets (see Details).}
+\item{\code{lambda}, \code{fmi}, \code{riv}}{The ratios defined in Details, one per
+coefficient; \code{lambda} and \code{fmi} are identical. The estimate table of
+a fit has no column for them: read them from the target, for example
+\code{get_target(fit)$fmi}.}
+\item{\code{fe_names}}{The coefficient names, which also name the vectors
+and matrices above: the column names of the model matrix with the
+prefix \code{b_}, such as \code{b_Intercept} and \code{b_x}.}
+\item{\code{M}, \code{R}, \code{fay_k}, \code{fay_variance_multiplier}}{The numbers of
+plausible values and replicate weights, the Fay coefficient, and the
+factor \eqn{1/(R(1 - k)^2)}{1 / (R (1 - k)^2)}.}
+\item{\code{per_pv}}{A list with one element per plausible value: \code{beta}
+(\eqn{\hat\beta_m}{b_m}), \code{U} (\eqn{U_m}), \code{replicate_beta} (the
+replicate estimates, one column per replicate weight),
+\code{replicate_diff} (their differences from \code{beta}), \code{pv_col} (the
+plausible-value column), and copies of \code{fe_names}, \code{R}, \code{fay_k} and
+\code{fay_variance_multiplier}.}
+\item{\code{formula}, \code{formula_string}, \code{rhs_string}}{The formula, its text
+and the text of its right-hand side.}
+\item{\code{pv_cols}, \code{weight_col}, \code{rep_weight_cols}, \code{id_cols}}{The
+columns used; \code{id_cols} is \code{character(0)} when none were given.}
+\item{\code{target_source}, \code{engine}}{Always \code{"external_brr_fay_rubin"}
+and \code{"lm"}.}
+\item{\code{design_hash}, \code{target_hash}}{SHA-256 checksums of the inputs
+(rows, plausible values, covariates, weights, \code{fay_k} and formula)
+and of the contents of the target. \code{design_hash} is not the same
+checksum as the \code{design_hash} of a \code{\link[=pv_design]{pv_design()}} object. The
+estimate table of a fit repeats \code{target_hash}.}
+\item{\code{binding_manifest}, \code{target_content}, \code{policy}}{The records that
+\code{design_hash} and \code{target_hash} cover. With them, \code{\link[=get_target]{get_target()}} and
+\code{\link[=pv_fit]{pv_fit()}} stop with an error when the target was changed after it
+was created, or when a \code{stack_direct} fit uses other data than the
+target. \code{policy} repeats \code{df_method} and the interval labels, with
+fixed settings such as \code{fixed_effects_only = TRUE}.}
+\item{\code{schema_version}, \code{provenance}, \code{warnings}}{The format version of
+the object (\code{"0.2.0"}), a record of how it was made (the function,
+the time in UTC and the package), and warnings, which are empty.}
 }
+\code{print()} shows the numbers of fixed effects, plausible values and
+replicate weights, \code{fay_k}, \code{df_method}, \code{interval_role} and
+\code{target_source}, and returns the object invisibly.
 }
 \description{
-\code{pv_brr_target()} assembles the external, design-based fixed-effect covariance
-target that \code{stack_direct} calibrates against. For each plausible value it
-forms a BRR-Fay sandwich covariance from the supplied replicate weights, then
-Rubin-combines the per-plausible-value estimates and covariances across
-plausible values into a single fixed-effect mean, total covariance, standard
-errors, and degrees of freedom. The target engine is a dependency-free
-weighted least-squares fit; in this package stage the target is
-fixed-effect-only.
+\code{pv_brr_target()} estimates the fixed effects of a survey-weighted linear
+regression from plausible-value data, with their covariance matrix,
+standard errors and degrees of freedom. It fits the regression to each
+plausible value with the final weight, estimates the sampling covariance of
+the coefficients from the BRR-Fay replicate weights (balanced repeated
+replication with Fay's method), and combines the plausible values with
+Rubin's rules. The result is the target of a \code{stack_direct} fit
+(\code{\link[=pv_fit]{pv_fit()}}), which reports the target's estimates, standard errors and
+degrees of freedom and calibrates its fixed-effect draws to the target's
+mean and covariance.
 }
 \details{
-The construction follows the canonical equation set (per-plausible-value
-BRR-Fay within-covariance, then Rubin combining).
-\subsection{Per-plausible-value BRR-Fay sandwich}{
+\subsection{Calculation}{
 
-For plausible value \eqn{m}, the design-based within-covariance is the
-replicate sandwich
-\deqn{\hat U_m = a_d \sum_{r=1}^{R}
-  (\hat\beta_m^{(r)} - \hat\beta_m)(\hat\beta_m^{(r)} - \hat\beta_m)^\top,
-  \qquad a_d = \frac{1}{R\,(1 - k)^2},}
-where \eqn{\hat\beta_m} is the full-sample weighted fixed-effect estimate,
-\eqn{\hat\beta_m^{(r)}} is the estimate under replicate weight \eqn{r}, \eqn{R}
-is the replicate count, and \eqn{k} is the Fay coefficient (\code{fay_k}). The
-multiplier \eqn{a_d} is returned as \code{fay_variance_multiplier}.
+For each plausible value \eqn{m = 1, \ldots, M}{m = 1, ..., M}, the
+function fits the regression in \code{formula}, with the plausible value as the
+outcome, by weighted least squares (\code{lm.wfit()} from the stats package):
+once with the final weight, giving the coefficients \eqn{\hat\beta_m}{b_m},
+and once with each replicate weight \eqn{r = 1, \ldots, R}{r = 1, ..., R},
+giving \eqn{\hat\beta_m^{(r)}}{b_m^(r)}. That is \eqn{M(R + 1)}{M (R + 1)}
+fits in all. The BRR-Fay replicate covariance of \eqn{\hat\beta_m}{b_m} is
+\deqn{U_m = \frac{1}{R(1 - k)^2} \sum_{r=1}^{R}
+  (\hat\beta_m^{(r)} - \hat\beta_m)(\hat\beta_m^{(r)} - \hat\beta_m)^\top,}{
+U_m = sum over r of (b_m^(r) - b_m) (b_m^(r) - b_m)' / (R (1 - k)^2),}
+where \eqn{k} is the Fay coefficient \code{fay_k}. In each replicate, Fay's
+method multiplies the weights of one half-sample by \eqn{2 - k} and those of
+the other by \eqn{k}, where plain BRR uses 2 and 0; the factor
+\eqn{1/(1 - k)^2}{1 / (1 - k)^2} corrects the variance for this smaller
+change of the weights (Judkins 1990).
+
+Rubin's rules then combine the \eqn{M} results:
+\deqn{\bar\beta = \frac{1}{M} \sum_{m=1}^{M} \hat\beta_m, \qquad
+  \bar U = \frac{1}{M} \sum_{m=1}^{M} U_m, \qquad
+  B = \frac{1}{M - 1} \sum_{m=1}^{M}
+  (\hat\beta_m - \bar\beta)(\hat\beta_m - \bar\beta)^\top,}{
+beta_bar = mean of the b_m,  U_bar = mean of the U_m,
+B = sum over m of (b_m - beta_bar) (b_m - beta_bar)' / (M - 1),}
+\deqn{T_{\mathrm{MI}} = \bar U + (1 + 1/M) B.}{T_MI = U_bar + (1 + 1/M) B.}
+\eqn{\bar U}{U_bar} averages the replicate covariances over the plausible
+values, and \eqn{B} is the covariance matrix of the \eqn{M} estimates
+\eqn{\hat\beta_m}{b_m}. The term \eqn{B/M} is the extra variance of
+\eqn{\bar\beta}{beta_bar} that comes from averaging a finite number of
+plausible values. The standard errors are the square roots of the diagonal
+of \eqn{T_{\mathrm{MI}}}{T_MI}.
+
+The fields \code{lambda} and \code{fmi} both hold
+\deqn{\lambda = (1 + 1/M) \, \mathrm{diag}(B) /
+  \mathrm{diag}(T_{\mathrm{MI}}),}{
+lambda = (1 + 1/M) diag(B) / diag(T_MI),}
+with the division taken coefficient by coefficient: the share of the total
+variance of each coefficient that is due to the variation between
+plausible values. Barnard and Rubin (1999) use this ratio as an
+approximation to the fraction of missing information. \code{riv} holds the
+relative increase in variance,
+\eqn{(1 + 1/M) \, \mathrm{diag}(B) / \mathrm{diag}(\bar U)}{(1 + 1/M)
+diag(B) / diag(U_bar)}.
 }
 
-\subsection{Rubin combining across plausible values}{
+\subsection{Degrees of freedom and interval labels}{
 
-The per-plausible-value estimates and covariances are combined into the Rubin
-mean \eqn{\bar\beta}, the within-imputation covariance \eqn{\bar U}, and the
-between-imputation covariance \eqn{B},
-\deqn{\bar\beta = \frac{1}{M}\sum_{m=1}^{M}\hat\beta_m, \qquad
-  \bar U = \frac{1}{M}\sum_{m=1}^{M}\hat U_m, \qquad
-  B = \frac{1}{M-1}\sum_{m=1}^{M}
-  (\hat\beta_m - \bar\beta)(\hat\beta_m - \bar\beta)^\top,}
-giving the Rubin total covariance --- the external target ---
-\deqn{T_{\mathrm{MI}} = \bar U + \left(1 + \tfrac{1}{M}\right) B.}
-Standard errors are \eqn{\sqrt{\mathrm{diag}(T_{\mathrm{MI}})}}. The fraction
-of missing information \eqn{\gamma_k = (1 + 1/M)\,B_{kk}/T_{\mathrm{MI},kk}}
-and the related Rubin quantities are returned as \code{fmi}, \code{riv}, and \code{lambda}.
+\code{df} holds the degrees of freedom of each coefficient by the rule in
+\code{df_method}:
+\itemize{
+\item \code{"classic"} (default): the rule of Rubin (1987),
+\eqn{\nu = (M - 1) / \lambda^2}{nu = (M - 1) / lambda^2}, which is
+never smaller than \eqn{M - 1}.
+\item \code{"barnard_rubin"}: the rule of Barnard and Rubin (1999),
+\deqn{\nu = \left(\frac{1}{\nu_{\mathrm{classic}}} +
+  \frac{1}{\nu_{\mathrm{obs}}}\right)^{-1}, \qquad
+  \nu_{\mathrm{obs}} = \frac{\nu_{\mathrm{com}} + 1}{\nu_{\mathrm{com}} + 3}
+  \, \nu_{\mathrm{com}} \, (1 - \lambda),}{
+  nu = 1 / (1 / nu_classic + 1 / nu_obs), with
+  nu_obs = nu_com (nu_com + 1) (1 - lambda) / (nu_com + 3),}
+where \eqn{\nu_{\mathrm{com}}}{nu_com} is \code{df_complete}. This rule corrects
+the classic one when the complete-data degrees of freedom are small. Its
+result is smaller than both the classic value and
+\eqn{\nu_{\mathrm{com}}}{nu_com}; with \code{df_complete = Inf} it equals the
+classic value.
 }
 
-\subsection{Degrees of freedom}{
+\code{df_classic} holds the classic value under both rules.
 
-The default \code{df_method = "classic"} uses the classic Rubin imputation degrees
-of freedom and is descriptive only. \code{df_method = "barnard_rubin"} uses the
-Barnard-Rubin small-sample degrees of freedom and requires \code{df_complete} (the
-complete-data degrees of freedom); \code{df_classic} is retained alongside the
-active \code{df} for reference.
-}
-
-\subsection{Computation}{
-
-The target requires on the order of \eqn{M\,(R+1)} weighted fixed-effect fits:
-one full-sample fit plus \eqn{R} replicate fits for each of the \eqn{M}
-plausible values. This is a description of the computational work, not a
-benchmarked performance claim.
+\code{df_method} also sets the interval labels that the target stores and that
+a \code{stack_direct} fit copies to its estimate table (see
+\link{pvstackr_object_contracts}). \code{"classic"} gives
+\code{interval_role = "descriptive_classic_rubin"} and
+\code{coverage_claim_allowed = FALSE}. \code{"barnard_rubin"} gives
+\code{interval_role = "coverage_barnard_rubin"} and
+\code{coverage_claim_allowed = TRUE} for any positive \code{df_complete}, \code{Inf}
+included. By pvstackr's reporting rule, which \code{\link[=pv_fit]{pv_fit()}} states in full,
+only intervals with \code{coverage_claim_allowed = TRUE} can be read as
+confidence intervals with nominal coverage.
 }
 }
-\section{Interval metadata}{
-
-The target fixes the interval-policy fields that downstream fits carry on
-reportable rows (consistent with \link{pvstackr_object_contracts}):
-\describe{
-\item{\code{interval_role}}{\code{"descriptive_classic_rubin"} under the default
-\code{df_method = "classic"}, or \code{"coverage_barnard_rubin"} under
-\code{df_method = "barnard_rubin"} with \code{df_complete}.}
-\item{\code{coverage_claim_allowed}}{\code{FALSE} for the classic-df target;
-\code{TRUE} only under \code{"coverage_barnard_rubin"}. A coverage claim is actually
-realized downstream by a \code{stack_direct} fit backed by this external target;
-this object only declares the policy.}
-\item{\code{df_method}}{\code{"classic"} or \code{"barnard_rubin"}. Selecting
-\code{"barnard_rubin"} does not by itself make a row coverage-claimable absent
-the \code{stack_direct} target provenance.}
-\item{\code{df_complete}}{Complete-data degrees of freedom recorded when
-\code{df_method = "barnard_rubin"}; otherwise unset.}
-}
-This is a design-based external target. Coverage is reserved for \code{stack_direct}
-rows under Barnard-Rubin df (see \code{\link[=pv_fit_direct]{pv_fit_direct()}}); no speed or efficiency
-claim attaches to assembling the target.
-}
-
 \examples{
 pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
@@ -240,8 +298,7 @@ Judkins, D. R. (1990). Fay's method for variance estimation. \emph{Journal of
 Official Statistics}, 6(3), 223-239.
 }
 \seealso{
-Build the design with \code{\link[=pv_design]{pv_design()}}; detect columns with
-\code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}} and \code{\link[=detect_pisa_brr_replicate_weights]{detect_pisa_brr_replicate_weights()}}. Calibrate
-against this target with \code{\link[=pv_fit_direct]{pv_fit_direct()}} or via the dispatcher \code{\link[=pv_fit]{pv_fit()}}.
+\code{\link[=pv_design]{pv_design()}} declares the columns, \code{\link[=pv_fit]{pv_fit()}} fits a model with
+this target, and \code{\link[=get_target]{get_target()}} returns the target of a fit.
 }
 \concept{pvstackr-target}

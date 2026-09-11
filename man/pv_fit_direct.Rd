@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit-direct.R
 \name{pv_fit_direct}
 \alias{pv_fit_direct}
-\title{Fit the Direct Stacked Plausible-Value Model}
+\title{Fit a stacked model and calibrate it to a BRR-Fay target}
 \usage{
 pv_fit_direct(
   data,
@@ -23,149 +23,238 @@ pv_fit_direct(
 )
 }
 \arguments{
-\item{data}{Analysis data frame.}
+\item{data}{The data frame used to build \code{target}: the same rows in the
+same order, with the same plausible values, weights and covariates.
+Otherwise \code{pv_fit_direct()} stops with an error.}
 
-\item{formula}{Two-sided formula with \code{OUTCOME} on the left-hand side.}
+\item{formula}{The formula used to build \code{target}, with the placeholder
+\code{OUTCOME} on the left-hand side, such as \code{OUTCOME ~ x + female} (see
+\code{\link[=pv_fit]{pv_fit()}}). Random-effect terms such as \code{(1 | school)} stop with an
+error.}
 
-\item{target}{A \code{pvstackr_brr_target} object from \code{\link[=pv_brr_target]{pv_brr_target()}}.}
+\item{target}{The \code{pvstackr_brr_target} object returned by
+\code{\link[=pv_brr_target]{pv_brr_target()}} for \code{data} and \code{formula}.}
 
-\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "stack_direct"}.}
+\item{control}{A \code{\link[=pv_control]{pv_control()}} object with \code{method = "stack_direct"}.
+The default is \code{pv_control(method = "stack_direct")}, and \code{NULL} gives
+the same. Its \code{center} must be \code{"target"}.}
 
-\item{family}{Optional family representation. Reportable \code{stack_direct}
-accepts only Gaussian/identity semantics and passes a package-owned
-canonical \code{stats::gaussian("identity")} object to the backend; executable
-closures supplied by the caller are never forwarded.}
+\item{family}{\code{NULL} (default), \code{"gaussian"}, or a family object or list
+with elements \code{family} and \code{link}, such as \code{gaussian()}. Only the
+Gaussian family with the identity link is accepted; any other family or
+link stops with an error. The fitting function always receives
+\code{stats::gaussian()} made by pvstackr, not the object you pass.}
 
-\item{prior}{Optional backend prior object. Under the materialized
-\code{stack_direct} design, only recognized invariant prior tables are passed
-through; coefficient-, intercept-, scoped-, and opaque priors fail before
-backend execution because their identities cannot be preserved exactly.
-Accepted explicit priors are still reported as warning-level diagnostics
-because the current identity result is scoped to MLE/flat-prior
-fixed-effect regimes.}
+\item{prior}{\code{NULL} (default) or a prior table: a data frame with
+character columns \code{class} and \code{coef}, such as the result of the brms
+function \code{set_prior()}. Only priors of class \code{"b"} or \code{"sigma"} with an
+empty \code{coef} are accepted; a prior on the intercept, on one coefficient
+or of another class stops with an error. A \code{"b"} prior is given to the
+slopes only, as in the original formula, so the intercept keeps the
+default prior. Any explicit prior, even a flat one, gives the fit the
+status \code{"warning"} (\code{explicit_prior_warning}).}
 
-\item{fit_function}{Injected backend fitting function for this package stage.}
+\item{fit_function}{\code{NULL} (default) or your function that fits the
+stacked model. \code{NULL} selects the bundled brms engine when
+\code{control$backend} is \code{"brms"} and stops with an error otherwise. The
+function is called with the arguments \code{formula}, \code{data}, \code{family},
+\code{prior}, \code{chains}, \code{iter}, \code{warmup}, \code{cores}, \code{seed}, \code{backend}, \code{file}
+and \code{file_refit} (the stacked formula and data, the settings from
+\code{control} and the cache file; see Details and \code{cache_dir}), plus the
+elements of \code{additional_args}. There is no \code{weights} argument: the
+weights are in \code{formula} and in the column \code{.pvstackr_weight} of \code{data},
+and a function that ignores them fits an unweighted model. It may
+return any object that \code{draws_function} and \code{diagnose_function} accept.}
 
-\item{draws_function}{Function extracting posterior draws from the injected
-backend fit.}
+\item{draws_function}{Your function that takes the object returned by the
+fitting function and returns its draws: a numeric matrix or data frame
+with one row per draw (at least two), finite values and unique column
+names. It may be \code{NULL} (default) only with the bundled engine. The
+fixed-effect columns must be named as in \code{target$fe_names} (such as
+\code{b_Intercept}) or after the columns of the stacked formula
+(\code{b_pvstackrMM001}, \code{b_pvstackrMM002}, ...); otherwise give \code{param_map}
+and list all fixed effects in the order of \code{target$fe_names}.}
 
-\item{param_map}{Optional explicit draw-column map passed to the stack-fit
-layer. Supply \code{fe_names} or \code{fe_idx} to identify fixed-effect columns, and
-optional \code{vc_names} or \code{vc_idx} for nuisance variance-component columns.
-Use \code{vc_names = character()} to drop all nuisance columns. Explicit maps
-are recommended when backend draw names do not follow the automatic \verb{b_*}
-fixed-effect convention, including distributional names such as
-\verb{b_sigma_*}.}
+\item{param_map}{\code{NULL} (default) or a named list that says which columns
+of the draws are the fixed effects. With \code{NULL}, columns whose names
+start with \code{b_} are the fixed effects; \code{sigma} and \verb{sd_*} columns are
+other model parameters, which are not reported, and all other columns,
+such as \code{lp__}, are dropped. Give a list with \code{fe_names} (names) or
+\code{fe_idx} (positions) when the fixed-effect columns have other names or
+when other columns start with \code{b_}, such as distributional parameters
+named \verb{b_sigma_*}. Its optional elements \code{vc_names} and \code{vc_idx} select
+the other model parameters and change nothing that is reported.}
 
-\item{diagnose_function}{Injected backend diagnostic extractor. Required for
-a reportable injected fit: without it the sampler evidence is incomplete and
-the fit is blocked.
-Its existing named-list fields are preserved, while sampler fields are
-normalized under \code{stack_fit$diagnostics$sampler}. A missing, malformed, or
-failed extractor produces explicit incomplete diagnostics and reason codes.
-When the bundled brms adapter is used, pvstackr automatically obtains
-R-hat and bulk/tail ESS from posterior summaries and divergences from brms
-NUTS parameters. The normalized record includes total and per-chain ESS
-minima, chain count, post-warmup draws per chain, source, and completeness.
-Extraction records diagnostics but does not itself change fit status.}
+\item{diagnose_function}{Your function that takes the object returned by
+the fitting function and returns its sampler diagnostics as a named list
+with the elements \code{rhat_max} (the largest R-hat), \code{ess_bulk_min} and
+\code{ess_tail_min} (the smallest bulk and tail effective sample sizes, totals
+over all chains), \code{divergences} (the number of divergent transitions),
+\code{chains} and \code{post_warmup_draws_per_chain}; the list may also sit in an
+element \code{sampler}. For the per-chain check, pvstackr divides each
+effective sample size by \code{chains}; a returned \code{ess_bulk_per_chain_min}
+or \code{ess_tail_per_chain_min} must equal that ratio. If the function is
+missing or fails, or a value is missing or invalid, the fit is blocked
+(\code{sampler_diagnostics_incomplete}), and \code{diagnostic_reason_codes} in
+\code{get_diagnostics(fit)$sampler} says why. The bundled engine ignores this
+argument: it takes R-hat and the effective sample sizes over all
+variables of the fit from the posterior package and the number of
+divergent transitions from the brms sampler record.}
 
-\item{log_lik_function}{Optional log-likelihood extractor.}
+\item{log_lik_function}{\code{NULL} (default) or your function that takes the
+object returned by the fitting function and returns the pointwise
+log-likelihood: a finite numeric matrix with one row per draw and one
+column per row of the stacked data. It is called only when
+\code{extract_log_lik = TRUE}; the bundled engine does not supply one.}
 
-\item{extract_log_lik}{Whether to extract log-likelihood draws.}
+\item{extract_log_lik}{Whether to call \code{log_lik_function}, which is then
+required: \code{TRUE} or \code{FALSE} (default). The matrix is kept in the fit's
+\code{stack_fit} only with \code{pv_control(keep_log_lik = TRUE)}, for your own
+use: no pvstackr function uses it. \code{keep_log_lik = TRUE} stops with an
+error unless \code{extract_log_lik = TRUE}.}
 
-\item{cache_dir, cache_stem}{Cache directory and safe file stem. For the
-bundled brms backend, pvstackr creates the directory, verifies that it is
-writable, and uses brms \code{file_refit = "on_change"}. Set \code{cache_dir = NULL}
-to disable file caching. Injected adapters continue to own their cache
-implementation and receive these values only as fit arguments.
+\item{cache_dir, cache_stem}{The folder and the file name (without
+extension) for a cached stacked fit; defaults \code{"cache"} and
+\code{"pvstackr-stack-direct"}. \code{cache_stem} must be a plain file name,
+without a path separator. For the bundled brms engine, pvstackr creates
+the folder, verifies that it is writable, and uses brms
+\code{file_refit = "on_change"}. Set \code{cache_dir = NULL} to disable file
+caching. Your own \code{fit_function} receives
+\code{file = file.path(path.expand(cache_dir), cache_stem)} and
+\code{file_refit = "on_change"}, or \code{file = NULL} and \code{file_refit = "never"}
+when \code{cache_dir = NULL}; pvstackr does not create the folder for it.
 
-\code{"on_change"} tracks the data and the formula, \strong{not} the sampler
-settings. Re-running with a different \code{seed}, or with different \code{chains},
-\code{iter}, or \code{warmup}, reloads the cached fit: a changed chain or draw count
-is caught by the sampler gate and blocks the fit, but a changed seed
-returns the identical draws with no warning. Pass \code{cache_dir = NULL}, or a
-distinct \code{cache_stem}, when the sampler settings are what you are
-varying -- a seed-stability check in particular.}
+brms refits a cached model only when its Stan code or data change, not
+when \code{chains}, \code{iter}, \code{warmup} or \code{seed} change. The sampler check then
+blocks a cached fit whose number of chains or of draws per chain
+differs from \code{control}, and a changed seed returns the cached draws
+without a warning. Use \code{cache_dir = NULL} or a new \code{cache_stem} when you
+vary these settings, as in a seed-stability check.}
 
-\item{additional_args}{Additional named arguments passed to the injected fit
-function.}
+\item{additional_args}{A named list of further arguments for the fitting
+function, \code{list()} by default. They are passed to your \code{fit_function}
+or, with the bundled engine, to the brms function \code{brm()}, for example
+\code{list(control = list(adapt_delta = 0.95))}. They may not repeat the
+arguments that pvstackr sets (see \code{fit_function}).}
 }
 \value{
-A \code{pvstackr_fit} object.
+A \code{pvstackr_fit} object with \code{method = "stack_direct"}. Read it
+with \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}} and
+\code{\link[=get_diagnostics]{get_diagnostics()}}; \code{\link[=pv_fit]{pv_fit()}} explains the status and the estimate
+table, and \link{pvstackr_object_contracts} describes every part of the
+object. The estimate table has one row per fixed effect, with the
+estimates, standard errors and degrees of freedom of \code{target}.
+\code{\link[=get_draws]{get_draws()}} returns the calibrated fixed-effect draws (one row per
+draw of the stacked fit, one column per fixed effect) when
+\code{control$return_draws} is \code{TRUE}, the default. \code{\link[=get_diagnostics]{get_diagnostics()}}
+returns \code{preflight} (the check that \code{data}, \code{formula} and \code{target}
+match), \code{sampler} and \code{sampler_gate} (the sampler diagnostics and their
+check), \code{stack_fit}, \code{stack_fit_warnings} (notes from the stacked fit,
+such as dropped draw columns) and \code{ccc} (the calibration diagnostics).
+For a blocked fit it returns only \code{preflight}, \code{sampler},
+\code{sampler_gate}, \code{redaction} (what was removed) and, when the
+calibration check blocked the fit, \code{ccc}, with its values grouped as
+\code{center}, \code{conditioning}, \code{residual} and \code{prior} (for example
+\code{get_diagnostics(fit)$ccc$center$delta_c_max}).
 }
 \description{
-\code{pv_fit_direct()} runs the current \code{stack_direct} path: fixed-effect-only
-compatibility preflight, one stacked plausible-value fit, CCC calibration to
-an external BRR-Fay/Rubin target, and assembly of a reportable
-\code{pvstackr_fit} object.
+\code{pv_fit_direct()} runs the \code{"stack_direct"} method of \code{\link[=pv_fit]{pv_fit()}}. It fits
+one model to the stacked data (one copy of \code{data} per plausible value),
+checks the sampler diagnostics of that fit, and then applies the Cholesky
+calibration correction (CCC): the fixed-effect draws are transformed so
+that their mean and covariance equal the estimates and the covariance
+(\code{T_MI}) of \code{target}. The reported estimates, standard errors and degrees
+of freedom are those of \code{target}.
 }
 \details{
-The current \code{stack_direct} contract is fixed-effect-only and requires an external
-\code{pvstackr_brr_target} from \code{\link[=pv_brr_target]{pv_brr_target()}}. The formula RHS and derived
-fixed-effect names must match the target exactly. Group terms such as
-\code{(1 | school)} are rejected until a two-level target engine is implemented.
+\subsection{The stacked fit}{
 
-The returned \code{pvstackr_fit} has \code{status = "ok"}, \code{"warning"}, or
-\code{"blocked"}. Yellow CCC center separation and explicit priors produce
-warning-status fits; red CCC center separation blocks reportable estimates.
-Frozen sampler gates also promote R-hat or ESS findings to warning status and
-block incomplete diagnostics, hard R-hat/ESS failures, configuration
-mismatches, or any divergence before CCC calibration. A sampler-blocked fit
-retains the independently valid external target but removes design data,
-stack/backend fit, CCC payload, estimates, and draws. Its retained target is
-an exact canonical allowlisted snapshot whose formula uses the safe base
-environment and whose warnings are empty. Its preflight record is a
-formula-free snapshot, so extensions and caller/private environments are not
-retained.
-CCC calibration-matrix conditioning is also gated by \code{kappa_A}: values at or
-above \code{1e6} produce warning-status fits, and values at or above \code{1e8} block
-reportable estimates. Reportable estimates and retained draws are
-fixed-effect-only.
-
-With the default \code{control$center = "target"}, the reportable fixed-effect
-estimate table is target-based: \code{estimate} is the external Rubin/BRR-Fay
-coefficient after CCC centering, \code{se} is \code{sqrt(diag(target$T_MI))}, and the
-degrees of freedom and interval metadata are inherited from \code{target}.
-Therefore \code{df_method}, \code{df_complete}, \code{interval_role}, and
-\code{coverage_claim_allowed} describe the external target policy, not a residual
-df or interval policy estimated by the stacked backend fit. When the target
-uses classic Rubin df, the reported df are the target's classic Rubin
-imputation df; when it uses Barnard-Rubin df, \code{df_complete} is the explicit
-complete-data df supplied to \code{\link[=pv_brr_target]{pv_brr_target()}}. The stacked fit supplies the
-draw cloud used for calibration, retained calibrated draws when requested,
-and center-separation agreement diagnostics; it is not a replacement source
-for the headline Rubin/BRR-Fay fixed-effect numbers.
-
-Reportable \code{pv_fit_direct()} output requires \code{control$center = "target"}.
-The lower-level CCC convention \code{center = "posterior"} is diagnostic and
-exploratory: it leaves the output fixed-effect center at the raw stacked
-posterior mean while pairing that center with the external target covariance.
-\code{pv_fit_direct()} does not expose that hybrid as a reportable
-\code{stack_direct} estimate table.
-
-See also \link{pvstackr_object_contracts}.
-}
-\section{Reportable scope and coverage}{
-
-In this package stage, reportable output is \strong{fixed-effect-only}; variance
-components are fit but not calibrated to the target. Coverage claims are
-enabled \strong{only} for \code{stack_direct} rows backed by the external Rubin/BRR-Fay
-target with Barnard-Rubin df and an explicit \code{df_complete}
-(\code{interval_role = "coverage_barnard_rubin"}, \code{coverage_claim_allowed = TRUE});
-with classic Rubin df the rows are descriptive
-(\code{interval_role = "descriptive_classic_rubin"}, \code{coverage_claim_allowed = FALSE}),
-as in the bundled cached example. \code{per_pv} and \code{stack_psis} intervals are
-\strong{descriptive/reference} even with Barnard-Rubin degrees of freedom. "One
-stacked fit" describes the computational topology, not a benchmarked speed
-claim.
+The stacked data hold one copy of \code{data} for each plausible value, with
+that plausible value as the outcome. Each row is weighted by the final
+survey weight named in \code{target}, divided by its mean and by the number of
+plausible values, and the model is a Gaussian linear model with the
+identity link. pvstackr adds the columns of the design matrix of
+\code{formula}, the intercept included, to the stacked data as ordinary
+covariates, so the fitting function receives the formula
+\code{.pvstackr_y | weights(.pvstackr_weight) ~ 0 + pvstackrMM001 + ...}, in
+which the weights enter through \code{weights()}. With the bundled brms engine
+and \code{prior = NULL}, brms therefore gives every fixed effect, the intercept
+included, its default flat prior. The residual standard deviation \code{sigma}
+is estimated but neither calibrated nor reported.
 }
 
+\subsection{What is reported}{
+
+Only the fixed effects are reported. By pvstackr's reporting rule, the
+intervals of a \code{stack_direct} fit can be read as confidence intervals with
+nominal coverage only when \code{target} uses Barnard-Rubin degrees of freedom; \code{\link[=pv_fit]{pv_fit()}} gives the full
+rule.
+
+\code{pv_fit_direct()} requires \code{control$center = "target"} (the default of
+\code{\link[=pv_control]{pv_control()}}), so the estimate table holds the numbers of the target:
+\code{estimate} is the target estimate, \code{se} is \code{sqrt(diag(target$T_MI))}, and
+\code{df}, \code{df_method}, \code{df_complete}, \code{interval_role} and
+\code{coverage_claim_allowed} are copied from \code{target}: the degrees of freedom
+follow the rule chosen in \code{\link[=pv_brr_target]{pv_brr_target()}} and are
+not residual degrees of freedom estimated from the stacked fit. The
+stacked fit supplies the draws that are calibrated and the diagnostics
+described below. The other value, \code{center = "posterior"}, would keep the
+mean of the stacked draws and calibrate only their covariance; it is
+accepted by \code{\link[=pv_control]{pv_control()}}, but \code{pv_fit_direct()} stops with an error when
+it is set.
+}
+
+\subsection{Fitting engine}{
+
+With \code{pv_control(backend = "brms")} and \code{fit_function = NULL}, the brms
+engine bundled with pvstackr fits the stacked model. It needs the brms and
+posterior packages, and \code{\link[=pv_backend_brms_fit_function]{pv_backend_brms_fit_function()}} describes how it
+chooses the Stan backend. A \code{draws_function} that you pass replaces its
+draws step, but a \code{diagnose_function} is ignored: the bundled engine
+computes the sampler diagnostics itself. Otherwise, as with the default
+\code{backend = "none"}, pass all three functions. A \code{fit_function} that you
+pass is used whatever the \code{backend} value, which is only passed on to it.
+There is no argument for draws computed elsewhere.
+}
+
+\subsection{Checks and status}{
+
+Before the model is fitted, \code{pv_fit_direct()} stops with an error when
+\code{data} or \code{formula} differ from those used to build \code{target}, when
+\code{formula} has a random-effect term such as \code{(1 | school)}, when \code{family}
+is not Gaussian with the identity link, or when \code{prior} is not accepted.
+After the stacked fit, pvstackr's checks give the fit the status \code{"ok"},
+\code{"warning"} or \code{"blocked"}:
+\itemize{
+\item Sampler diagnostics, checked first. The six values listed under
+\code{diagnose_function}, from the bundled engine or from your function, must
+all be available, and \code{chains} and \code{post_warmup_draws_per_chain} must
+equal \code{chains} and \code{iter - warmup} in \code{control}. The largest R-hat and
+the smallest bulk and tail effective sample sizes can give a warning or
+a block, and any divergent transition blocks the fit. A fit blocked here
+is not calibrated.
+\item Calibration. \code{delta_c_max}, the largest difference between a target
+estimate and the mean of the stacked draws in target standard errors,
+and \code{kappa_A}, the condition number of the calibration matrix, can each
+give a warning or a block.
+\item Priors. Any explicit \code{prior} gives a warning.
+}
+
+The thresholds are listed under "Status and checks" in
+\link{pvstackr_object_contracts}. The status is \code{"ok"} when no check gave a
+warning or a block; it does not show that the sampler converged. A fit
+with status \code{"warning"} has estimates, and \code{reason_codes} and \code{warnings}
+name the checks. A blocked fit has an empty estimate table and no draws;
+it keeps the target and the diagnostics that explain the block.
+}
+}
 \examples{
 pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
 
-# Build the design and the external BRR-Fay target on the fixture.
+# Declare the columns and build the BRR-Fay target from the bundled
+# synthetic data.
 design <- pv_design(
   pisa_tiny, formula = OUTCOME ~ x + female,
   pv_suffix = "READ", expected_M = 2L, expected_R = 4L, id_cols = "CNTSTUID"
@@ -177,25 +266,32 @@ target <- pv_brr_target(
   id_cols = design$id_cols
 )
 
-# A live stack_direct fit needs injected/precomputed backend adapters
-# (e.g. brms/cmdstanr); not run in checks.
+# A live fit samples with Stan, so it is not run here. With
+# backend = "brms" and no fit_function, the bundled brms engine is used.
 \dontrun{
 fit <- pv_fit_direct(
-  data = pisa_tiny, formula = OUTCOME ~ x + female,
-  target = target,
-  control = pv_control(method = "stack_direct", backend = "cmdstanr"),
-  fit_function = my_backend_adapter, draws_function = my_draws_adapter,
-  diagnose_function = my_diagnose_adapter, cache_dir = NULL
+  data = pisa_tiny, formula = OUTCOME ~ x + female, target = target,
+  control = pv_control(method = "stack_direct", backend = "brms")
+)
+
+# With the default backend = "none", fit_function and draws_function are
+# required, and without diagnose_function the fit is blocked.
+fit <- pv_fit_direct(
+  data = pisa_tiny, formula = OUTCOME ~ x + female, target = target,
+  fit_function = my_fit_function, draws_function = my_draws_function,
+  diagnose_function = my_diagnose_function, cache_dir = NULL
 )
 }
 
-# Inspect the reportable fixed-effect surface via the bundled cached fit.
+# Read the example fit that ships with pvstackr. It was made from the same
+# data with fitting functions that return draws around the target, not
+# with a sampler.
 path <- system.file(
   "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
 )
 if (nzchar(path)) {
-  fit <- readRDS(path)$fit     # a stack_direct pvstackr_fit
-  head(get_estimates(fit))     # reportable fixed-effect table
+  fit <- readRDS(path)$fit     # a stack_direct fit (class pvstackr_fit)
+  head(get_estimates(fit))     # the target's estimates, se and df
 }
 }
 \references{
@@ -205,9 +301,10 @@ Barnard, J., & Rubin, D. B. (1999). Small-sample degrees of freedom with
 multiple imputation. \emph{Biometrika}, 86(4), 948-955.
 }
 \seealso{
-\code{\link[=pv_fit]{pv_fit()}}, \code{\link[=pv_fit_reference]{pv_fit_reference()}}, \code{\link[=pv_fit_stack_psis]{pv_fit_stack_psis()}},
-\code{\link[=pv_control]{pv_control()}}; \code{\link[=pv_brr_target]{pv_brr_target()}}, \code{\link[=pv_compare_methods]{pv_compare_methods()}}, \code{\link[=get_estimates]{get_estimates()}},
-\link{pvstackr_object_contracts}.
+\code{\link[=pv_brr_target]{pv_brr_target()}} to build the target,
+\code{\link[=pv_backend_brms_fit_function]{pv_backend_brms_fit_function()}} for the bundled brms engine, and
+\link{pvstackr_object_contracts} for the parts of a fit and the thresholds of
+the checks.
 
 Other pvstackr-fitting:
 \code{\link[=pv_control]{pv_control()}},

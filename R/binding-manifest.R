@@ -297,13 +297,13 @@ pv_binding_ordered_labels_hash <- function(labels, domain, role) {
 
 # Survey files carry cosmetic metadata from their SAS, SPSS, or Stata origin:
 # nearly every PISA column arrives with a `label`, and many with a `format.*`
-# string. Those attributes are not part of the analysed content, and the
+# string. Those attributes are not part of the analyzed content, and the
 # projections record the structural properties they do depend on -- type, factor
 # levels, orderedness, timezone -- as explicit manifest fields. Reducing a plain
 # atomic column to its values and names keeps the binding hash stable across
 # files that differ only in that metadata. Anything carrying a class is returned
-# untouched, so factors, Dates, and POSIXct still reach the canonicaliser's own
-# typed branches and any unaccounted attribute there is still refused.
+# untouched: factors, Dates, and POSIXct have their own branches in
+# pv_binding_canonical_bytes(), and a column of any other class is refused.
 pv_binding_column_values <- function(x) {
   if (!is.atomic(x) || !is.null(attr(x, "class", exact = TRUE))) {
     return(x)
@@ -3795,8 +3795,8 @@ pv_binding_target_content_from_brr_target <- function(
         engine = "lm",
         verbose = FALSE
       )
-      # Structure and declared inputs must match exactly. The estimates must not:
-      # they are weighted least-squares output, and the last bits of a BLAS
+      # Structure and declared inputs must match exactly. The estimates must
+      # not: they are weighted least-squares output, and the last bits of a BLAS
       # result differ between platforms, so a legacy target built on one machine
       # could never be revalidated on another under bit-exact equality. Compare
       # them under the package's numeric policy instead, and compare the

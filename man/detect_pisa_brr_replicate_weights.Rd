@@ -2,7 +2,7 @@
 % Please edit documentation in R/brr-fay-target.R
 \name{detect_pisa_brr_replicate_weights}
 \alias{detect_pisa_brr_replicate_weights}
-\title{Detect PISA-Style BRR Replicate-Weight Columns}
+\title{Find PISA-style replicate-weight columns}
 \usage{
 detect_pisa_brr_replicate_weights(
   data,
@@ -11,26 +11,32 @@ detect_pisa_brr_replicate_weights(
 )
 }
 \arguments{
-\item{data}{Data frame containing replicate-weight columns.}
+\item{data}{A data frame. Only its column names are used.}
 
-\item{prefix}{Character scalar. Column prefix before the numeric replicate
-index. Default \code{"W_FSTURWT"}.}
+\item{prefix}{The text before the number. Default \code{"W_FSTURWT"}, the PISA
+name.}
 
-\item{expected_R}{Optional integer scalar. Expected replicate-weight count;
-if supplied, detection errors unless exactly \code{expected_R} columns are
-found. If \code{NULL} (default), the count is not checked.}
+\item{expected_R}{The number of replicate-weight columns you expect, a
+whole number, for example \code{80} for PISA 2022. If a different number is
+found, the function stops with an error. \code{NULL} (default) skips the check.}
 }
 \value{
-Character vector of column names in natural numeric order.
+A character vector of column names in numeric order
+(\code{W_FSTURWT1}, \code{W_FSTURWT2}, ..., \code{W_FSTURWT80}).
 }
 \description{
-PISA balanced-repeated-replication (BRR) replicate weights are named as a
-prefix followed by a numeric replicate index, for example \code{W_FSTURWT1},
-\code{W_FSTURWT2}, and so on. This finds the \verb{<prefix><r>} columns and returns
-them in natural numeric order using the default prefix \code{"W_FSTURWT"}. It is
-the replicate-weight companion to \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}. Use
-\code{expected_R} to guard against an incomplete replicate set or the wrong
-prefix.
+\code{detect_pisa_brr_replicate_weights()} returns the names of the
+replicate-weight columns, such as \code{W_FSTURWT1}, ..., \code{W_FSTURWT80} in
+PISA 2022 files, where they are balanced repeated replication (BRR)
+weights made with Fay's method. A column matches when its whole name is
+\code{prefix} followed by a number; the match is case-sensitive. \code{\link[=pv_design]{pv_design()}}
+and \code{\link[=pv_brr_target]{pv_brr_target()}} call this function when you do not give
+\code{rep_weight_cols}.
+}
+\details{
+The numbers must run from 1 without gaps or repeats; otherwise, or when no
+column matches, the function stops with an error. Only the names are
+checked: \code{\link[=pv_design]{pv_design()}} and \code{\link[=pv_brr_target]{pv_brr_target()}} check the weights themselves.
 }
 \examples{
 pisa_tiny <- read.csv(
@@ -39,8 +45,7 @@ pisa_tiny <- read.csv(
 detect_pisa_brr_replicate_weights(pisa_tiny, expected_R = 4L)
 }
 \seealso{
-\code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}; build a design with \code{\link[=pv_design]{pv_design()}} or a target
-with \code{\link[=pv_brr_target]{pv_brr_target()}}.
+\code{\link[=pv_design]{pv_design()}} and \code{\link[=pv_brr_target]{pv_brr_target()}}, which call this function.
 
 Other pvstackr-detection:
 \code{\link[=detect_pisa_pv_columns]{detect_pisa_pv_columns()}}

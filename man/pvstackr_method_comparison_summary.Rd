@@ -5,7 +5,7 @@
 \alias{print.pvstackr_method_comparison}
 \alias{summary.pvstackr_method_comparison}
 \alias{print.summary.pvstackr_method_comparison}
-\title{Display Methods for pvstackr Method Comparisons}
+\title{Print and summarize a method comparison}
 \usage{
 \method{print}{pvstackr_method_comparison}(x, ...)
 
@@ -16,43 +16,57 @@
 \arguments{
 \item{...}{Ignored.}
 
-\item{object, x}{A \code{pvstackr_method_comparison} object (or its summary, for
-the \code{print.summary.pvstackr_method_comparison} method).}
+\item{object, x}{A comparison (class \code{pvstackr_method_comparison}) from
+\code{\link[=pv_compare_methods]{pv_compare_methods()}}; for the \code{print()} method of a summary, the list
+returned by \code{summary()}.}
 }
 \value{
-The \code{print} methods return their input invisibly. \code{summary()}
-returns a \code{summary.pvstackr_method_comparison} list with fields:
-\describe{
-\item{\code{reference_method}}{The method used as the comparison reference.}
-\item{\code{methods}, \code{method_labels}, \code{n_methods}}{The compared method ids,
-their display labels, and the number of compared methods.}
-\item{\code{n_terms}}{Number of distinct reportable fixed-effect terms.}
-\item{\code{blocked_methods}, \code{warning_methods}}{Methods whose reportable
-output was blocked, and methods that fit with warnings.}
-\item{\code{interval_note}}{Set when reportable intervals are descriptive
-rather than coverage-claimable; \code{NA} otherwise.}
-\item{\code{provenance_note}}{Shared-provenance caveat (close agreement is not
-independent corroboration when compared methods share a target source,
-pooling source, or estimand construction); \code{NA} otherwise.}
-\item{\code{estimate_table}, \code{diagnostic_table}}{The aligned cross-method
-estimate table and the per-method diagnostic table.}
-\item{\code{agreement}}{The descriptive cross-method agreement table.}
-\item{\code{timing}}{Per-method timing metadata.}
-\item{\code{summary_schema_version}, \code{source_validation},
-\code{source_reportability_comparison}, \code{validation}}{The current summary
-schema, deep-valid compact source comparison and its stamp, and the
-owned-summary SHA-256 record used before printing.}
+\code{print()} returns its input invisibly. \code{summary()} returns a list
+of class \code{summary.pvstackr_method_comparison} with these elements:
+\itemize{
+\item \code{reference_method}: the label of the reference fit.
+\item \code{methods}, \code{method_labels} and \code{n_methods}: the method of each fit
+(named by label), the labels and the number of fits.
+\item \code{n_terms}: the number of fixed effects in the comparison.
+\item \code{blocked_methods} and \code{warning_methods}: the labels of the fits with
+status \code{"blocked"} or \code{"warning"}.
+\item \code{interval_note} and \code{provenance_note}: the texts of the two note
+lines; \code{interval_note} is \code{NA} when all intervals are
+coverage-claimable.
+\item \code{estimate_table}, \code{diagnostic_table}, \code{agreement} and \code{timing}: the
+tables described in \code{\link[=pv_compare_methods]{pv_compare_methods()}}.
+\item \code{schema_version}, \code{summary_schema_version}, \code{source_validation},
+\code{source_reportability_comparison} and \code{validation}: the format
+versions of the comparison and of the summary; a copy of the
+comparison without its fits and the checksum of that copy; and a
+SHA-256 checksum of the summary, which \code{print()} recomputes to detect
+changes.
 }
 }
 \description{
-Compact console \code{print()} and \code{summary()} for a
-\code{pvstackr_method_comparison} object. The \code{print()} method shows the
-reference method, the compared method labels, the fixed-effect count, any
-blocked or warning methods, the provenance note (the shared-target caveat),
-and the interval note. The \code{summary()} method builds a structured
-\code{summary.pvstackr_method_comparison} object; its \code{print()} method also
-renders the agreement table.
+\code{print()} shows a short overview of a comparison made by
+\code{\link[=pv_compare_methods]{pv_compare_methods()}}. \code{summary()} returns the same overview, together
+with the tables of the comparison, as a list of class
+\code{summary.pvstackr_method_comparison}; its \code{print()} method also shows the
+agreement table.
+}
+\details{
+The overview shows the label of the reference fit, the label and the
+method of each fit (only their number in the summary), the number of
+fixed effects, and the labels of blocked fits and of fits with status
+\code{"warning"} when there are any. A line beginning "provenance note:"
+follows for every comparison: it says that agreement is descriptive and
+that a shared target, combined result or source label is not independent
+confirmation (\code{\link[=pv_compare_methods]{pv_compare_methods()}} explains this). A line beginning
+"interval note:" is added when some or all intervals are descriptive.
+
+The three methods stop with an error if the comparison or the summary was
+changed after it was created, and for a comparison saved by pvstackr
+0.1.x, which has to be made again from current fits. A summary that
+contains a \code{stack_psis} fit and was saved by an earlier version of
+pvstackr also stops with an error when printed (see
+\code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}}).
 }
 \seealso{
-\code{\link[=pv_compare_methods]{pv_compare_methods()}}, \code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_diagnostics]{get_diagnostics()}}.
+\code{\link[=get_estimates]{get_estimates()}} and \code{\link[=get_diagnostics]{get_diagnostics()}} to read a comparison.
 }

@@ -4,9 +4,6 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out
 ## ----library------------------------------------------------------------------
 library(pvstackr)
 
-## ----install-cran, eval = FALSE-----------------------------------------------
-# # install.packages("pvstackr")
-
 ## ----install-dev, eval = FALSE------------------------------------------------
 # # install.packages("pak")
 # pak::pak("joonho112/pvstackr")
@@ -14,29 +11,16 @@ library(pvstackr)
 ## ----load-again, eval = FALSE-------------------------------------------------
 # library(pvstackr)
 
-## ----the-one-call, eval = FALSE-----------------------------------------------
+## ----pv-fit-call, eval = FALSE------------------------------------------------
 # fit <- pv_fit(
-#   data          = your_data,
-#   formula       = OUTCOME ~ x + female,           # OUTCOME is a placeholder
-#   target        = your_target,                    # from pv_brr_target()
-#   method        = "stack_direct",
-#   control       = pv_control(method = "stack_direct", backend = "brms")
-# )
-# 
-# # Or drive your own engine, which takes all three adapter functions:
-# fit <- pv_fit(
-#   data              = your_data,
-#   formula           = OUTCOME ~ x + female,
-#   target            = your_target,
-#   method            = "stack_direct",
-#   control           = pv_control(method = "stack_direct", backend = "cmdstanr"),
-#   fit_function      = your_fit_function,          # estimates the stacked model
-#   draws_function    = your_draws_function,        # extracts posterior draws
-#   diagnose_function = your_diagnose_function,     # reports sampler diagnostics
-#   cache_dir         = NULL
+#   data    = your_data,
+#   formula = OUTCOME ~ x + female,   # OUTCOME stands for each plausible value
+#   target  = your_target,            # made by pv_brr_target()
+#   method  = "stack_direct",
+#   control = pv_control(method = "stack_direct", backend = "brms")
 # )
 
-## ----load-fixture-------------------------------------------------------------
+## ----load-example-------------------------------------------------------------
 pisa_tiny <- read.csv(
   system.file("extdata", "pisa_tiny.csv", package = "pvstackr")
 )
@@ -46,7 +30,7 @@ fit <- readRDS(
               package = "pvstackr")
 )$fit
 
-## ----fixture-peek-------------------------------------------------------------
+## ----example-data-------------------------------------------------------------
 str(pisa_tiny)
 
 ## ----print-fit----------------------------------------------------------------
@@ -59,7 +43,7 @@ est[, c("term", "estimate", "se", "df",
         "conf_low", "conf_high",
         "interval_role", "coverage_claim_allowed")]
 
-## ----coef-figure, fig.width = 7, fig.height = 3, fig.cap = "Slope coefficients from the cached synthetic stack_direct fit, with 95% descriptive intervals. The intercept is omitted because its scale (~458 score points) would dominate the axis. The dashed line marks zero (no effect). These are illustrative synthetic values, not real PISA estimates.", fig.alt = "A horizontal dot-and-interval plot of two slope coefficients from the synthetic fixture fit. The coefficient on x is about 47 score points with a narrow interval well to the right of zero. The coefficient on female is about 2 score points with a wide interval spanning zero from roughly minus 42 to plus 46. A dashed vertical reference line is drawn at zero."----
+## ----coef-figure, fig.width = 7, fig.height = 3, fig.cap = "Slopes of the example fit, from synthetic data, with their 95% descriptive intervals. The intercept, about 458 points, is not shown. The dashed line marks zero.", fig.alt = "Dot-and-interval plot of the two slopes of the example fit, on a horizontal axis in synthetic reading-score points. b_x, at the top, is about 47 with a short interval from about 44 to 49, well to the right of zero. b_female, at the bottom, is about 2 with a long interval from about minus 42 to 46, which contains zero. A dashed vertical line marks zero."----
 slopes <- est[est$term != "b_Intercept", ]
 slopes <- slopes[order(slopes$term), ]
 
@@ -82,10 +66,4 @@ par(op)
 
 ## ----get-draws----------------------------------------------------------------
 get_draws(fit)
-
-## ----honest-columns-----------------------------------------------------------
-est[, c("term", "interval_role", "coverage_claim_allowed")]
-
-## ----session-info-------------------------------------------------------------
-sessionInfo()
 

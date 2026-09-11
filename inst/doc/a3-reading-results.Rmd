@@ -1,21 +1,21 @@
 ---
-title: "A3: Reading results — estimates, intervals, and what to report"
+title: "Reading and reporting the results"
 author: "JoonHo Lee"
 date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 abstract: >
-  How to read a fitted object and decide what is safe to report. This vignette
-  tours the four stable accessors, walks the reportable estimate table, and
-  explains the interval-metadata columns — `interval_role`,
-  `coverage_claim_allowed`, `df_method`, and `df_complete` — that mark a row as
-  coverage-claimable or descriptive. It covers the fraction of missing information
-  and closes with a copy-paste reporting checklist.
+  This article reads a fitted object with `get_estimates()`, `get_target()`,
+  `get_draws()` and `get_diagnostics()`. It explains the columns of the
+  estimate table, including the columns that say whether pvstackr's reporting
+  rule lets you read an interval as a confidence interval with nominal
+  coverage, and shows where to find
+  the fraction of missing information. It ends with a list of what to report.
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
     df_print: kable
 vignette: >
-  %\VignetteIndexEntry{A3: Reading results — estimates, intervals, and what to report}
+  %\VignetteIndexEntry{Reading and reporting the results}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
@@ -29,72 +29,57 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out
 library(pvstackr)
 ```
 
-## 1. Setup — load a fit to read
+## Loading a fit
 
-Vignettes A1 and A2 produced a fitted object two ways — A1 loaded the cached
-fixture and read it three ways; A2 built the pipeline that creates such a fit
-(`pv_design()` → `pv_brr_target()` → `pv_fit(method = "stack_direct")`). This
-article does neither. It assumes you already have a fit in hand and asks the next
-question: *what is in it, and what may you safely report?*
+The examples read the `stack_direct` fit that ships with pvstackr:
 
-We reuse the same bundled, synthetic `stack_direct` fit so everything runs
-offline and deterministically. We only **read** it — nothing below re-estimates
-anything:
-
-```{r load-fixture}
+```{r load-example-fit}
 fit <- readRDS(
   system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
               package = "pvstackr")
 )$fit
 ```
 
-::: {.alert .alert-warning}
-This is the same tiny **synthetic** PISA-shaped fixture used across the Applied
-track — one make-believe country, 12 students, $M = 2$ plausible values, $R = 4$
-replicate weights. The coefficients below are **illustrative**, not real PISA
-results, and must never be cited as such. For genuine PISA files see vignette A5.
-:::
+The example fit and its synthetic data ($M = 2$ plausible values, $R = 4$
+replicate weights) are described in [Getting started with
+pvstackr](a1-getting-started.html#example-fit).
 
-## 2. The four accessors
+## Functions that read a fit
 
-Everything you report comes from four stable accessors. Each takes the fit and
-returns one well-defined object; together they cover the headline table, the
-external variance answer, the calibrated draws, and the diagnostics.
+Four functions read a fit. Use them rather than `$`: they stop with an error if
+the fit was changed after it was created.
 
-**`get_estimates(fit)`** is the headline. It returns the reportable tidy table —
-one row per fixed-effect term, with the estimate, standard error, confidence
-interval, degrees of freedom, and the interval metadata that licenses (or
-withholds) a coverage claim. This is the object you turn into a results table.
-The full column tour is Section 3.
+- `get_estimates(fit)` returns the estimate table: one row per fixed effect,
+  with the estimate, its standard error, degrees of freedom and interval, and
+  the columns that say how the interval can be read (see [the estimate
+  table](#estimate-table)).
+- `get_target(fit)` returns the target that the fit was calibrated to, the
+  `pvstackr_brr_target` object made by `pv_brr_target()`. It holds the
+  estimates combined over the plausible values, their covariance matrix
+  $T_{\text{MI}}$, the degrees of freedom and the fraction of missing
+  information.
+- `get_draws(fit)` returns the calibrated fixed-effect draws of the stacked
+  fit, or `NULL` when the fit was saved without them.
+- `get_diagnostics(fit)` returns the results of pvstackr's checks and other
+  records of the fit. For a `stack_direct` fit it is a list with six
+  elements: `preflight`, `sampler`, `sampler_gate`, `stack_fit`,
+  `stack_fit_warnings` and `ccc`.
 
-**`get_target(fit)`** returns the external Rubin / BRR–Fay target object (class
-`pvstackr_brr_target`) that the fit was calibrated against. It carries the pooled
-coefficients, the total covariance $T_{\text{MI}}$, the degrees of freedom, the
-fraction of missing information, and a content hash. Under the reportable
-convention (`center = "target"`), the headline estimate and SE in
-`get_estimates()` *are* values read off this object — see Sections 3 and 6.
-
-**`get_draws(fit)`** returns the calibrated fixed-effect posterior draws **when
-they were retained** — an $S \times \text{(FE terms)}$ matrix — and `NULL`
-otherwise. The bundled fit was produced with `return_draws = FALSE` to keep the
-object small, so it returns `NULL`. That is expected and does not affect the
-fixed-effect report, which is fully determined by the target:
+[The target, the draws and the diagnostics](#target-and-diagnostics) shows the
+last three in more detail. The example fit was saved without its draws
+(`return_draws = FALSE` in `pv_control()`), so `get_draws()` returns `NULL`:
 
 ```{r get-draws}
 get_draws(fit)
 ```
 
-**`get_diagnostics(fit)`** returns a named list of fit diagnostics —
-`preflight`, `stack_fit`, `stack_fit_warnings`, and (for `stack_direct`) the
-`ccc` calibration block with the center-separation agreement numbers. These tell
-you whether the calibration behaved; you read them to *trust* the fit, not to
-populate a results table. Section 6 takes a peek; the full treatment is in the
-Method track, **M4**.
+The estimate table does not need the draws, because for a `stack_direct` fit
+its values come from the target.
 
-## 3. The estimate table tour
+## The estimate table {#estimate-table}
 
-`get_estimates()` is the workhorse. Pull the whole table once, then look at it in
-slices:
+`get_estimates()` returns a data frame with one row per fixed effect. For a
+`stack_direct` fit it has 17 columns:
 
 ```{r get-estimates}
 est <- get_estimates(fit)
@@ -102,131 +87,168 @@ est <- get_estimates(fit)
 names(est)
 ```
 
-The table is deliberately wide because it carries both the numbers and their
-*provenance*. Three things to notice before reading any value.
+- `term` names the coefficient: the column name of the model matrix with the
+  prefix `b_`, here `b_Intercept`, `b_x` and `b_female`. Only the fixed
+  effects (the intercept and the slopes) have rows; other parameters of the
+  model, such as the residual standard deviation `sigma`, are not reported.
+- `estimate`, `se` and `df` are the estimate, its standard error and its
+  degrees of freedom.
+- `conf_level`, `conf_low` and `conf_high` give the interval, and
+  `df_method`, `df_complete`, `interval_role` and `coverage_claim_allowed`
+  say how it was made and how it can be read (see [the interval
+  columns](#interval-columns)).
+- `parameter_scope`, `target_source` and `target_hash` say what each row is
+  and where its numbers come from (see below).
+- `std.error`, `conf.low` and `conf.high` repeat `se`, `conf_low` and
+  `conf_high` under the names that the broom package uses for model
+  summaries. pvstackr has no `tidy()` method; the repeated columns only let
+  code written for these names read the table.
 
-**The three terms.** Rows are `b_Intercept`, `b_x`, and `b_female` — the
-fixed-effect block, with the `b_` prefix marking each as a fixed-effect
-coefficient. There are no variance-component rows: the package calibrates and reports
-$\beta_{\text{FE}}$ only, a scope reminder carried over from A1/A2 and confirmed
-by the `parameter_scope` column below.
-
-**Dual snake_case / broom naming.** Several columns appear twice under two
-spellings: the package-native snake_case (`se`, `conf_low`, `conf_high`) and the
-`broom`-style dotted aliases (`std.error`, `conf.low`, `conf.high`). They hold
-identical values — the duplication lets pvstackr tables drop into `broom`/`tidy`
-pipelines unchanged while keeping a tidy snake_case surface for everything else.
-Use whichever your downstream code expects.
-
-Here is the compact "what is the estimate" slice most analyses start from:
+The first columns hold the numbers that most analyses start from:
 
 ```{r estimate-core}
 est[, c("term", "estimate", "se", "df", "df_method")]
 ```
 
-On this synthetic fixture the intercept sits near 458 score points, the slope on
-`x` near 47 points per unit, and the `female` coefficient near 2 points with a
-very wide interval (Section 4 explains the width). The `df` values hover near 1
-because $M = 2$ — there is almost no between-imputation information to spend.
+In the example the intercept is 457.9, the slope of `x` is 46.9 and the
+coefficient of `female` is 2.1, with standard errors 1.29, 0.37 and 3.56. The
+degrees of freedom are close to 1, which makes the intervals very wide. With
+$M = 2$ plausible values the classic degrees of freedom cannot be smaller than
+$M - 1 = 1$, and they are close to that value here because most of the
+variance comes from the differences between the two plausible values (see
+[the fraction of missing information](#fmi)).
 
-**Provenance is in the table, not in your memory.** Three columns record where
-each row came from:
+The last three columns record what each row is and where it comes from:
 
-```{r estimate-provenance}
+```{r estimate-source-columns}
 est[, c("term", "parameter_scope", "target_source", "target_hash")]
 ```
 
-- `parameter_scope == "fixed_effect"` confirms every row is in the reportable
-  fixed-effect block.
-- `target_source == "external_brr_fay_rubin"` is the seal that the variance came
-  from an **external, design-based** Rubin / BRR–Fay target — the property that
-  governs coverage (Section 4).
-- `target_hash` is a stable fingerprint of that target object. Record it: it lets
-  you (or a reviewer) prove which target produced these numbers. The same hash
-  appears on the target object itself (Section 6) and underpins the
-  reproducibility checklist in A5.
+`parameter_scope` is `"fixed_effect"` in every row. `target_source` is
+`"external_brr_fay_rubin"` for a `stack_direct` fit: the numbers come from the
+target that `pv_brr_target()` computed with the BRR–Fay replicate weights and
+Rubin's rules. `target_hash` is a SHA-256 checksum of the contents of that
+target. The target stores the same value, and pvstackr uses it to detect a
+target that was changed after it was made. Keep it with your results, since it
+identifies the target they come from; [Real PISA data: access, memory and
+reproducibility](a5-real-pisa-guidance.html#reproducibility-checklist) lists
+the other records to keep.
 
-**Where the numbers come from.** Because this fit uses the reportable convention
-`center = "target"` (see A2 §6), the reported `estimate` and `se` are *exactly*
-the external target's pooled coefficients $\bar\beta$ and
-$\sqrt{\operatorname{diag}(T_{\text{MI}})}$. The single stacked, CCC-calibrated
-fit is engineered to *report the external answer* — Section 6 shows the same
-values living on the target object, and verifies they coincide.
+For a `stack_direct` fit, `estimate`, `se` and `df` are copied from the target
+([The full analysis workflow](a2-the-workflow.html#center-target)): `estimate`
+is the target's $\bar\beta$, the average of the $M$ survey-weighted estimates,
+one per plausible value, and `se` is $\sqrt{\operatorname{diag}(T_{\text{MI}})}$,
+the square root of the diagonal of the target covariance matrix.
 
-## 4. Interval metadata — coverage-claimable vs descriptive
+## Interval columns and pvstackr's reporting rule {#interval-columns}
 
-The columns that separate an honest report from an over-claim are the interval
-metadata. Read them as a small block:
+Each row has an interval from `conf_low` to `conf_high`: the estimate plus or
+minus a $t$ quantile with `df` degrees of freedom times `se`, at the level
+`conf_level` set in `pv_control()` (0.95 by default). Four columns say how the
+interval was made and how it can be read:
 
 ```{r interval-metadata}
 est[, c("term", "interval_role", "df_method",
         "df_complete", "coverage_claim_allowed")]
 ```
 
-What each column means:
+- `df_method` is the rule for the degrees of freedom, chosen when the target
+  is made with `pv_brr_target()`. `"classic"`, the default, is the rule of
+  @rubin1987multiple, $(M - 1)/\lambda^2$, where $\lambda$ is the fraction of
+  missing information of the coefficient (see [the fraction of missing
+  information](#fmi)). `"barnard_rubin"` is the correction of
+  @barnard1999small for small complete-data degrees of freedom ([The full
+  analysis workflow](a2-the-workflow.html#target) describes both rules).
+- `df_complete` is used only with `"barnard_rubin"`: the complete-data
+  degrees of freedom of the replicate-weight variance, which you state when
+  you make the target. They are the degrees of freedom the analysis would
+  have if the outcome were observed directly instead of through plausible
+  values, and the Barnard–Rubin adjustment matters when this number is
+  small. pvstackr does not choose this number and does not check it against
+  the replicate weights: `pv_brr_target()` accepts any positive value, `Inf`
+  included. The value depends on how the survey formed its replicate weights,
+  which the survey's technical documentation describes; report it with the
+  intervals. With `"classic"` the column is `NA`, as here.
+- `coverage_claim_allowed` is `TRUE` when pvstackr's reporting rule lets you
+  read the interval as a confidence interval with nominal coverage (a
+  coverage-claimable interval), and `FALSE` when pvstackr makes no statement about its
+  coverage (a descriptive interval).
+- `interval_role` names the case, as in the table below.
 
-- **`interval_role`** names the *kind* of interval. Here every row is
-  `descriptive_classic_rubin`: a Rubin interval built on **classic** degrees of
-  freedom, suitable for *describing* the spread of the estimate but not for a
-  calibrated coverage claim.
-- **`df_method`** is how the degrees of freedom were computed — `"classic"` (the
-  plain Rubin formula) here, as opposed to the small-sample **Barnard–Rubin**
-  adjustment that a coverage-claimable interval requires
-  [@barnard1999small; @rubin1987multiple].
-- **`df_complete`** is the complete-data (large-sample) degrees of freedom the
-  Barnard–Rubin correction needs. It is `NA` for this fixture precisely because
-  the classic path does not use it; a Barnard–Rubin target would supply it.
-- **`coverage_claim_allowed`** is the single licensing flag. It is `FALSE` for
-  every row here.
+pvstackr sets `interval_role` and `coverage_claim_allowed` by its reporting
+rule, from the method and `df_method`. For `stack_direct`, `df_method` and
+`df_complete` are those of the target; `per_pv` and `stack_psis` take them as
+their own arguments.
 
-**The rule** — enforced by the metadata, not by trust:
+| Method | `df_method` | `interval_role` | `coverage_claim_allowed` |
+|:--|:--|:--|:--|
+| `stack_direct` | `"barnard_rubin"` | `coverage_barnard_rubin` | `TRUE` |
+| `stack_direct` | `"classic"` | `descriptive_classic_rubin` | `FALSE` |
+| `per_pv` | `"barnard_rubin"` | `reference_barnard_rubin` | `FALSE` |
+| `per_pv` | `"classic"` | `reference_classic_rubin` | `FALSE` |
+| `stack_psis` | `"barnard_rubin"` | `psis_barnard_rubin` | `FALSE` |
+| `stack_psis` | `"classic"` | `psis_classic_rubin` | `FALSE` |
 
-> A row is `coverage_claim_allowed = TRUE` **only** when the fit is
-> `stack_direct` *and* it was calibrated against an external **Barnard–Rubin**
-> BRR–Fay target [@barnard1999small; @rubin1987multiple; @judkins1990fay]. The
-> `per_pv` and `stack_psis` methods are **always** descriptive, regardless of
-> their df. And a `stack_direct` fit that uses **classic** Rubin df — like this
-> bundled fixture — is also descriptive, because classic df does not deliver the
-> small-sample calibration the coverage claim rests on.
+So `coverage_claim_allowed` is `TRUE` only for a `stack_direct` fit whose
+target was made with `df_method = "barnard_rubin"` and a positive
+`df_complete` (`pv_brr_target()` stops with an error without one). The labels
+do not depend on the status of the fit: a fit with status `"warning"` keeps
+them, and a fit with status `"blocked"` has an empty estimate table.
+`per_pv` and `stack_psis` intervals are always descriptive, because their
+variance within each plausible value comes from the model's posterior draws,
+not from the replicate weights. The label follows the rule, not the value of
+the degrees of freedom: the classic rule assumes that the complete-data
+degrees of freedom are infinite [@barnard1999small, p. 948], and a target made
+with the Barnard–Rubin rule keeps the label `coverage_barnard_rubin` even with
+`df_complete = Inf`, which gives the classic degrees of freedom ([The
+design-based target: BRR–Fay replicate weights and Rubin's
+rules](m2-brr-fay-target.html#degrees-of-freedom) explains both rules). The
+label records how the interval was built; it does not certify coverage ([Choosing
+a method and reading its intervals](m5-methods-and-coverage.html#interval-rule)
+gives the reason for the rule and its limits).
 
-Two practical consequences:
+The example fit is a `stack_direct` fit whose target uses the classic degrees
+of freedom, so every row is `descriptive_classic_rubin` with
+`coverage_claim_allowed = FALSE`, and `print(fit)` adds the note "intervals
+are descriptive rather than coverage-claimable". The method alone does not
+decide the label; read it in the table. Report an interval as a confidence
+interval with nominal coverage only when `coverage_claim_allowed` is `TRUE`,
+and as a descriptive interval otherwise.
 
-- **Read the column, do not infer from the method name.** "It's `stack_direct`,
-  so it must be coverage-claimable" is exactly the mistake the metadata exists to
-  prevent. This fixture *is* `stack_direct` and is still descriptive. Let
-  `coverage_claim_allowed` decide, every time.
-- **Coverage comes from provenance, not from the calibration diagnostics.** It is
-  tempting to read the near-perfect CCC center-separation numbers in Section 6
-  (agreement to ~$10^{-14}$) as evidence of coverage. They are not. CCC is an
-  affine moment match — it guarantees the calibrated draws' mean and covariance
-  equal the target's, by construction — but that algebraic identity is not a
-  coverage theorem. Coverage is conferred by the **provenance** of $T_{\text{MI}}$
-  (external, design-based, Barnard–Rubin) and the supporting simulation evidence,
-  not by how cleanly CCC ran. The precise statement is in **M4** (the CCC map)
-  and **M5** (why only `stack_direct` is coverage-claimable).
+The calibration diagnostics are not evidence about coverage. The Cholesky
+calibration correction (CCC) transforms the draws of the stacked fit so that
+their mean and covariance equal the target's $\bar\beta$ and $T_{\text{MI}}$,
+whatever the target is. Its diagnostics (see [the
+diagnostics](#target-and-diagnostics)) show how far the stacked fit was from
+the target before the calibration and whether the calibration was
+numerically stable; they cannot show that the target's intervals have nominal
+coverage. [Calibrating the fixed-effect draws
+(CCC)](m4-ccc-calibration.html) describes the calibration, and [Choosing a
+method and reading its intervals](m5-methods-and-coverage.html) explains the
+intervals of each method.
 
-The bundled fixture is therefore a faithful, deliberately *descriptive*
-demonstration of the object surface — not a coverage-claimable result.
+## Fraction of missing information {#fmi}
 
-## 5. Fraction of missing information (FMI)
-
-The **fraction of missing information** (FMI) for a coefficient is the share of
-its total uncertainty that comes from imputation (the spread *between* plausible
-values) rather than from sampling. For coefficient $k$,
+For each coefficient $\ell$, `pv_brr_target()` computes
 
 $$
-\gamma_k \;=\; \frac{\bigl(1 + \tfrac1M\bigr)\,B_{kk}}{T_{\text{MI},\,kk}},
+\lambda_\ell = \frac{(1 + 1/M)\,B_{\ell\ell}}{T_{\text{MI},\ell\ell}},
+\qquad
+T_{\text{MI}} = \bar U + (1 + 1/M)\,B,
 $$
 
-where $B$ is the between-imputation covariance and $T_{\text{MI}}$ the total
-target covariance from the Rubin combining rules [@rubin1987multiple]. FMI is
-what drives the degrees of freedom — high FMI means little information per
-coefficient, hence small df and wide intervals.
+where $\bar U$ is the BRR–Fay replicate covariance of the estimates averaged
+over the plausible values, and $B$ is the covariance of the estimates between
+plausible values. $\lambda_\ell$ is the share of the total variance of
+coefficient $\ell$ that comes from the variation between plausible values;
+@barnard1999small use this ratio as an approximation to the fraction of
+missing information (FMI). pvstackr stores it in the target twice, as `fmi`
+and as `lambda`, which are identical; the estimate table has no column for it.
+Since the classic degrees of freedom are $(M - 1)/\lambda_\ell^2$, an FMI
+close to 1 gives degrees of freedom close to their smallest value, $M - 1$.
 
-FMI lives on the **target object**, not in the `get_estimates()` table — it is a
-property of the variance target, so you read it from `get_target()`. Alongside it
-the target reports the relative increase in variance (`riv`) and the degrees of
-freedom that FMI drives:
+The target also stores `riv`, the relative increase in variance
+$(1 + 1/M)B_{\ell\ell}/\bar U_{\ell\ell}$, and the degrees of freedom:
 
 ```{r fmi}
 tg <- get_target(fit)
@@ -239,70 +261,69 @@ data.frame(
 )
 ```
 
-These FMI values are very high — roughly 0.84 to 0.99 — which looks alarming
-until you remember why: with only $M = 2$ plausible values, the
-$(1 + 1/M) = 1.5$ multiplier sits on a between-imputation covariance estimated
-from a single pair of fits, so the between-share dominates and the degrees of
-freedom collapse toward 1 (compare the `df` column in Section 3). This is the MI
-machinery being *honest* about how little information two imputations carry — not
-a defect.
+In the example the FMI is between 0.84 and 0.99 because the variance between
+the two plausible values is much larger than the replicate-weight variance:
+`riv` is about 5 for `b_x` and about 95 and 146 for the intercept and
+`b_female`. Because `fmi` equals `riv / (1 + riv)`, a large `riv` gives an FMI
+close to 1, and the degrees of freedom are then close to $M - 1 = 1$. The small
+number of plausible values is not the reason: with the same $B$ and $\bar U$
+and ten plausible values, the FMI would still be between 0.80 and 0.99.
 
-::: {.alert .alert-warning}
-Because $M = 2$ here, these FMI values illustrate the **mechanics**, not a
-substantive finding. Real PISA reading uses $M = 10$ plausible values, where FMI
-is far smaller and the small-sample df correction [@barnard1999small] matters in
-its intended regime. Do not read this fixture's FMI as a statement about real
-data.
-:::
+PISA 2022 provides ten plausible values per domain [@oecd2024pisa]. The FMI of
+an analysis of real data depends on its data and model, and this synthetic
+example says nothing about it.
 
-## 6. Reading the target and draws
+## The target, the draws and the diagnostics {#target-and-diagnostics}
 
-The remaining accessors round out the picture: the target supplies the headline
-numbers, draws are absent here, and the diagnostics tell you the calibration
-behaved.
+### The target
 
-### 6.1 The target — `get_target()`
-
-The target object carries the external variance answer in full. The three fields
-you reach for most:
+`tg`, made in the previous chunk, holds the target of the fit. The estimate
+table takes its standard errors, degrees of freedom and checksum from these
+fields:
 
 ```{r target-fields}
-diag(tg$T_MI)        # total target variance per coefficient
-round(tg$df, 3)      # degrees of freedom per coefficient
-tg$target_hash       # content fingerprint (matches the estimate table)
+diag(tg$T_MI)        # variance of each coefficient; se is its square root
+round(tg$df, 3)      # degrees of freedom of each coefficient
+tg$target_hash       # checksum of the target, also in the estimate table
 ```
 
-This is the *source* of the reportable SE: the standard errors in
-`get_estimates()` are $\sqrt{\operatorname{diag}(T_{\text{MI}})}$, and the point
-estimates are the pooled `beta_bar`. We can confirm the identity directly — under
-`center = "target"`, the table and the target agree to machine precision:
+The two comparisons below return `TRUE` because pvstackr copies `estimate`
+from `beta_bar` and `se` from the square roots of the diagonal of `T_MI` when
+`center = "target"`. The equality holds for every `stack_direct` fit that has
+estimates; it shows how the table is made, not that two methods agree.
 
 ```{r target-identity}
-all.equal(est$estimate, unname(tg$beta_bar))            # estimates == pooled beta
-all.equal(est$se,       unname(sqrt(diag(tg$T_MI))))    # SEs == sqrt(diag T_MI)
+all.equal(est$estimate, unname(tg$beta_bar))            # estimate = beta_bar
+all.equal(est$se,       unname(sqrt(diag(tg$T_MI))))    # se = sqrt(diag(T_MI))
 ```
 
-The target also carries `lambda`, the `fmi` of Section 5, the Fay variance
-multiplier (`fay_variance_multiplier == 1` here), and the components
-`U_bar` / `B` that feed $T_{\text{MI}} = \bar U + (1 + 1/M)B$. Their derivation —
-Rubin pooling, the BRR–Fay sandwich, Barnard–Rubin df, and the design-variance
-coverage result — is the subject of the Method track, **M2**.
+`?pv_brr_target` lists all fields of the target. Besides `beta_bar` (also
+stored as `beta`), `T_MI`, `df` and `target_hash`, they include `U_bar` and
+`B`, the two parts of $T_{\text{MI}} = \bar U + (1 + 1/M)B$; `fmi` and
+`lambda`, which hold the same values, and `riv` (see [the fraction of missing
+information](#fmi)); `M`, `R` and `fay_k`; and `fay_variance_multiplier`, the
+factor $1/(R(1 - k)^2)$ of the BRR–Fay replicate covariance, where $k$ is the
+Fay coefficient `fay_k`. In the example $R = 4$ and $k = 0.5$, so the factor
+is 1. [The design-based target: BRR–Fay replicate weights and Rubin's
+rules](m2-brr-fay-target.html) explains how the target is computed: the
+BRR–Fay replicate covariance for each plausible value, Rubin's rules, and the
+two rules for the degrees of freedom.
 
-### 6.2 The draws — `get_draws()`
+### The draws
 
-As noted in Section 2, this fit retained no posterior draws, so the draw accessor
-returns `NULL`:
+A fit made with `return_draws = TRUE`, the default of `pv_control()`, keeps
+the calibrated fixed-effect draws: a matrix with one row per draw of the
+stacked fit and one column per fixed effect, named as in the estimate table.
+They can be used for quantities derived from the coefficients: their mean and
+covariance are the target's, so a linear combination computed from them has
+the target's estimate and variance. They do not carry the target's degrees of
+freedom, so their quantiles give roughly normal-reference intervals, narrower
+than the $t$ intervals of the estimate table when the degrees of freedom are
+small ([Calibrating the fixed-effect draws (CCC)](m4-ccc-calibration.html#map)).
+For the example fit, which was saved without them, `get_draws()` returns
+`NULL`, as shown above; it does the same for a blocked fit.
 
-```{r get-draws-again}
-get_draws(fit)
-```
-
-Had the fit been run with `return_draws = TRUE`, this would be an
-$S \times \text{(FE terms)}$ matrix of CCC-calibrated fixed-effect draws — useful
-for derived quantities or custom intervals. Its absence does not weaken the
-fixed-effect report, which is fully specified by the target.
-
-### 6.3 The diagnostics — `get_diagnostics()`
+### The diagnostics
 
 ```{r get-diagnostics}
 dg <- get_diagnostics(fit)
@@ -310,81 +331,77 @@ dg <- get_diagnostics(fit)
 names(dg)
 ```
 
-The list holds `preflight` (the resolved formula, term names, and target
-fingerprint checked before fitting), `stack_fit` and `stack_fit_warnings` (the
-stacked-fit record and any messages it raised), and `ccc`, the calibration block
-for `stack_direct`. A quick peek at the center-separation agreement inside `ccc`:
+For a `stack_direct` fit the list has six elements:
+
+- `preflight`: the record of the check, made before fitting, that the formula,
+  the data and the target match;
+- `sampler`: the sampler diagnostics of the stacked fit (the largest R-hat,
+  the smallest bulk and tail effective sample sizes, the number of divergent
+  transitions, and the numbers of chains and of draws per chain);
+- `sampler_gate`: the result of pvstackr's check of those values;
+- `stack_fit` and `stack_fit_warnings`: a record of the stacked fit and the
+  notes it produced;
+- `ccc`: the calibration diagnostics.
+
+The thresholds of the checks are listed under "Status and checks" in
+`?pvstackr_object_contracts`; a fit has status `"ok"` when none of them gave a
+warning or a block. The sampler record of the example fit was typed in by its
+fitting functions: 2 chains of 10 draws each, an R-hat of 1 and no divergent
+transitions. The record reports 20 draws although the functions return 12:
+pvstackr compares the reported numbers of chains and draws with the settings
+in `pv_control()`, not with the draws, so the record passed pvstackr's checks.
+The center-separation values in `ccc` are:
 
 ```{r ccc-peek}
 dg$ccc[c("center_status", "delta_c_rel", "delta_c_max")]
 ```
 
-`center_status == "ok"` means the calibration's center matched the target's
-within tolerance; `delta_c_rel` and `delta_c_max` are the relative
-center-separation summarised two ways — a root-mean-square diagnostic and a
-max-over-terms reportable gate — both effectively zero (~$10^{-14}$) here.
+`delta_c_max` is the largest, over the fixed effects, of the absolute
+difference between the target estimate and the mean of the stacked draws
+before calibration, divided by the target standard error:
 
-A reminder from Section 4: these tiny numbers confirm CCC *ran cleanly*; they do
-**not** confer coverage. The center-separation diagnostic, its green/yellow/red
-tiers, the conditioning diagnostic $\kappa_A$, and the RMS-vs-max distinction are
-defined in **M4**.
+$$
+\max_\ell \frac{\lvert \bar\beta_\ell - \bar\beta^{\text{raw}}_\ell \rvert}
+               {\sqrt{T_{\text{MI},\ell\ell}}},
+$$
 
-## 7. A reporting checklist
+where $\bar\beta^{\text{raw}}_\ell$ is the mean of the stacked draws of
+coefficient $\ell$ before calibration. By pvstackr's thresholds,
+`center_status` is `"ok"` when `delta_c_max` is below 0.01, `"warning"` from
+0.01 and `"blocked"` from 0.05. `delta_c_rel` is the root mean square (RMS) of
+the same ratios; it is recorded but does not change the status. Both are
+about $10^{-14}$ in the example because its draws were built around the
+target. `ccc` also holds `kappa_A`, the condition number of the calibration
+matrix, which has thresholds of its own. [Calibrating the fixed-effect draws
+(CCC)](m4-ccc-calibration.html) explains these values.
 
-A copy-paste checklist for reporting a pvstackr fixed-effect result. Walk it once
-per analysis; every field is read directly off the objects above, never
-remembered.
+## What to report {#reporting-checklist}
 
-- **Method.** State it (`stack_direct` for a reportable fit). `per_pv` and
-  `stack_psis` are reference/cross-check only — see A4.
-- **Centering.** Confirm `center = "target"` (the reportable convention; A2 §6).
-  A `"posterior"`-centered fit is diagnostic only and must not be reported.
-- **Estimates and SEs.** Take `estimate` and `se` from `get_estimates()`. Under
-  `center = "target"` these are the external target's pooled coefficients and
-  $\sqrt{\operatorname{diag}(T_{\text{MI}})}$.
-- **Intervals — with their role.** Report `conf_low` / `conf_high` *together with*
-  the `interval_role` for each row. Never strip the role off the number.
-- **Degrees of freedom.** Report `df` and `df_method` (and `df_complete` when the
-  Barnard–Rubin path supplies it), so the small-$M$ behaviour is visible.
-- **Fraction of missing information.** Report `get_target(fit)$fmi` — high FMI
-  explains small df and wide intervals.
-- **The coverage flag.** Report intervals as **coverage-claimable only when
-  `coverage_claim_allowed == TRUE`**. When it is `FALSE` (as for this fixture),
-  label them **descriptive** explicitly.
-- **Provenance.** Record `target_source`, `target_hash`, and the package version
-  so the result is reproducible and auditable. The full reproducibility checklist
-  is in A5.
+A checklist for reporting the fixed effects of a pvstackr fit:
 
-For this synthetic fixture, that report reads: a `stack_direct`, `center =
-"target"` fit; estimates ~458 / 47 / 2 with SEs from $T_{\text{MI}}$; intervals
-`descriptive_classic_rubin` with `df_method == "classic"` and df ~1; FMI
-~0.84–0.99; and — because `coverage_claim_allowed == FALSE` throughout — the
-intervals reported as **descriptive, not coverage-claimable**.
+- The method (`stack_direct`, `per_pv` or `stack_psis`); [Comparing the three
+  fitting methods](a4-comparing-methods.html#choosing) gives pvstackr's
+  recommendation.
+- The status shown by `print(fit)` and, for `"warning"`, the reason codes it
+  lists.
+- `estimate` and `se` from `get_estimates()`; for `stack_direct` they are the
+  target's ([The full analysis workflow](a2-the-workflow.html#center-target)
+  explains why).
+- `conf_low`, `conf_high` and `conf_level`, with the `interval_role` of each
+  row.
+- The name of each interval: "confidence interval" only where
+  `coverage_claim_allowed` is `TRUE`, otherwise "descriptive interval".
+- `df`, `df_method` and, with the Barnard–Rubin rule, `df_complete`.
+- The fraction of missing information, `get_target(fit)$fmi` (`stack_direct`
+  and `per_pv`).
+- `target_hash` and the pvstackr version, `packageVersion("pvstackr")`; [Real
+  PISA data: access, memory and
+  reproducibility](a5-real-pisa-guidance.html#reproducibility-checklist) lists
+  the other records to keep.
 
-## 8. Where to next
-
-You can now read a fit and decide what is safe to report. From here:
-
-- **A4 · Comparing methods** — `pv_compare_methods()` across `stack_direct`,
-  `per_pv`, and `stack_psis`; how to read agreement diagnostics; and the two
-  cautions (design variance is not optional; a small Pareto-$\hat k$ does not
-  guarantee correct variance).
-- **A5 · Real PISA data guidance** — connecting to genuine PISA files: licensing
-  and non-affiliation, the design declaration, memory and runtime, and the full
-  reproducibility checklist (where `target_hash` and friends earn their keep).
-
-For the mathematics behind the columns read here — the external target, Rubin /
-BRR–Fay combining, Barnard–Rubin df, and FMI in **M2**, and the precise statement
-of why only `stack_direct` is coverage-claimable in **M5** — start the Method
-track at **M1 · Foundations and notation**.
-
-Bug reports and feature requests:
-<https://github.com/joonho112/pvstackr/issues>.
-
-### Session info
-
-```{r session-info}
-sessionInfo()
-```
+For the example fit a report would read: "The slope of `x` was 46.9 (standard
+error 0.37; 95% descriptive interval 44.4 to 49.4, classic Rubin degrees of
+freedom 1.40; `stack_direct`, status ok; fraction of missing information
+0.84)." The data are synthetic.
 
 ## References

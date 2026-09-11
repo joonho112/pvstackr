@@ -9,47 +9,47 @@ fit <- readRDS(
   system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
               package = "pvstackr")
 )$fit
-tg <- get_target(fit)   # external Rubin / BRR–Fay target (class pvstackr_brr_target)
+tg <- get_target(fit)   # the target of the fit, a pvstackr_brr_target object
 
 class(tg)
-c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
+c(M = tg$M, R = tg$R, fay_k = tg$fay_k)
 
 ## ----brrfay-peek--------------------------------------------------------------
-tg$fay_variance_multiplier                 # a_d = 1 on this fixture (coincidence)
-dim(tg$per_pv[[1]]$replicate_diff)         # 3 x 4 : (beta_hat_m^(r) - beta_hat_m)
+tg$fay_variance_multiplier                 # 1/(R (1 - k)^2), 1 in the example
+dim(tg$per_pv[[1]]$replicate_diff)         # 3 coefficients x 4 replicate weights
 str(tg$per_pv[[1]]$replicate_diff)
 
 ## ----rubin-pooling------------------------------------------------------------
 M     <- tg$M                                    # 2
-betas <- sapply(tg$per_pv, function(p) p$beta)   # 3 x M : per-PV beta_hat_m
-Us    <- lapply(tg$per_pv, function(p) p$U)      # list of per-PV U_hat_m (BRR–Fay)
+betas <- sapply(tg$per_pv, function(p) p$beta)   # 3 x M: one column per plausible value
+Us    <- lapply(tg$per_pv, function(p) p$U)      # the replicate covariances U_m
 
-beta_bar <- rowMeans(betas)                      # Rubin mean
-U_bar    <- Reduce(`+`, Us) / M                  # within-imputation covariance
+beta_bar <- rowMeans(betas)                      # average of the estimates
+U_bar    <- Reduce(`+`, Us) / M                  # average replicate covariance
 dev      <- betas - beta_bar
-B        <- (dev %*% t(dev)) / (M - 1)           # between-imputation covariance
-T_MI     <- U_bar + (1 + 1/M) * B                # EQ-TMI
+B        <- (dev %*% t(dev)) / (M - 1)           # covariance between plausible values
+T_MI     <- U_bar + (1 + 1/M) * B                # total covariance
 
-all.equal(unname(beta_bar), unname(tg$beta_bar)) # TRUE
-all.equal(unname(U_bar),    unname(tg$U_bar))    # TRUE
-all.equal(unname(B),        unname(tg$B))        # TRUE
-all.equal(unname(T_MI),     unname(tg$T_MI))     # TRUE
+all.equal(unname(beta_bar), unname(tg$beta_bar))
+all.equal(unname(U_bar),    unname(tg$U_bar))
+all.equal(unname(B),        unname(tg$B))
+all.equal(unname(T_MI),     unname(tg$T_MI))
 
 ## ----fmi-recompute------------------------------------------------------------
-fmi <- (1 + 1/M) * diag(B) / diag(T_MI)          # EQ-FMI
-all.equal(unname(fmi), unname(tg$fmi))           # TRUE
+fmi <- (1 + 1/M) * diag(B) / diag(T_MI)          # lambda for each coefficient
+all.equal(unname(fmi), unname(tg$fmi))
 
 ## ----df-table-----------------------------------------------------------------
 data.frame(
   term      = tg$fe_names,
-  fmi       = round(tg$fmi, 3),
-  riv       = round(tg$riv, 2),
-  df        = round(tg$df,  2),
-  df_method = tg$df_method
+  fmi       = round(unname(tg$fmi), 3),
+  riv       = round(unname(tg$riv), 2),
+  df        = round(unname(tg$df),  2),
+  df_method = unname(tg$df_method)
 )
 
 ## ----df-complete--------------------------------------------------------------
-tg$df_complete   # NA for every term -> the classic path, not Barnard–Rubin
+tg$df_complete   # NULL for a classic target
 
 ## ----session-info-------------------------------------------------------------
 sessionInfo()

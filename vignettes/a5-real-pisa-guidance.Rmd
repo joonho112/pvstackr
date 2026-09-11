@@ -1,31 +1,31 @@
 ---
-title: "A5: Real PISA data — licensing, memory, and reproducibility"
+title: "Real PISA data: access, memory and reproducibility"
 author: "JoonHo Lee"
 date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 abstract: >
-  How to connect pvstackr to real PISA data without bundling licensed survey
-  files. This guidance covers licensing and non-affiliation, declaring the
-  plausible-value design on a real cycle, the target and fit shape, the memory and
-  runtime footprint (about N times M stacked rows, and about M times R-plus-one
-  target fits), and a reproducibility checklist. It is guidance, not a worked
-  substantive analysis; the package ships no real PISA records.
+  This article describes what to do when you analyze real PISA files with
+  pvstackr: obtaining the files under their terms, declaring the PISA 2022
+  design, writing the target and fit calls, planning for the memory and
+  computing time they need, and recording what is needed to repeat the
+  analysis. pvstackr ships no real PISA records, so the calls are shown
+  without being run. The last section says what the companion preprint shows
+  about PISA and what it does not.
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
     df_print: kable
 vignette: >
-  %\VignetteIndexEntry{A5: Real PISA data — licensing, memory, and reproducibility}
+  %\VignetteIndexEntry{Real PISA data: access, memory and reproducibility}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
 ---
 
 ```{r setup, include = FALSE}
-# This is a GUIDANCE vignette. The package ships NO real PISA data (the bundled
-# pisa_tiny fixture is synthetic), so every illustrative real-PISA chunk below is
-# set eval = FALSE GLOBALLY here and shows only the shape of the call. The closing
-# session-info chunk re-enables eval = TRUE explicitly so it still runs.
+# pvstackr ships no real PISA data (the bundled pisa_tiny data are synthetic),
+# so the chunks of this article are not run (eval = FALSE below) and show only
+# the form of each call. The session-info chunk sets eval = TRUE and runs.
 knitr::opts_chunk$set(
   collapse  = TRUE,
   comment   = "#>",
@@ -39,65 +39,44 @@ knitr::opts_chunk$set(
 library(pvstackr)
 ```
 
-## 1. Purpose
+pvstackr does not ship real PISA records. The only data in the package are
+the synthetic `pisa_tiny` data (one made-up country, `CNT` is `"SYN"`, with
+$M = 2$ plausible values and $R = 4$ replicate weights) and an example fit
+made from them. They exist so that the examples and the package tests run
+without licensed files.
+pvstackr is not affiliated with or endorsed by OECD/PISA. Its documentation
+uses the PISA column names, such as `PV1MATH`, `W_FSTUWT`, `W_FSTURWT1` and
+`CNTSTUID`, because they are the names in the files that users analyze
+[@oecd2024pisa].
 
-Vignettes A1–A4 ran end to end on the bundled **synthetic** `pisa_tiny` fixture:
-you loaded a cached fit (A1), built the pipeline that creates one (A2), read what
-is safe to report (A3), and compared the three methods (A4). This article is
-different in kind. It is **guidance** for pointing the same workflow at a
-**real** PISA cycle on your own machine — it is not a worked substantive analysis,
-and it computes no real-data numbers.
+Each call below is written for a PISA 2022 file and is not run, since the
+package has no real data; [The full analysis workflow](a2-the-workflow.html)
+runs the same steps on the synthetic data.
 
-The reason is deliberate and worth stating plainly:
+## Data access and licensing {#data-access}
 
-- **pvstackr does not ship real PISA records.** The only example data in the
-  package is the synthetic `pisa_tiny` fixture (one make-believe country
-  `CNT == "SYN"`, $M = 2$ plausible values, $R = 4$ replicate weights), built
-  solely so examples and package checks run offline without licensed files.
-  Nothing in this vignette bundles, mirrors, or reproduces genuine PISA microdata.
-- **pvstackr is not affiliated with or endorsed by OECD/PISA.** In package
-  documentation "PISA" is used **descriptively**, for the survey-data and
-  column-name conventions that applied users bring to their own authorized
-  analyses (`PV1MATH`, `W_FSTUWT`, `W_FSTURWT1`, `CNTSTUID`, and so on)
-  [@oecd2024pisa].
+### Obtaining the files
 
-Because the package has no real data to run, **every real-PISA code chunk below is
-`eval = FALSE`**: it shows the *shape* of the call you would make on your own
-authorized extract, never a live result. Only the setup, the `library()` line, and
-the closing session-info chunk actually execute.
+Obtain real PISA files only from an authorized source: the OECD's official
+PISA website or a copy that your institution has approved. Before you use a
+file, read the license, citation, redistribution, and privacy terms of the
+cycle and of the files you downloaded. The terms differ between cycles and
+releases, and the terms that come with the files are the ones that apply.
 
-The road map for this article: data access and licensing → declare the design on
-a real cycle → the target and fit shape → memory and runtime → a reproducibility
-checklist → the companion methods paper, described qualitatively.
+### The pvstackr license and your data
 
-## 2. Data access and licensing
+The MIT license for `pvstackr` does not license users' real PISA data, the
+extracts derived from them or any other files processed with the package. It
+covers the software only. Your data are governed by the terms of their
+source, including its rules on attribution, redistribution, third-party
+rights and privacy, and following them is your responsibility.
 
-### 2.1 Download only from an authorized source
+### Keeping the data out of your repository
 
-Obtain real PISA files **only** from an authorized source — the official OECD PISA
-release portal or an institutionally approved mirror. Before you use a file,
-review the **license, citation, redistribution, and privacy terms** for the
-**specific cycle and files** you download: these vary by cycle and release, and
-the terms attached to the files govern, not any convention assumed here
-[@oecd2024pisa]. The plausible-value design that the data encode — $M$ draws per
-student from a latent-proficiency posterior — is itself a property of how PISA is
-constructed and scored [@mislevy1991randomization; @vondavier2009plausible].
-
-### 2.2 The package license does not license your data
-
-The **MIT license for `pvstackr` does not license users' real PISA data**, derived
-extracts, or any third-party files you process with it. The package license covers
-the *software*; your *data* are governed by the cycle- and file-specific terms of
-your source. Follow those terms in full — attribution requirements, redistribution
-limits, third-party-rights rules, and privacy obligations all remain yours to
-honour.
-
-### 2.3 Keep microdata, extracts, and caches out of the repository
-
-Do **not** commit real PISA microdata, large derived extracts, or backend caches
-to a source-controlled package or project repository. Keep them outside the source
-tree — for example under a local directory referenced by an environment variable,
-so paths never leak into version control:
+Do not commit real PISA microdata, large extracts or the cache files of a
+modeling engine to a package or project repository under version control.
+Keep them in a folder outside the source tree and refer to the folder through
+an environment variable, so that its path does not appear in your code:
 
 ```{r data-dir, purl = FALSE}
 pisa_dir <- Sys.getenv("PISA_DATA_DIR")
@@ -106,19 +85,24 @@ stopifnot(nzchar(pisa_dir))
 student_file <- file.path(pisa_dir, "student_file_for_your_cycle")
 ```
 
-### 2.4 Read with the reader for your format, and keep only what you need
+`Sys.getenv()` returns an empty string when `PISA_DATA_DIR` is not set, and
+`stopifnot()` then stops the script with an error. You can set the variable
+in your `.Renviron` file.
 
-File names and formats vary by cycle and release. Use the reader that matches your
-**authorized** file format — an SPSS, SAS, transport, or converted local extract —
-and then select only the columns the model needs: the country filter, the
-plausible values, the final weight, the replicate weights, the identifiers, and
-the covariates. Narrowing the columns at read time is the single cheapest thing
-you can do for the memory footprint discussed in Section 5.
+### Reading the file
+
+File names and formats differ between cycles and releases. Read your
+authorized file with the reader for its format, whether an
+SPSS, SAS, transport, or converted local extract, and keep only the columns
+that the model needs: the country, the identifiers, the covariates, the
+plausible values, the final weight and the replicate weights. Keeping only
+these columns reduces the memory that the later steps need (see [memory and
+runtime](#memory-runtime)).
 
 ```{r read-extract, purl = FALSE}
-# Example only: replace this with the reader for YOUR authorized file format,
-# e.g. haven::read_sav() for SPSS, a SAS/transport reader, or a converted CSV.
-# pvstackr does not ship a PISA reader and does not bundle any real PISA file.
+# An example: use the reader for the format of your file, such as
+# haven::read_sav() for SPSS, a reader for SAS or SAS transport files, or
+# read.csv() for a converted CSV file. pvstackr has no PISA reader.
 pisa_raw <- haven::read_sav(student_file)
 
 pisa_country <- subset(pisa_raw, CNT == "USA")
@@ -130,71 +114,84 @@ pisa_country <- pisa_country[
     "CNTSTUID",
     "ESCS",
     "ST004D01T",
-    paste0("PV", 1:10, "MATH"),   # M = 10 plausible values (mathematics)
+    paste0("PV", 1:10, "MATH"),   # M = 10 plausible values in mathematics
     "W_FSTUWT",                    # final student weight
-    paste0("W_FSTURWT", 1:80)     # R = 80 BRR replicate weights
+    paste0("W_FSTURWT", 1:80)     # R = 80 replicate weights
   )
 ]
 ```
 
-## 3. Design declaration
+The extract keeps the country code `CNT`, the school and student IDs
+`CNTSCHID` and `CNTSTUID`, two covariates (`ESCS`, the PISA index of
+economic, social and cultural status, and `ST004D01T`, the student's gender
+[@oecd2024pisa, ch. 19]),
+the ten plausible values in mathematics, the final weight `W_FSTUWT` and the
+80 replicate weights.
 
-Declare the plausible-value design **before** fitting, exactly as in A2 — only now
-the arguments describe a real cycle. The single most important habit here is to
-**verify every structural argument against the official technical documentation for
-that cycle**: the plausible-value suffix, the plausible-value count `expected_M`,
-the replicate-weight count `expected_R`, the Fay coefficient `fay_k`, and the
-identifier columns `id_cols`. PISA mathematics commonly uses M = 10, R = 80, and
-Fay $k = 0.5$ [@oecd2024pisa; @judkins1990fay], but you confirm these per cycle
-rather than assume them — `pv_design()` asserts the counts you pass, so a mismatch
-surfaces immediately instead of silently mis-pooling.
+## Declaring the design {#design}
+
+`pv_design()` finds and checks the plausible-value and weight columns before
+anything is computed, as described in [The full analysis
+workflow](a2-the-workflow.html#check-columns). On a real file, check each
+argument that describes the design against the technical documentation of
+the cycle: the plausible-value suffix `pv_suffix`, the number of plausible
+values `expected_M`, the number of replicate weights `expected_R`, the Fay
+coefficient `fay_k` and the identifier columns `id_cols`. In PISA 2022,
+$M = 10$, $R = 80$ and $k = 0.5$ [@oecd2024pisa]. `pv_design()` stops with
+an error when the number of plausible-value or replicate-weight columns it
+finds differs from `expected_M` or `expected_R`, for example because the
+suffix is wrong. It does not check `fay_k` against the replicate weights, so
+take that value from the documentation.
 
 ```{r design, purl = FALSE}
 design <- pv_design(
   data       = pisa_country,
-  formula    = OUTCOME ~ ESCS + ST004D01T,   # OUTCOME is a placeholder
-  pv_suffix  = "MATH",                        # matches PV1MATH ... PV10MATH
-  expected_M = 10L,                           # assert exactly 10 plausible values
-  expected_R = 80L,                           # assert exactly 80 replicate weights
-  fay_k      = 0.5,                           # Fay coefficient for this cycle
-  id_cols    = "CNTSTUID"                     # column(s) identifying a unique row
+  formula    = OUTCOME ~ ESCS + ST004D01T,   # OUTCOME stands for each plausible value
+  pv_suffix  = "MATH",                        # finds PV1MATH to PV10MATH
+  expected_M = 10L,                           # stop unless 10 plausible values are found
+  expected_R = 80L,                           # stop unless 80 replicate weights are found
+  fay_k      = 0.5,                           # the Fay coefficient of PISA 2022
+  id_cols    = "CNTSTUID"                     # the column that identifies each row
 )
 
 design
 ```
 
-Three points about the call shape, carried over from A2 and specialised to a real
-cycle:
+The formula has the placeholder `OUTCOME` on the left-hand side, which
+pvstackr replaces by each plausible value in turn, `PV1MATH` to `PV10MATH`.
+`pv_suffix = "MATH"` selects the mathematics values, since PISA 2022 names the
+plausible values by subject. The default, `pv_suffix = ""`, matches only bare
+names such as `PV1`; on a PISA 2022 file it finds no plausible-value columns
+and stops with an error. The survey weights stay out of the formula; the
+defaults of `pv_design()` find the final weight `W_FSTUWT` and the replicate
+weights `W_FSTURWT1` to `W_FSTURWT80` by their PISA names.
 
-- **`OUTCOME` is a placeholder, not a column.** pvstackr substitutes each
-  plausible-value column (`PV1MATH`, …, `PV10MATH`) in turn when it builds the
-  target and the stacked data, so you write the model once rather than $M$ times
-  [@mislevy1991randomization; @vondavier2009plausible].
-- **`pv_suffix = "MATH"` selects the domain.** Modern subject-suffixed columns such
-  as `PV1MATH` require the matching suffix. Leaving `pv_suffix = ""` (the bare
-  names such as `PV1`, `PV2`, … default) is appropriate **only** when your analytic
-  extract has *intentionally renamed* the plausible values to bare names; on an
-  official file it would fail to detect the domain block.
-- **No `weights()` in the formula.** Survey weights are *design* information, not
-  model terms. Pass the final weight and the replicate weights through the design
-  and target arguments (auto-detected here from the `W_FSTUWT` / `W_FSTURWT*`
-  columns), never inside the formula.
+`pv_design()` checks only the form of the formula. The covariates are checked
+by `pv_brr_target()`, which stops with an error when one of them has a
+missing value, is a character column (make it a factor) or has a class that
+pvstackr does not accept. `haven::read_sav()` returns the columns that carry
+SPSS value labels with the class `haven_labelled`, and such a covariate stops
+`pv_brr_target()` with the message "A formula predictor has an unsupported
+type or class". Since the target is computed from `design$data`, prepare the
+extract before you call `pv_design()`: remove the incomplete rows, for example
+with `complete.cases()`, and convert the labeled columns to plain numbers, for
+example with `haven::zap_labels()`.
 
-## 4. Target and fit shape
+## Computing the target
 
-This section mirrors A2 (§3–6) and A3, specialised to a real cycle; consult those
-vignettes for the line-by-line reading of the objects.
-
-### 4.1 stack_direct requires an external BRR–Fay target
-
-A reportable `stack_direct` fit requires an **external**
-Rubin / BRR–Fay fixed-effect target built by `pv_brr_target()`. The target is
-**fixed-effect-only**: it forms a BRR–Fay sandwich covariance per plausible value
-and pools the $M$ results with Rubin's rules into the total
-$T_{\text{MI}} = \bar U + (1 + 1/M)\,B$ [@rubin1987multiple; @barnard1999small].
-Random-effect (group) terms such as `(1 | CNTSCHID)` or `(1 || CNTSCHID)` are
-**not accepted by the BRR-Fay target engine**, by design — see A2 §3 for the
-error this raises.
+`pv_brr_target()` computes the design-based target from the columns in the
+design. For each plausible value it fits the regression by weighted least
+squares, once with the final weight and once with each replicate weight, and
+computes the BRR–Fay replicate covariance of the coefficients from the spread
+of the replicate estimates. Rubin's rules then combine the $M$ results into
+the estimates $\bar\beta$ and their covariance matrix
+$T_{\text{MI}} = \bar U + (1 + 1/M)\,B$, where $\bar U$ is the average of the
+$M$ replicate covariances and $B$ is the covariance matrix of the $M$
+estimates [@rubin1987multiple]. [The full analysis
+workflow](a2-the-workflow.html#target) gives the formulas. The target is
+fixed-effect-only: `pv_brr_target()` stops with an error when the formula
+contains a random-effect term such as `(1 | CNTSCHID)`, and so does a
+`stack_direct` fit.
 
 ```{r target, purl = FALSE}
 target <- pv_brr_target(
@@ -210,15 +207,28 @@ target <- pv_brr_target(
 target
 ```
 
-### 4.2 Fit shape — `center = "target"` and the backend adapter
+The call uses the default rule for the degrees of freedom,
+`df_method = "classic"`, so the intervals of a fit calibrated to this target
+are descriptive (`coverage_claim_allowed = FALSE`). By pvstackr's reporting
+rule, only a target made with `df_method = "barnard_rubin"` and a positive
+`df_complete` gives `stack_direct` intervals that can be read as confidence
+intervals with nominal coverage. [Reading and reporting the
+results](a3-reading-results.html#interval-columns) explains the rule and
+`df_complete`.
 
-With a design and a target in hand, `pv_fit(method = "stack_direct")` fits **one**
-stacked model on the N * M rows and calibrates it (via CCC) to the external target.
-On real data you either ask for the bundled backend with
-`pv_control(backend = "brms")`, or supply your own engine through the three
-adapter slots (`fit_function`, `draws_function`, `diagnose_function` — all three
-are required for a reportable fit). This vignette runs **no** live backend, so
-the chunk shows only the shape; the adapter contracts are sketched in A2 §7.
+## Fitting the model
+
+`pv_fit()` with `method = "stack_direct"` fits one Bayesian model to the
+stacked data, which hold one copy of the data for each plausible value, and
+calibrates its fixed-effect draws to the target with the Cholesky calibration
+correction (CCC). The fit needs an engine: the bundled one, selected with
+`pv_control(backend = "brms")`, or three functions of your own,
+`fit_function`, `draws_function` and `diagnose_function`. The chunk below uses
+functions of your own. With them, leave `backend` at its default: pvstackr
+passes the value to your `fit_function` and records it in the fit, but the
+value selects nothing. [The full analysis
+workflow](a2-the-workflow.html#own-engine) describes what the three functions
+receive and must return; without `diagnose_function` the fit is blocked.
 
 ```{r fit, purl = FALSE}
 fit <- pv_fit(
@@ -228,8 +238,7 @@ fit <- pv_fit(
   method         = "stack_direct",
   control        = pv_control(
                      method           = "stack_direct",
-                     backend          = "injected",
-                     center           = "target",     # required for a reportable fit
+                     center           = "target",     # the default; stack_direct requires it
                      iter             = 2000L,
                      warmup           = 1000L,
                      chains           = 4L,
@@ -240,104 +249,114 @@ fit <- pv_fit(
                      keep_backend_fit = FALSE,
                      keep_log_lik     = FALSE
                    ),
-  fit_function      = your_fit_function,      # your modelling backend (see A2 §7)
-  draws_function    = your_draws_function,    # extract posterior draws for CCC
-  diagnose_function = your_diagnose_function, # sampler diagnostics; required
-  cache_dir         = NULL                    # an injected adapter owns its cache
+  fit_function      = your_fit_function,      # fits the stacked model
+  draws_function    = your_draws_function,    # returns the draws of that fit
+  diagnose_function = your_diagnose_function, # returns its sampler diagnostics
+  cache_dir         = NULL                    # no cache file for your function
 )
 
 summary(fit)
 get_estimates(fit)
 ```
 
-### 4.3 How to read the result
+To use the bundled engine instead, leave out the three functions and set
+`backend = "brms"` in `pv_control()`. It fits the stacked model with the brms
+function `brm()` and needs the brms and posterior packages. It saves the brms
+fit, which contains the stacked outcome and weights, as a cache file in the
+folder `cache_dir` (by default `cache` in the working directory), creating
+the folder if needed. On real data, set `cache_dir` to a folder outside your
+repository, for example under `PISA_DATA_DIR`. brms reuses a cached fit when
+only `chains`, `iter`, `warmup` or `seed` change, so give the cache file a
+new name with `cache_stem`, or set `cache_dir = NULL`, when you change them
+(see `?pv_fit_direct`).
 
-Read `get_estimates(fit)` exactly as in A3. For the default `control$center =
-"target"` path, the reportable fixed-effect estimate and standard error are the
-external target values: the estimate is the target coefficient after CCC centering,
-and the standard error is $\sqrt{\operatorname{diag}(T_{\text{MI}})}$ with the
-target's degrees of freedom and interval metadata. The stacked fit supplies the
-calibrated draw cloud (when retained) and the center-separation agreement
-diagnostics — it is **not** the source of the headline fixed-effect numbers, and
-must not be read as replacing the external target. Reportable `stack_direct` fits
-require `control$center = "target"`; posterior-centered CCC output is
-diagnostic/exploratory only, because it keeps the raw stacked posterior center
-while borrowing the external covariance (A2 §6).
+### Reading the result
 
-Use the interval-metadata columns when interpreting results (A3 §4). In this
-package stage, `coverage_claim_allowed = TRUE` is reserved for external
-Barnard–Rubin BRR–Fay `stack_direct` target rows
-[@barnard1999small; @rubin1987multiple; @judkins1990fay]; `per_pv` and
-`stack_psis` intervals are descriptive/reference intervals even when their Rubin
-pooling uses Barnard–Rubin df and `df_complete`. Read the `coverage_claim_allowed`
-column rather than inferring from the method name.
+`get_estimates(fit)` returns the estimate table, which you read as in
+[Reading and reporting the results](a3-reading-results.html#estimate-table).
+With `control$center = "target"`, the default, which `stack_direct` requires,
+its numbers are copied from the target ([The full analysis
+workflow](a2-the-workflow.html#center-target)). The other value,
+`center = "posterior"`, is accepted by `pv_control()`, but no fitting function
+uses it: `pv_fit()` stops with an error when a `stack_direct` fit sets it. The
+diagnostics include the center separation, which shows how far the mean of
+the stacked draws was from the target before the calibration ([Reading and
+reporting the results](a3-reading-results.html#target-and-diagnostics)).
 
-## 5. Memory and runtime
+## Memory and runtime {#memory-runtime}
 
-Start with **one country, one domain, and a small fixed-effect formula**, and keep
-only the columns the analysis needs (Section 2.4). Two footprint facts then let you
-size a job before you launch it. Both are statements about the **footprint and
-topology** of the computation — *not* speed or "faster" claims (the honesty triad,
-Section 7).
+Start with one country, one domain and a small formula, and keep only the
+columns that the analysis needs (see [data access and
+licensing](#data-access)). Two counts then tell you the size of a job before
+you start it: the amount of data and the number of fits.
 
-**Stacked-data preparation expands the row count.** Each plausible value
-contributes a copy of the data at weight $1/M$, so a design with `N` rows and `M`
-plausible values produces about `N * M` stacked rows before the live Bayesian fit.
-A modest national sample at M = 10 therefore presents the backend with roughly ten
-times its raw row count.
+The stacked data hold one copy of the data for each plausible value, so a
+design with `N` rows and `M` plausible values gives `N * M` stacked rows. Each
+copy keeps every column of the data, not only those in the formula, so a
+column that you drop from the extract is not repeated `M` times. Row $i$ of
+each copy has the weight $\tilde w_i/M$, where $\tilde w_i$ is the student's
+final weight divided by the mean final weight ([The full analysis
+workflow](a2-the-workflow.html#fitting) explains why). With $M = 10$, as in
+PISA 2022, the engine fits the model to ten times as many rows as the extract
+has.
 
-**The target step runs many weighted fixed-effect fits.** `pv_brr_target()`
-estimates a weighted fixed-effect fit for the point and for each of the `R`
-replicate weights, across all `M` plausible values: about `M * (R + 1)` weighted
-fits per model. With common PISA settings (M = 10, R = 80) that is about
-`10 * 81 = 810` weighted least-squares fits before any live Bayesian sampling. This
-stage is ordinary weighted regression, but on a large national extract it is still
-worth validating on a reduced country/domain slice first.
+`pv_brr_target()` fits the regression by weighted least squares once with the
+final weight and once with each of the `R` replicate weights, for each of the
+`M` plausible values: `M * (R + 1)` fits. For PISA 2022 ($M = 10$, $R = 80$)
+that is `10 * 81 = 810` weighted least-squares fits, before any Bayesian
+sampling. Each is an ordinary weighted regression, but on a large national
+extract it is worth trying the call on a smaller part of the data first.
 
-The live backend usually dominates the footprint. Practise backend hygiene:
+The Bayesian fit usually needs the most memory and time. These settings help:
 
-- **set a seed and record every control setting** (Section 6), so a run is exactly
-  reproducible;
-- **write backend caches outside the repository**, alongside the microdata
-  (Section 2.3);
-- keep **`keep_data = FALSE`**, **`keep_backend_fit = FALSE`**, and
-  **`keep_log_lik = FALSE`** unless you specifically need those artifacts — each
-  one can dominate the size of a saved fit;
-- use **`return_draws = FALSE`** for lightweight reporting when calibrated draws
-  are not needed downstream (the fixed-effect report is fully determined by the
-  target, A3 §6);
-- **increase `chains`, `iter`, and `cores` only after the design and target hashes
-  are stable** — scaling the backend before the inputs are frozen wastes the most
-  expensive part of the run.
+- Set `seed` and record every setting of `pv_control()` (see the
+  [reproducibility checklist](#reproducibility-checklist)), so that the fit
+  can be repeated.
+- Keep the engine's cache files outside the repository, with the data (see
+  [data access and licensing](#data-access)).
+- Keep the defaults `keep_data = FALSE`, `keep_backend_fit = FALSE` and
+  `keep_log_lik = FALSE` unless you need the data, the engine's fit object or
+  the log-likelihood draws in the saved fit; each makes the saved fit larger.
+- Set `return_draws = FALSE` when you do not need the calibrated draws: the
+  estimate table comes from the target and does not use them ([Reading and
+  reporting the results](a3-reading-results.html#target-and-diagnostics)).
+- Increase `chains`, `iter` and `cores` only once the design and the target
+  are final, that is, when their checksums `design_hash` and `target_hash` no
+  longer change from one run to the next; a long run on inputs that still
+  change has to be repeated.
 
-## 6. Reproducibility checklist
+## Reproducibility checklist {#reproducibility-checklist}
 
-Record these items with each real-data analysis, so a reviewer can tell a
-reproducible applied workflow from the tiny synthetic examples used in package
-tests. The hashes are stable content fingerprints carried on the design, target,
-and estimate objects (A2 §2–3, A3 §3) — recording them lets you prove which inputs
-produced which numbers.
+Record these items with each analysis of real data, so that you and your
+readers can repeat it and see which inputs produced which numbers:
 
-- **Cycle provenance.** PISA cycle and release date; the authorized data source.
-- **Filters.** Country / domain filters applied to the extract.
-- **Variables.** The model variables and the plausible-value suffix (`pv_suffix`).
-- **Weights.** The final weight, the replicate-weight prefix and count, and the
-  Fay coefficient `fay_k`.
-- **Package.** The `pvstackr` package version
-  (`utils::packageVersion("pvstackr")`).
-- **Design / target hashes.** `design_hash`, `row_support_hash`, `pv_value_hash`,
-  `weight_design_hash`, and the target's `target_hash`.
-- **Backend.** The backend, the seed, and `chains`, `iter`, `warmup`, and `cores`.
-- **Retention flags.** Whether reportable draws, backend fits, data, or
-  log-likelihoods were retained (`return_draws`, `keep_backend_fit`, `keep_data`,
-  `keep_log_lik`).
+- the PISA cycle, the release date and the authorized source of the files;
+- the filters applied to the extract, such as the country and the domain;
+- the model variables and the plausible-value suffix `pv_suffix`;
+- the final weight, the prefix and number of the replicate weights, and the
+  Fay coefficient `fay_k`;
+- the pvstackr version, `utils::packageVersion("pvstackr")`, and the R
+  session, printed by `sessionInfo()`;
+- the checksums of the design, `design_hash`, `row_support_hash`,
+  `pv_value_hash` and `weight_design_hash`, and of the target, `target_hash`;
+- the engine (`backend`), the seed, and `chains`, `iter`, `warmup` and
+  `cores`;
+- what the fit keeps: `return_draws`, `keep_backend_fit`, `keep_data` and
+  `keep_log_lik`.
+
+The design checksums do not cover the values of the covariates. `target_hash`
+is a checksum of the contents of the target, including its estimates, so a
+change in the covariates changes it as well; it is also a column of the
+estimate table ([Reading and reporting the
+results](a3-reading-results.html#estimate-table)). The chunk below collects
+the records in one list from the objects made above:
 
 ```{r repro-record, purl = FALSE}
-# Sketch only (eval = FALSE): assemble a compact provenance record from the
-# objects above. Adapt the field names to your project's logging conventions.
-provenance <- list(
-  pisa_cycle         = "2022",                  # cycle + release date
-  data_source        = "OECD PISA portal",      # authorized source
+# A sketch: one list with the records above, taken from the objects made in
+# this article. Rename the fields to suit your project.
+analysis_record <- list(
+  pisa_cycle         = "2022",                  # record the release date too
+  data_source        = "OECD PISA portal",      # the authorized source
   filters            = "CNT == 'USA'; domain = MATH",
   variables          = all.vars(design$formula),
   pv_suffix          = "MATH",
@@ -351,7 +370,7 @@ provenance <- list(
   pv_value_hash      = design$pv_value_hash,
   weight_design_hash = design$weight_design_hash,
   target_hash        = target$target_hash,
-  backend            = "injected",
+  backend            = "none",                  # "brms" with the bundled engine
   seed               = 20260607,
   chains             = 4L,
   iter               = 2000L,
@@ -363,91 +382,73 @@ provenance <- list(
   keep_log_lik       = FALSE
 )
 
-str(provenance)
+str(analysis_record)
 ```
 
-These records separate a reproducible applied workflow from the tiny synthetic
-examples used in package tests — and they are what the `target_hash` and friends
-read off in A3 §3 are ultimately *for*.
-
-## 7. The companion methods paper (qualitative)
-
-The substantive PISA findings — the empirical evidence that motivates the package —
-live in a **companion methods paper, currently in preparation**, not in
-`pvstackr`. The package neither bundles real PISA nor presents contested
-coefficients as its own output, so this section describes that work **qualitatively
-and without a formal citation**, and **hard-codes no real-PISA coefficient** as a
-package fact. Treat everything here as motivation to read the paper when it
-appears, not as a result you may quote from the package.
-
-What the paper supports, stated qualitatively:
-
-- **Point bridge at real PISA scale.** The companion paper checks that the stacked
-  fixed-effect point used by `stack_direct` agrees closely with the orthodox
-  per-PV Rubin point under the stated production conditions. The reportable
-  standard error in `stack_direct` is imposed from the external BRR-Fay /
-  Barnard-Rubin target. The package's `per_pv` path remains model-based and
-  descriptive, so its standard error should not be described as matching the
-  design-based target. This is a topology statement about one stacked fit rather
-  than $M$ backend fits, never an efficiency or "faster" claim.
-- **Caution 1 — design variance is not optional.** A correct *weighted point* with
-  *model-based* standard errors can under-cover severely under complex PISA
-  sampling; the design-based BRR–Fay total $T_{\text{MI}}$ restores nominal
-  coverage. This is exactly why `stack_direct` is the only coverage-claimable path
-  (A4 §5; the proof is **M5**).
-- **Caution 2 — small Pareto-$\hat k$ ≠ correct `stack_psis` variance.** Reusing
-  one draw cloud makes the per-PV imputations correlated, so `stack_psis` intervals
-  can run narrow even when $\hat k$ is small; and $\hat k$ is
-  **specification-dependent** — small in the simplified low-dimensional reading demo
-  but well above the reliability threshold in the full paper specification, where
-  Pipeline B is unreliable. Treat `stack_psis` as a cross-check, never the
-  deliverable (A4 §6; **M5**).
-- **The "PISA reversal" headline.** The paper's cautionary empirical result is that
-  proper PISA **two-stage survey weighting overturns a naive between-school SES-gap
-  conclusion**: a between-school socioeconomic gap that looks large and significant
-  under naive weighting shrinks and loses significance once the exact two-stage
-  weights are applied. This is a *survey-weighting* lesson about the **target** —
-  complementary to, and independent of, the stacked-calibration machinery the
-  package implements (the target is the subject of **M2**).
-
-Three things this section must **not** do, and does not:
-
-- it does **not** cite any single coefficient as "the result" — the naive *before*
-  value is precisely what the reversal overturns, so hard-coding it would
-  contradict the paper's own point;
-- it makes **no** speed or efficiency claim — "one fit" is a statement about the
-  *topology* of the method, not a benchmarked runtime; and
-- it makes **no** "verified" simulation claim — the mathematical identities are
-  stated as results *under their stated conditions*, not as established simulation
-  runs.
-
-For the underlying theory the paper rests on, the **Method track** carries the
-derivations this section only gestures at: **M2** (the external BRR–Fay target),
-**M4** (CCC calibration), and **M5** (the precise method contrast, PSIS, and why
-only `stack_direct` is coverage-claimable). Start the track at **M1 · Foundations
-and notation**.
-
-## 8. Where to next
-
-- **A1 · Getting started** and **A2 · The end-to-end workflow** — the same
-  `pv_design()` → `pv_brr_target()` → `pv_fit()` pipeline, run end to end on the
-  synthetic fixture (and the conceptual live-backend sketch in A2 §7).
-- **A3 · Reading results** — the estimate table and the interval-metadata columns
-  whose hashes the checklist above records.
-- **A4 · Comparing methods** — `pv_compare_methods()` and the two cautions, on
-  which Section 7 draws.
-
-For the mathematics — the BRR–Fay target (**M2**), the stacked fractional bridge
-(**M3**), CCC (**M4**), and why only `stack_direct` is coverage-claimable
-(**M5**) — start the Method track at **M1 · Foundations and notation**.
-
-Bug reports and feature requests:
-<https://github.com/joonho112/pvstackr/issues>.
-
-### Session info
+`sessionInfo()` prints the versions of R, of the operating system and of the
+loaded packages. Here it runs and shows the session that built this article,
+which does not attach pvstackr; in your analysis, call it after
+`library(pvstackr)` so that the pvstackr version is recorded:
 
 ```{r session-info, eval = TRUE}
 sessionInfo()
 ```
+
+## The companion preprint {#companion-preprint}
+
+The stacked fit and the calibration that pvstackr uses are described in a
+companion preprint [@lee2026onemcmc]. The preprint gives the conditions under
+which the fixed-effect estimate of one stacked fit equals the average of the
+estimates for the separate plausible values: the stacked fixed-effect point
+identity, Theorem 4.1 of the preprint, which [One stacked fit and the Rubin
+point estimate](m3-stacked-bridge.html) explains. It also shows that CCC gives
+the calibrated draws exactly the mean and covariance of the target
+(Proposition B.1 of the preprint), as described in [Calibrating the
+fixed-effect draws (CCC)](m4-ccc-calibration.html). The preprint builds its
+default target from model-based fits of each plausible value and describes a
+target from replicate weights, the only kind that pvstackr computes, as an
+alternative ([The design-based target: BRR–Fay replicate weights and Rubin's
+rules](m2-brr-fay-target.html) describes pvstackr's target).
+
+The preprint's application to PISA 2022 reading, in the United States and
+Korea, checks whether one MCMC run, together with the target and one
+calibration, reproduces the results of ten MCMC runs, one for each plausible
+value [@lee2026onemcmc, sec. 6]. The preprint presents its PISA values as
+context rather than as findings, and three points matter when you read them:
+
+- In the application, the stacked fit is calibrated to the combined output of
+  the ten fits, so it has their estimates and standard errors by
+  construction, as a `stack_direct` fit has those of its target. The preprint
+  calls this agreement target-calibrated by design
+  and does not offer it as independent evidence.
+- The application fits a model with a random intercept for schools and takes
+  its target from the Bayesian fits of that model to each plausible value.
+  pvstackr 0.2.x cannot repeat this analysis: its target uses the BRR–Fay
+  replicate weights, and `pv_brr_target()` and `stack_direct` stop with an
+  error on a random-effect term.
+- In the preprint, the per-PV workflow, one fit for each plausible value
+  combined with Rubin's rules, is the reference that defines the target. The
+  package's `per_pv` method combines posterior draws from fits that you
+  supply, and its intervals are always descriptive, because the variance
+  within each plausible value comes from the model's posterior draws
+  (model-based), not from the replicate weights.
+
+The simulation of the preprint compares the per-PV workflows and the
+calibrated stack with the generating values; their variances and targets come
+from model-based fits, and the simulated data have no replicate weights
+[@lee2026onemcmc, sec. 5]. It therefore does not test the BRR–Fay target that pvstackr computes, and
+pvstackr's reporting rule for intervals is the package's own rule, not a
+result of the preprint.
+
+In a qualified secondary analysis (Appendix F.4 of the preprint), the
+difference between Korea and the United States in the between-school gradient
+of `ESCS` shrinks by more than half and loses nominal significance when the
+survey weights are placed in two stages rather than at the student level, but
+it keeps its sign. The preprint draws no conclusion about the two countries
+from it.
+
+[Comparing the three fitting methods](a4-comparing-methods.html#cautions)
+gives the cautions for comparing pvstackr's methods on your own data,
+including the preprint's PISA result for the Pareto $\hat k$ check.
 
 ## References

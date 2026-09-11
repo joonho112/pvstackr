@@ -4,7 +4,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out
 ## ----library------------------------------------------------------------------
 library(pvstackr)
 
-## ----load-fixture-------------------------------------------------------------
+## ----load-example-fit---------------------------------------------------------
 fit <- readRDS(
   system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
               package = "pvstackr")
@@ -21,7 +21,7 @@ names(est)
 ## ----estimate-core------------------------------------------------------------
 est[, c("term", "estimate", "se", "df", "df_method")]
 
-## ----estimate-provenance------------------------------------------------------
+## ----estimate-source-columns--------------------------------------------------
 est[, c("term", "parameter_scope", "target_source", "target_hash")]
 
 ## ----interval-metadata--------------------------------------------------------
@@ -39,16 +39,13 @@ data.frame(
 )
 
 ## ----target-fields------------------------------------------------------------
-diag(tg$T_MI)        # total target variance per coefficient
-round(tg$df, 3)      # degrees of freedom per coefficient
-tg$target_hash       # content fingerprint (matches the estimate table)
+diag(tg$T_MI)        # variance of each coefficient; se is its square root
+round(tg$df, 3)      # degrees of freedom of each coefficient
+tg$target_hash       # checksum of the target, also in the estimate table
 
 ## ----target-identity----------------------------------------------------------
-all.equal(est$estimate, unname(tg$beta_bar))            # estimates == pooled beta
-all.equal(est$se,       unname(sqrt(diag(tg$T_MI))))    # SEs == sqrt(diag T_MI)
-
-## ----get-draws-again----------------------------------------------------------
-get_draws(fit)
+all.equal(est$estimate, unname(tg$beta_bar))            # estimate = beta_bar
+all.equal(est$se,       unname(sqrt(diag(tg$T_MI))))    # se = sqrt(diag(T_MI))
 
 ## ----get-diagnostics----------------------------------------------------------
 dg <- get_diagnostics(fit)
@@ -57,7 +54,4 @@ names(dg)
 
 ## ----ccc-peek-----------------------------------------------------------------
 dg$ccc[c("center_status", "delta_c_rel", "delta_c_max")]
-
-## ----session-info-------------------------------------------------------------
-sessionInfo()
 

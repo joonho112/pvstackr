@@ -1,6 +1,5 @@
-% pvstackr vignette bibliography — core method references.
-% Theorem 2.2 and CCC are attributed in prose ("companion methods paper, in
-% preparation") in the Method vignettes, without a bib key.
+% pvstackr vignette bibliography.
+% The companion methods paper is cited as its Zenodo preprint (lee2026onemcmc).
 
 @book{rubin1987multiple,
   title     = {Multiple Imputation for Nonresponse in Surveys},
@@ -46,11 +45,12 @@
 
 @article{vondavier2009plausible,
   title   = {What Are Plausible Values and Why Are They Useful?},
-  author  = {von Davier, Matthias and Gonzalez, Eugenio and Mislevy, Robert J.},
-  journal = {IERI Monograph Series},
+  author  = {{von Davier}, Matthias and Gonzalez, Eugenio J. and Mislevy, Robert J.},
+  journal = {{IERI} Monograph Series: Issues and Methodologies in Large-Scale Assessments},
   year    = {2009},
   volume  = {2},
-  pages   = {9--36}
+  pages   = {9--36},
+  url     = {https://www.ets.org/research/policy_research_reports/publications/chapter/2009/hlbj.html}
 }
 
 @techreport{oecd2024pisa,
@@ -58,7 +58,9 @@
   author      = {{OECD}},
   year        = {2024},
   institution = {OECD Publishing},
-  address     = {Paris}
+  address     = {Paris},
+  type        = {PISA},
+  doi         = {10.1787/01820d6d-en}
 }
 
 @article{vehtari2017practical,
@@ -79,7 +81,8 @@
   year    = {2024},
   volume  = {25},
   number  = {72},
-  pages   = {1--58}
+  pages   = {1--58},
+  url     = {https://www.jmlr.org/papers/v25/19-556.html}
 }
 
 @article{judkins1990fay,
@@ -89,16 +92,25 @@
   year    = {1990},
   volume  = {6},
   number  = {3},
-  pages   = {223--239}
+  pages   = {223--239},
+  url     = {https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/fay39s-method-for-variance-estimation.pdf}
 }
 
-@article{burkner2017brms,
-  title   = {{brms}: An {R} Package for {Bayesian} Multilevel Models Using {Stan}},
-  author  = {B{\"u}rkner, Paul-Christian},
-  journal = {Journal of Statistical Software},
-  year    = {2017},
-  volume  = {80},
+@misc{lee2026onemcmc,
+  title        = {One {Markov} Chain {Monte} {Carlo} Fit for Many Plausible Values: A Calibrated Stacked Posterior Workflow for {Bayesian} Multilevel Models of Large-Scale Assessment Data},
+  author       = {Lee, JoonHo and Williams, Matthew R. and Savitsky, Terrance D.},
+  year         = {2026},
+  howpublished = {Zenodo preprint, version 1},
+  doi          = {10.5281/zenodo.22407935}
+}
+
+@article{williams2021uncertainty,
+  title   = {Uncertainty Estimation for Pseudo-{Bayesian} Inference Under Complex Sampling},
+  author  = {Williams, Matthew R. and Savitsky, Terrance D.},
+  journal = {International Statistical Review},
+  year    = {2021},
+  volume  = {89},
   number  = {1},
-  pages   = {1--28},
-  doi     = {10.18637/jss.v080.i01}
+  pages   = {72--107},
+  doi     = {10.1111/insr.12376}
 }

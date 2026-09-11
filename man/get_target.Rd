@@ -6,7 +6,7 @@
 \alias{get_target.pvstackr_fit}
 \alias{get_target.pvstackr_brr_target}
 \alias{get_target.pvstackr_legacy_psis_inspection}
-\title{Access pvstackr Targets}
+\title{Get the target of a fit}
 \usage{
 get_target(x, ...)
 
@@ -19,32 +19,44 @@ get_target(x, ...)
 \method{get_target}{pvstackr_legacy_psis_inspection}(x, ...)
 }
 \arguments{
-\item{x}{A pvstackr fit or target object.}
+\item{x}{A fit (class \code{pvstackr_fit}), or a target from \code{\link[=pv_brr_target]{pv_brr_target()}}.}
 
-\item{...}{Reserved for future extensions.}
+\item{...}{Ignored.}
 }
 \value{
-The target object used by a fit, or \code{NULL} when the method has no
-target component. Estimate-row \code{target_source} labels are provenance
-metadata and may be present even when a method, such as \code{stack_psis}, does
-not carry a formal target object. A legacy PSIS inspection object also
-returns \code{NULL}.
+For a \code{stack_direct} fit, its \code{pvstackr_brr_target} object, also
+when the fit is blocked. \code{\link[=pv_brr_target]{pv_brr_target()}} lists its elements, such as
+\code{beta}, \code{T_MI}, \code{df} and \code{fmi} (the fraction of missing information,
+which the estimate table does not have). For a \code{per_pv} fit, a
+\code{pvstackr_reference_pool} object with the same kind of elements. For a
+\code{stack_psis} fit, \code{NULL}: its estimate table has
+\code{target_source = "stack_psis_rubin_pooling"}, but that is only a label
+for the combined result, not a target object. Given a target,
+\code{get_target()} checks it and returns it unchanged.
+
+\code{get_target()} stops with an error if the fit or target was changed
+after it was created. For the inspection object that
+\code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}} makes from a \code{stack_psis} fit of an
+earlier pvstackr version, it returns \code{NULL}.
 }
 \description{
-Return the formal target object carried by a fit. Estimate-row provenance
-labels such as \code{target_source} are separate from this accessor and do not
-imply that every method has a formal target object.
+\code{get_target()} returns the target that the estimates of a fit come from.
+For a \code{stack_direct} fit this is the BRR-Fay target from \code{\link[=pv_brr_target]{pv_brr_target()}},
+to which the stacked fit was calibrated; for a \code{per_pv} fit it is the
+Rubin's-rules combination of the draws of the per-plausible-value fits. A
+\code{stack_psis} fit has no target object.
 }
 \examples{
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   get_target(fit)
 }
 }
 \seealso{
-\code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_draws]{get_draws()}}, \code{\link[=get_diagnostics]{get_diagnostics()}};
-\code{\link[=pv_brr_target]{pv_brr_target()}}, \code{\link[=pv_fit]{pv_fit()}}.
+\code{\link[=pv_brr_target]{pv_brr_target()}} for the elements of a target.
 
 Other pvstackr-accessors:
 \code{\link[=get_diagnostics]{get_diagnostics()}},

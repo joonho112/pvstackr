@@ -2,7 +2,7 @@
 % Please edit documentation in R/binding-migration.R
 \name{pv_revalidate_brr_target}
 \alias{pv_revalidate_brr_target}
-\title{Revalidate a Legacy BRR-Fay Target Against Its Original Inputs}
+\title{Check a BRR-Fay target or rebuild it in the current format}
 \usage{
 pv_revalidate_brr_target(
   target,
@@ -12,27 +12,48 @@ pv_revalidate_brr_target(
 )
 }
 \arguments{
-\item{target}{A \code{pvstackr_brr_target} object.}
+\item{target}{A BRR-Fay target (class \code{pvstackr_brr_target}).}
 
-\item{data}{The complete original data frame used to create a schema-0.1
-target.}
+\item{data}{For a target in the old format, the data frame from which it
+was built; default \code{NULL}. Not used for a target in the current format.}
 
-\item{formula}{The original model formula.}
+\item{formula}{For a target in the old format, the formula from which it
+was built; it must be the formula stored on the target. Default \code{NULL};
+not used for a target in the current format.}
 
-\item{conf_level}{Confidence level used by the legacy target. This must be
-supplied when it is not retained on the source object.}
+\item{conf_level}{For a target in the old format, the confidence level to
+store in the new target, a number between 0 and 1. It is required when
+the old target does not store one (targets saved by pvstackr 0.1.x do
+not); when it does, give \code{NULL} (default) or the same value. Not used
+for a target in the current format.}
 }
 \value{
-A separately allocated, validated schema-0.2
-\code{pvstackr_brr_target}, or the unchanged schema-0.2 input.
+A target (class \code{pvstackr_brr_target}) in the current format: the
+input itself when it is already in that format, otherwise the new
+target.
 }
 \description{
-\code{pv_revalidate_brr_target()} upgrades a schema-0.1 BRR-Fay target only after
-rebuilding its model, replicate-weight target, target content, and binding
-manifest from the complete original data and formula. Legacy objects without
-those inputs remain inspection-only and cannot be used for reportable fitting.
+\code{pv_revalidate_brr_target()} checks a target from \code{\link[=pv_brr_target]{pv_brr_target()}} and
+returns it in the current format. A target in the current format
+(\code{schema_version} \code{"0.2.0"}) is returned unchanged; the function stops
+with an error if that target was changed after it was created. A target
+in the format of pvstackr 0.1.x (\code{schema_version} \code{"0.1.0"}) is computed
+again from \code{data} and \code{formula}, and the new target is returned if it
+matches the old one. In pvstackr 0.2.x no target saved by pvstackr 0.1.x
+matches, because pvstackr 0.2.0 computes the design checksum
+\code{design_hash} differently (see the package NEWS); compute such a target
+again with \code{\link[=pv_brr_target]{pv_brr_target()}}. The target that you pass is not modified.
 }
 \details{
-Already bound schema-0.2 targets are strictly validated and returned
-unchanged.
+The old target is computed again with \code{\link[=pv_brr_target]{pv_brr_target()}}, using the
+columns and settings stored on it. The new target must match the old one:
+the formula, the settings (such as the numbers of plausible values and
+replicate weights, the Fay coefficient and the degrees-of-freedom rule),
+the fixed-effect names and \code{design_hash} exactly, and the estimates,
+covariance matrices, standard errors and degrees of freedom up to a small
+numerical tolerance (absolute 1e-12 plus relative 1e-10), because the last
+digits of least-squares results can differ between computers. Otherwise,
+and for a target in the old format without \code{data} and \code{formula}, the
+function stops with an error. The new target records the upgrade in
+\code{binding_manifest$migration}.
 }

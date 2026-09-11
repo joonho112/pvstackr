@@ -62,9 +62,9 @@ pv_compatibility_family_link <- function(family = NULL) {
 }
 
 pv_compatibility_stack_direct_family <- function(family = NULL) {
-  # Validate the caller-facing representation first, then discard every
-  # executable closure or incidental field supplied by the caller. The backend
-  # receives one package-owned Gaussian/identity implementation.
+  # Check the caller's `family`, then drop it: none of its functions or other
+  # fields reach the backend, which always receives a new Gaussian family with
+  # the identity link.
   pv_compatibility_family_link(family)
   pv_compatibility_canonical_gaussian()
 }
@@ -72,7 +72,7 @@ pv_compatibility_stack_direct_family <- function(family = NULL) {
 pv_compatibility_canonical_gaussian <- function() {
   # Keep construction in a zero-argument frame. stats::gaussian() retains a
   # local closure environment, so constructing it in the caller-validation
-  # frame would indirectly serialize the caller's family and private state.
+  # frame could indirectly serialize the caller's family and private state.
   out <- stats::gaussian()
   out$linkfun(0)
   out$linkinv(0)

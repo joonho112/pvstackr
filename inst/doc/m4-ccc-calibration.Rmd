@@ -1,28 +1,24 @@
 ---
-title: "M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics"
+title: "Calibrating the fixed-effect draws (CCC)"
 author: "JoonHo Lee"
 date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 abstract: >
-  The fourth page of the Method track derives the calibration map that makes a
-  single stacked fit report the external variance answer. M3 matched the point —
-  the stacked fixed-effect estimate equals the Rubin mean; M4 matches the
-  variance, forcing the first two moments of the raw stacked draw cloud to equal
-  the external target's center and covariance through an affine Cholesky map. It
-  states the map in full, distinguishes the reportable target-centering
-  convention from the diagnostic posterior one, describes the deterministic
-  algorithm and its conditioning diagnostic, and defines the center-separation
-  diagnostic with both summaries the package tracks. A self-contained synthetic
-  panel verifies the moment-match invariant to machine precision. Throughout it
-  is explicit that CCC is an affine moment match, not a coverage theorem: the
-  invariants are algebraic by construction, and coverage comes from the
-  provenance of the target, never from the calibration itself.
+  In a `stack_direct` fit, the Cholesky calibration correction (CCC)
+  transforms the fixed-effect draws of one Bayesian fit to the stacked
+  plausible-value data so that their mean and covariance equal the estimates
+  and the covariance matrix of the design-based target. This article gives
+  the map, its exact moment properties and their source, the algorithm that
+  pvstackr uses and when it stops with an error, and the diagnostics
+  `delta_c_max`, `delta_c_rel` and `kappa_A` with pvstackr's thresholds. A
+  check on simulated draws confirms the moment properties; neither the check
+  nor the calibration says anything about the coverage of intervals.
 output:
   rmarkdown::html_vignette:
     toc: true
     toc_depth: 3
     df_print: kable
 vignette: >
-  %\VignetteIndexEntry{M4: CCC — Cholesky Calibration Correction and the center-separation diagnostics}
+  %\VignetteIndexEntry{Calibrating the fixed-effect draws (CCC)}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 bibliography: references.bib
@@ -36,380 +32,416 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.align = "center", out
 library(pvstackr)
 ```
 
-M3 settled the **point**. Its stacked fractional bridge showed that one model fit
-on the $N\cdot M$ stacked rows, each weighted $1/M$, recovers the Rubin mean
-$\bar\beta$ under the regularity conditions of Theorem 2.2 (EQ-THM22) — but it was
-emphatic that this is a fixed-effect *point* identity and says **nothing** about
-the variance. The variance answer is a separate object: M2's external Rubin /
-BRR–Fay total $T_{\text{MI}}$ (EQ-TMI), built from the *design*, not from the fit
-[@rubin1987multiple]. This page closes the gap. CCC — the **Cholesky Calibration
-Correction** — is the deterministic affine map that takes the raw stacked draw
-cloud and forces its first two moments to equal that external target's. Where
-Theorem 2.2 matched the point, CCC matches the **variance**.
+A `stack_direct` fit rests on two calculations. The target, computed by
+`pv_brr_target()`, fits a survey-weighted linear regression by weighted least
+squares to each of the $M$ plausible values, estimates the covariance of each
+estimate from the BRR–Fay replicate weights, and combines the results with
+Rubin's rules into the estimate $\bar\beta$ of the $p$ fixed effects and its
+total covariance matrix $T_{\text{MI}} = \bar U + (1 + 1/M)B$. Here $\bar U$ is
+the average of the $M$ replicate covariances and $B$ the covariance between
+the $M$ estimates ([The design-based target: BRR–Fay replicate weights and
+Rubin's rules](m2-brr-fay-target.html#rubin)). The stacked fit is one Bayesian
+fit of the same regression to the stacked data: $M$ copies of the $N$ rows,
+one for each plausible value, in which row $i$ has the weight $\tilde w_i/M$,
+where $\tilde w_i = W_i/\overline W$ is the final weight $W_i$ divided by the
+mean final weight $\overline W$.
 
-The shared light-path load — the same one used across the Method track — gives us
-the cached fit and its external target to point at. As in A3 §6.2, this fit was
-produced with `return_draws = FALSE`, so it retains **no** posterior draws and
-`get_draws(fit)` is `NULL`:
+The Cholesky calibration correction (CCC) connects the two. It transforms the
+fixed-effect draws of the stacked fit so that their mean is $\bar\beta$ and
+their covariance is $T_{\text{MI}}$, and before it does so it records how far
+the stacked fit was from the target. The code below reads the example fit that
+ships with pvstackr and its target:
 
 ```{r common-load}
 fit <- readRDS(
   system.file("extdata", "examples", "pisa_tiny_stack_direct.rds",
               package = "pvstackr")
 )$fit
-tg <- get_target(fit)   # external Rubin / BRR–Fay target (M2's object); Sigma_tgt = T_MI
+tg <- get_target(fit)   # the target of the fit, made by pv_brr_target()
 
-c(M = tg$M, R = tg$R, fay_k = tg$fay_k)   # 2, 4, 0.5
-is.null(get_draws(fit))                   # TRUE -- no retained draws to calibrate
+is.null(get_draws(fit))
 ```
 
-The design is the tiny synthetic one M1 introduced: $M = 2$ plausible values,
-$R = 4$ replicate weights, Fay coefficient $k = 0.5$. The empty draw matrix is the
-reason Section 6's invariant must be **self-contained synthetic** — there are no
-real draws on this fixture to run the map on. We can still read the *realized*
-calibration diagnostics off the fit, and we do so in Section 6.
+The example fit and its synthetic data are described in [Getting started with
+pvstackr](a1-getting-started.html#example-fit). The fit was saved without its
+calibrated draws, so [the check of the map](#checks) uses simulated draws, and
+the diagnostics that the calibration recorded are read from the fit.
 
-::: {.alert .alert-info}
-**Scope of this page.** M4 derives the calibration map (EQ-CCC) and the
-center-separation diagnostic (EQ-DELTAC), and verifies the moment-match invariant
-on a self-contained synthetic draw cloud. It estimates nothing — there is no MCMC
-below, only base-R linear algebra and read-only accessor calls against the bundled
-synthetic fixture. M4 is the only Method vignette with any randomness, and that is
-confined to the synthetic cloud of Section 6 (with a fixed `set.seed`). The *point*
-side is **M3** (EQ-THM22); the provenance of $\Sigma_{\text{tgt}}=T_{\text{MI}}$ is
-**M2**; which fits may carry a coverage claim is **M5**.
-:::
+## Why the stacked draws are calibrated {#why-calibrate}
 
-## 1. What CCC is for
+The stacked fit is built to agree with the target in its point estimate. Its
+log likelihood is the average of the $M$ survey-weighted log-likelihoods, one
+for each plausible value, and the stacked fixed-effect point identity, Theorem
+4.1 of the companion preprint [@lee2026onemcmc], gives conditions under which
+the value of $\beta$ that maximizes this average equals $\bar\beta$. In
+pvstackr's model the weighted least-squares estimate from the stacked data
+equals $\bar\beta$ exactly, so with a flat prior on the fixed effects the mean
+of the draws differs from $\bar\beta$ only by Monte Carlo error ([One stacked
+fit and the Rubin point estimate](m3-stacked-bridge.html#point-identity)
+explains the identity and its conditions).
 
-The raw stacked fit hands you a posterior draw cloud for the fixed effects —
-call its draws $\beta_1,\dots,\beta_S$. That cloud has *some* mean
-$\bar\beta^{\text{raw}}$ and *some* covariance $\Sigma_{\text{raw}}$, but neither
-is the answer you want to report. Its mean is the raw stacked posterior center —
-close to $\bar\beta$ under the bridge (M3), but not the external object — and its
-covariance is the model's nominal posterior spread, which M2 §6 warned can
-**under-cover** because it never sees the survey's clustering and weighting. The
-variance you are entitled to report lives outside the fit: the design-based
-$T_{\text{MI}}$ from M2 [@rubin1987multiple].
+The identity concerns the point estimate only and gives no variance. The
+between-imputation covariance $B$ is the covariance of estimates from separate
+analyses of the $M$ plausible values and exists only across such analyses, so
+the draws of one stacked fit do not contain it. The preprint notes that the
+covariance of the stacked fixed-effect draws approximates a one-sample
+quantity that corresponds to the within-imputation part $\bar U$ only, and so
+lacks the term $(1 + 1/M)B$ of $T_{\text{MI}}$ [@lee2026onemcmc, pp. 11–12,
+40]. In pvstackr the target's $\bar U$ comes from the replicate weights,
+whereas the spread of the stacked draws comes from the model: the likelihood
+of the stacked fit carries the survey weights, but not the clustering of the
+sample or the replicate weights.
 
-CCC reconciles the two. It is the map that takes the raw cloud and **moves its
-first two moments onto the external target's**: it shifts the mean to a target
-center $c$ and stretches the covariance to $\Sigma_{\text{tgt}}=T_{\text{MI}}$.
-After CCC, the calibrated draw cloud has — by construction — exactly the center
-and covariance of the external target, so a fit that reports the calibrated cloud's
-moments *reports the external answer*. That is the whole purpose: M3's bridge makes
-one stacked fit recover the right **point**; CCC makes that same fit carry the
-right **variance**. Together they are the "one fit instead of $M$" machinery the
-package's honest headline rests on (facts §5) — an algebraic equivalence, never a
-speed claim.
+pvstackr therefore takes the numbers it reports from the target ([The full
+analysis workflow](a2-the-workflow.html#center-target)), and CCC transforms
+the draws to agree with these numbers. The calibrated draws, returned by
+`get_draws(fit)`, have the mean $\bar\beta$ and the covariance $T_{\text{MI}}$,
+so a linear combination of the coefficients computed from them has the
+target's estimate and variance. They
+do not carry the target's degrees of freedom: quantiles of the draws give
+roughly a normal-reference interval, which is narrower than the $t$ interval
+of the estimate table when the degrees of freedom are small (see [the
+calibration map](#map)). Before the draws are moved, the calibration compares the
+stacked fit with the target (see [the diagnostics](#diagnostics)).
 
-Two pieces of the division of labour are worth stating now, because the rest of
-the page keeps returning to them. First, CCC supplies an *algebraic* match of
-moments; the *coverage* that match is useful for comes entirely from the
-**provenance** of $\Sigma_{\text{tgt}}$ (Section 5, and the central caveat). Second,
-the match is of the **first two moments only** — center and covariance — not of the
-full distributional shape; CCC is an affine map, and affine maps preserve, they do
-not create, higher-order structure.
+## The calibration map {#map}
 
-## 2. The map
-
-The map itself is one line. Writing $\beta_s$ for the $s$-th raw posterior draw
-and $\beta_s^{\text{cal}}$ for its calibrated image, **CCC — tag EQ-CCC — is**
+Let $\beta_1, \dots, \beta_S$ be the $S$ draws of the $p$ fixed effects from the
+stacked fit, with mean and covariance
 
 $$
-\beta_s^{\text{cal}}=c+L_{\text{tgt}}L_{\text{raw}}^{-1}\big(\beta_s-\bar\beta^{\text{raw}}\big),\qquad L L^\top=\Sigma\ \text{(lower-triangular)},
+\bar\beta^{\text{raw}} = \frac{1}{S}\sum_{s=1}^{S} \beta_s, \qquad
+\Sigma_{\text{raw}} = \frac{1}{S-1}\sum_{s=1}^{S}
+  \big(\beta_s - \bar\beta^{\text{raw}}\big)\big(\beta_s - \bar\beta^{\text{raw}}\big)^\top ,
 $$
 
-so by construction $\operatorname{mean}\{\beta_s^{\text{cal}}\}=c$ and
-$\operatorname{Cov}\{\beta_s^{\text{cal}}\}=\Sigma_{\text{tgt}}$ (to machine
-precision, when $\Sigma_{\text{raw}}$ is positive definite).
+and let $L_{\text{raw}}$ and $L_{\text{tgt}}$ be the lower-triangular Cholesky
+factors of $\Sigma_{\text{raw}}$ and $T_{\text{MI}}$, so that
+$L_{\text{raw}} L_{\text{raw}}^\top = \Sigma_{\text{raw}}$ and
+$L_{\text{tgt}} L_{\text{tgt}}^\top = T_{\text{MI}}$. CCC maps each draw to
 
-Read it as three moves applied to every draw, right to left:
+$$
+\beta^{\text{cal}}_s = \bar\beta + A\big(\beta_s - \bar\beta^{\text{raw}}\big),
+\qquad A = L_{\text{tgt}} L_{\text{raw}}^{-1} .
+$$
 
-- **Recenter.** $\big(\beta_s-\bar\beta^{\text{raw}}\big)$ subtracts the raw
-  cloud's own mean, so the recentered draws are centered at the origin. This strips
-  off whatever the raw center happened to be, leaving only the cloud's *shape*
-  about its mean.
-- **Linear map.** $L_{\text{tgt}}L_{\text{raw}}^{-1}$ is the affine transform that
-  converts the raw covariance into the target covariance. Here $L_{\text{raw}}$ and
-  $L_{\text{tgt}}$ are the **lower-triangular Cholesky factors** of, respectively,
-  the raw covariance $\Sigma_{\text{raw}}$ and the target
-  $\Sigma_{\text{tgt}}=T_{\text{MI}}$ — each satisfies $L L^\top=\Sigma$. Applying
-  $L_{\text{raw}}^{-1}$ "whitens" the recentered draws (turns their covariance into
-  the identity), and applying $L_{\text{tgt}}$ then "colours" them to have exactly
-  the target covariance.
-- **Shift to $c$.** Adding $c$ relocates the now-correctly-shaped cloud so its mean
-  is the target center $c$ (the reportable choice $c=\bar\beta$ is Section 3).
+The preprint gives this map as its Eq. (5) [@lee2026onemcmc, p. 12]; in
+pvstackr, $\bar\beta$ and $T_{\text{MI}}$ are those of the target from
+`pv_brr_target()`. The map centers each draw at the mean of the stacked draws,
+multiplies it by the calibration matrix $A$, and adds the target estimate
+$\bar\beta$. Multiplying the centered draws by $L_{\text{raw}}^{-1}$ gives
+them the identity matrix as covariance, and multiplying them by
+$L_{\text{tgt}}$ then gives them the covariance $T_{\text{MI}}$.
 
-The covariance claim is a one-line consequence of how covariance transforms under
-a linear map. For a linear transform $\beta\mapsto A\beta$, the covariance becomes
-$A\,\Sigma_{\text{raw}}\,A^\top$. With $A=L_{\text{tgt}}L_{\text{raw}}^{-1}$ and
-$\Sigma_{\text{raw}}=L_{\text{raw}}L_{\text{raw}}^\top$,
+The calibrated draws have three properties, which make up exact moment
+calibration, Proposition B.1 of the preprint [@lee2026onemcmc, p. 37]:
+
+- their mean is $\bar\beta$;
+- their covariance, computed like $\Sigma_{\text{raw}}$, is $T_{\text{MI}}$;
+- the draws of parameters other than the fixed effects are unchanged.
+
+The first holds because the centered draws have mean zero and $A$ maps zero to
+zero. The second follows from the way a covariance matrix changes under a
+linear map:
 
 $$
 A\,\Sigma_{\text{raw}}\,A^\top
-= L_{\text{tgt}}L_{\text{raw}}^{-1}\,\big(L_{\text{raw}}L_{\text{raw}}^\top\big)\,L_{\text{raw}}^{-\top}L_{\text{tgt}}^\top
-= L_{\text{tgt}}L_{\text{tgt}}^\top
-= \Sigma_{\text{tgt}},
+= L_{\text{tgt}} L_{\text{raw}}^{-1}
+  \big(L_{\text{raw}} L_{\text{raw}}^\top\big)
+  L_{\text{raw}}^{-\top} L_{\text{tgt}}^\top
+= L_{\text{tgt}} L_{\text{tgt}}^\top
+= T_{\text{MI}} .
 $$
 
-the internal $L_{\text{raw}}^{-1}L_{\text{raw}}$ and $L_{\text{raw}}^\top
-L_{\text{raw}}^{-\top}$ collapsing to identities. The mean claim is even simpler:
-the recenter makes the pre-shift mean zero, the linear map sends zero to zero, and
-the shift sets the mean to $c$. Both invariants are therefore *exact by
-construction* — which is precisely the fact Section 6 checks numerically and the
-central caveat insists must **not** be over-read as coverage.
+The third holds because the map acts on the fixed-effect columns only. In
+pvstackr's model the only other parameter of the stacked fit is the residual
+standard deviation $\sigma$, whose draws pass through unchanged; pvstackr
+neither calibrates nor reports it, and `get_draws(fit)` returns the
+calibrated fixed-effect draws only.
 
-## 3. Centering conventions
+These properties are algebraic. They hold for any draws whose covariance
+matrix is positive definite, apart from the rounding error of floating-point
+arithmetic, and they do not depend on how well the stacked fit was sampled:
+because the map uses the mean and covariance of the draws at hand, Monte Carlo
+error changes $A$ but not the mean and covariance of the calibrated draws
+[@lee2026onemcmc, p. 37].
 
-EQ-CCC leaves one quantity to choose: the center $c$ the calibrated draws are
-shifted to. The choice is what separates a **reportable** fit from a merely
-**diagnostic** one, and it is the single most important control in this whole
-chapter — exactly the point A2 §6 makes from the workflow side.
+The preprint describes CCC as the scale-and-shape correction that
+@williams2021uncertainty developed for pseudo-posteriors under complex
+sampling, specialized to the fixed-effect block of the model and to a
+covariance target from the combining rules [@lee2026onemcmc, pp. 7, 13].
 
-**`center = "target"` is the reportable convention.** It sets $c=\bar\beta$ — the
-external target's pooled point from EQ-TMI, the same $\bar\beta$ M3's Theorem 2.2
-recovers. With $c=\bar\beta$ the calibrated cloud's mean is the external point and
-its covariance is the external $T_{\text{MI}}$, so the fit reports the external
-answer in full. This is the convention the bundled fixture uses, recorded in
-`fit$control$center`, and the one A2 §6 and A3 §3 both insist on for any reportable
-result.
+CCC sets the mean and the covariance of the draws and nothing else. The
+calibrated draws are an affine transformation of the stacked draws, so they
+are normal only when the stacked draws are, and their other features follow
+from those of the stacked draws through the same transformation. The interval
+of a `stack_direct` fit does not use the draws: it is the estimate plus or
+minus a $t$ quantile times the standard error, all taken from the target
+([Reading and reporting the
+results](a3-reading-results.html#interval-columns)). Quantiles of the
+calibrated draws therefore do not reproduce this interval. In the example,
+whose classic degrees of freedom are between 1.0 and 1.4, the 95% $t$
+intervals are three to six times as wide as normal-reference intervals with
+the same standard errors; with $M = 10$ the classic degrees of freedom are at
+least 9, so the $t$ quantile is at most 2.26 against 1.96; Barnard–Rubin
+degrees of freedom can be smaller, and the gap then larger.
+
+## The center of the calibrated draws
+
+The map above centers the calibrated draws at the target estimate $\bar\beta$.
+This is the setting `center = "target"` of `pv_control()`, the default, and a
+`stack_direct` fit requires it:
 
 ```{r center-control}
-fit$control$center   # "target" -- the reportable convention (c = beta_bar)
+fit$control$center   # "target": the calibrated draws are centered at beta_bar
 ```
 
-**`center = "posterior"` is diagnostic only.** It leaves the fixed-effect center
-at the raw stacked *posterior* mean $\bar\beta^{\text{raw}}$ while still applying
-the covariance calibration and computing the center-separation diagnostics. That
-hybrid is a useful CCC sanity check — it lets you *see* how far the raw center sat
-from $\bar\beta$ — but it is **not** a reportable `stack_direct` result;
-`pv_fit_direct()` refuses to emit a reportable estimate table from it (A2 §6).
-Treat `"posterior"` as a diagnostic, never a deliverable.
+With this setting the calibrated draws have the mean and covariance of the
+target, whose numbers the estimate table copies ([The full analysis
+workflow](a2-the-workflow.html#center-target) explains why pvstackr requires
+this setting), so the table and the draws agree. `pv_control()` also accepts
+`center = "posterior"`, which would keep the mean of the stacked draws,
+$\beta^{\text{cal}}_s = \bar\beta^{\text{raw}} + A(\beta_s - \bar\beta^{\text{raw}})$,
+and calibrate only the covariance; no fitting function uses it ([The full
+analysis workflow](a2-the-workflow.html#center-target)).
 
-The reportable choice $c=\bar\beta$ is exactly why M3's verification panel found
-the stacked estimate term-by-term equal to $\bar\beta$ and A3 §6.1 found the
-estimate column equal to the target's pooled `beta`: under target centering the
-reported point *is* the external point by construction. M4 is the variance
-counterpart of that same construction — the covariance leg of EQ-CCC is what makes
-the SE column equal $\sqrt{\operatorname{diag}(T_{\text{MI}})}$.
+## The algorithm {#algorithm}
 
-## 4. The deterministic algorithm
+CCC is deterministic: pvstackr computes it with plain Cholesky factorizations,
+a triangular solve and matrix products, without random numbers, iterations or
+tuning, so the same draws and target always give the same calibrated draws. A
+fit that pvstackr's check of the sampler diagnostics blocks is not calibrated.
+For the other fits, pvstackr proceeds as follows:
 
-CCC is an **algorithm**, not a sampler: given the raw cloud and the target, every
-quantity in EQ-CCC is computed by deterministic linear algebra, and re-running it
-on the same inputs returns bit-identical output. There is no Monte Carlo step
-inside the map. Three implementation facts complete the picture beyond the bare
-equation.
+1. It takes the fixed-effect columns of the draws of the stacked fit and
+   computes their mean $\bar\beta^{\text{raw}}$ and covariance
+   $\Sigma_{\text{raw}}$ with `colMeans()` and `cov()`.
+2. It checks the target: $T_{\text{MI}}$ must be symmetric and positive
+   definite, its rows and columns must name the same coefficients as the
+   draws, in the same order, and the target must come from `pv_brr_target()`.
+   It also stops with an error when $T_{\text{MI}}$ equals $\Sigma_{\text{raw}}$
+   or is proportional to it.
+3. It factors $\Sigma_{\text{raw}}$ and $T_{\text{MI}}$ with `chol()` from base
+   R, without pivoting, after making each matrix exactly symmetric as
+   $(\Sigma + \Sigma^\top)/2$. `chol()` returns the upper-triangular factor $U$
+   with $U^\top U = \Sigma$, and pvstackr uses its transpose, $L = U^\top$.
+4. It computes $L_{\text{raw}}^{-1}$ by forward substitution, with
+   `forwardsolve()` applied to the identity matrix, and forms
+   $A = L_{\text{tgt}} L_{\text{raw}}^{-1}$, a lower-triangular $p \times p$
+   matrix.
+5. It centers every draw at $\bar\beta^{\text{raw}}$, multiplies it by $A$ and
+   adds $\bar\beta$, and records [the diagnostics](#diagnostics).
 
-**Lower-triangular Cholesky factors.** Both $L_{\text{raw}}$ and $L_{\text{tgt}}$
-are the *lower-triangular* Cholesky factors of their covariances ($LL^\top=\Sigma$).
-The triangular structure is what makes the map cheap and stable to apply: solving
-with a triangular factor is a back-substitution rather than a general inverse, and
-the factorization is unique for a positive-definite $\Sigma$. EQ-CCC's
-parenthetical "(lower-triangular)" is fixing this convention so that "$L$" is
-unambiguous wherever the track cites it.
+A positive definite matrix has exactly one lower-triangular Cholesky factor
+with a positive diagonal, so $A$ is well defined. Other matrices $G$ with
+$G\,\Sigma_{\text{raw}}\,G^\top = T_{\text{MI}}$ exist, for example matrices
+built from symmetric square roots; used in place of $A$, they give the
+calibrated draws the same mean and covariance but move each draw differently.
+The preprint's algorithm, like pvstackr, uses the lower-triangular factors of
+both matrices [@lee2026onemcmc, p. 37].
 
-**Positive-definite inputs, fail-fast — no automatic repair.** The map needs
-$L_{\text{raw}}^{-1}$, which exists only if $\Sigma_{\text{raw}}$ is positive
-definite, and $L_{\text{tgt}}$ likewise requires a positive-definite
-$\Sigma_{\text{tgt}}=T_{\text{MI}}$. CCC factors both covariances **as
-given** and applies **no** automatic Tikhonov or near-PD repair to either. When the
-raw draw cloud is **ill-conditioned** — near-collinear fixed effects, or too few
-effective draws relative to the dimension — that condition surfaces in one of two
-ways rather than being silently patched: a matrix that is *not* positive definite is
-rejected outright on the Cholesky path (the factorization aborts with a "must be
-positive definite for CCC calibration" error), while a matrix that is positive
-definite but poorly conditioned clears the Cholesky and is instead flagged by the
-$\kappa_A$ conditioning diagnostic below. The remedy is upstream — increase
-effective draws, reduce collinearity, or simplify the fixed-effect block before
-reporting — never an internal ridge.
+Both factorizations need positive definite matrices, and pvstackr applies no
+automatic Tikhonov or near-PD repair: it adds no ridge (a constant on the
+diagonal) and does not replace a matrix by a nearby positive definite one.
+When $\Sigma_{\text{raw}}$ or $T_{\text{MI}}$ is not positive definite,
+pvstackr stops with an error and returns no fit. For $\Sigma_{\text{raw}}$ the
+message is "pvstackr: `Sigma_raw` must be positive definite for CCC
+calibration."; `Sigma_raw` and `Sigma_target` are the names of
+$\Sigma_{\text{raw}}$ and $T_{\text{MI}}$ in the calibration record of a fit
+("Calibration record" in `?pvstackr_object_contracts`). The calibration in the
+preprint also halts with an error when its preconditions, positive definite
+matrices among them, fail; its implementation keeps a nearest
+positive-semidefinite repair as an explicitly logged fallback, which pvstackr
+does not have [@lee2026onemcmc, p. 38].
 
-**The conditioning diagnostic $\kappa_A$.** Because the map's stability hinges on
-$L_{\text{raw}}^{-1}$, the package records a conditioning diagnostic, **$\kappa_A$**
-— a numerical-stability summary of the transform $A=L_{\text{tgt}}L_{\text{raw}}^{-1}$
-(it lives in the `ccc` diagnostic block as `kappa_A`). A well-conditioned raw cloud
-gives a small $\kappa_A$ and a trustworthy map; a large $\kappa_A$ flags that the
-inverse was delicate and the calibration should be read with care. It is a
-*trust* diagnostic for the algorithm, read alongside the center-separation
-numbers of the next section — never a coverage statistic.
+$\Sigma_{\text{raw}}$ is not positive definite when there are fewer than
+$p + 1$ draws, or when the draws of one fixed effect are an exact linear
+combination of the draws of others, as for a fixed effect that the model does
+not identify. The remedy is to change the stacked fit, for example with more
+draws or with fewer or less collinear fixed effects. A target covariance that
+is not positive definite already stops `pv_brr_target()` with an error when
+the target is made, and `pv_control(allow_target_nearpd = TRUE)`, which would
+allow a repair of the target, stops with an error as well.
 
-## 5. Center-separation diagnostics
+A covariance matrix that is positive definite but close to singular passes
+the factorization, and so, because of rounding, can a matrix that is singular
+in exact arithmetic. When one of the two matrices is much closer to singular
+than the other, the condition number $\kappa_A$ of $A$, stored as `kappa_A`,
+is large and pvstackr's thresholds apply (see [the
+diagnostics](#diagnostics)); when both are close to singular in the same
+direction, $\kappa_A$ can stay small.
 
-The covariance leg of EQ-CCC is exact by construction, but the **center** leg
-carries information worth auditing: *how far apart were the raw stacked center and
-the external point $\bar\beta$ before CCC shifted things?* If the bridge (M3) is
-behaving, the raw stacked posterior mean should already sit close to $\bar\beta$;
-a large gap is a warning that the stacked fit and the external target disagree on
-the point, which no amount of covariance calibration would fix. The
-center-separation diagnostic measures exactly that gap.
+## Diagnostics {#diagnostics}
 
-**EQ-DELTAC — the center-separation diagnostic.** $\Delta_c$ is the **relative gap
-between the raw stacked center and $\bar\beta$, measured on the target-SE scale** —
-the per-coefficient difference $\big(\text{raw center}-\bar\beta\big)$ divided by
-that coefficient's target standard error $\sqrt{\operatorname{diag}(T_{\text{MI}})}$,
-then summarised across terms. Putting it on the SE scale makes it dimensionless and
-comparable across coefficients on wildly different scales (an intercept near 458
-versus a slope near 2). The summary is then read against **green / yellow / red
-tiers** that gate the fit: green is a negligible separation (the bridge and target
-agree on the point), yellow warns, and red blocks a reportable result.
+The calibration records its diagnostics in `get_diagnostics(fit)$ccc`. Two of
+them can give the fit the status `"warning"` or `"blocked"`: the center
+separation and the condition number of $A$. They are combined with pvstackr's
+other checks, and the most severe result sets the status ("Status and checks"
+in `?pvstackr_object_contracts` lists all checks). Their thresholds are
+pvstackr's rules; the preprint sets no thresholds for these quantities. The
+calibration also records `a_matrix_fro_rel`, which measures how far $A$ is
+from the identity matrix, and `rho1`, `rho2` and `empirical_fro_rel`, which
+measure how far the covariance of the calibrated draws is from $T_{\text{MI}}$
+and are zero apart from rounding; these values do not change the status.
 
-The package computes **two summaries** of the per-term gaps:
+### Center separation
 
-- **`delta_c_rel`** is the root-mean-square (RMS) target-SE-scaled separation
-  across terms. It is a descriptive diagnostic that summarizes the overall size of
-  the center shift.
-- **`delta_c_max`** is the maximum absolute target-SE-scaled separation — the
-  single worst-separated coefficient. This is the reportable **NO-SEND gate** used
-  for the green / yellow / red center-separation bands.
+The center separation compares the mean of the stacked draws before
+calibration with the target estimate, coefficient by coefficient, in units of
+the target standard error:
 
-So when this vignette says "the reportable gate," it means **`delta_c_max`**. A3
-§6.3 previews the same pair: an RMS diagnostic (`delta_c_rel`) and a max-over-terms
-gate (`delta_c_max`).
+$$
+\Delta_c = \max_{\ell = 1, \dots, p}
+  \frac{\lvert \bar\beta_\ell - \bar\beta^{\text{raw}}_\ell \rvert}
+       {\sqrt{T_{\text{MI},\ell\ell}}} .
+$$
 
-::: {.alert .alert-warning}
-**$\Delta_c$ has two summaries — state both.** `delta_c_rel` is the RMS diagnostic;
-`delta_c_max` is the reportable **NO-SEND gate**. Center-separation bands are keyed
-to `delta_c_max`: green below `1e-2`, yellow from `1e-2` to below `5e-2`, and red
-at or above `5e-2`. Neither summary is a coverage statistic; they are algorithmic
-trust diagnostics for deciding whether the calibrated fit may be reported.
-:::
+pvstackr stores $\Delta_c$ as `delta_c_max` and the ratio for each coefficient
+as `delta_c_by_term`; `delta_c_rel` is the root mean square (RMS) of the same
+ratios. Measured in standard errors, the ratios can be compared across
+coefficients on different scales, such as an intercept in score points and the
+coefficient of a 0/1 indicator.
 
-## 6. Verify the CCC invariant in code
+With a flat prior on the fixed effects, which the bundled engine uses when
+`prior = NULL`, the mean of the stacked draws differs from $\bar\beta$ only by
+Monte Carlo error, as noted [above](#why-calibrate). It differs further when
+the prior is not flat, or when a fitting function of your own does not use the
+stacked weights. In Appendix A.4, the preprint treats this agreement in its
+own setting as an empirical quantity to be measured and reported, not as a
+consequence of the point identity [@lee2026onemcmc, p. 36].
 
-The natural way to demonstrate EQ-CCC would be to apply it to the fit's own raw
-draws and confirm the calibrated cloud has mean $c$ and covariance
-$\Sigma_{\text{tgt}}$. We cannot do that here for a concrete reason stated at the
-top of the page: **this fixture retains no draws** — it was produced with
-`return_draws = FALSE`, so `get_draws(fit)` is `NULL` (A3 §6.2), and there is no
-raw cloud to calibrate. The invariant is therefore demonstrated on a
-**self-contained synthetic** draw cloud, built only to exercise the algebra of the
-map. This is the only randomness in the Method track, and it is seeded.
+Monte Carlo error alone is not small on this scale. The Monte Carlo standard
+error of the mean of the draws of coefficient $\ell$ is their standard
+deviation divided by $\sqrt{\mathrm{ESS}_\ell}$, where $\mathrm{ESS}_\ell$ is
+their effective sample size. In target standard errors it is therefore the
+ratio of that standard deviation to $\sqrt{T_{\text{MI},\ell\ell}}$, divided by
+$\sqrt{\mathrm{ESS}_\ell}$. With a ratio of 0.5 and 4,000 effective draws it is
+about 0.008, close to the warning threshold of 0.01 below. A fit that differs
+from the target only by Monte Carlo error can therefore get the status
+`"warning"`, and with few effective draws even `"blocked"`; more draws make
+this less likely.
 
-We manufacture an arbitrary raw cloud with a non-trivial mean and covariance,
-choose target moments to impose (standing in for $c=\bar\beta$ and
-$\Sigma_{\text{tgt}}=T_{\text{MI}}$), and apply EQ-CCC exactly as written:
+pvstackr sets `center_status` from `delta_c_max`. Below 0.01 it is `"ok"`.
+From 0.01 the fit gets the status `"warning"`, with the reason code
+`center_separation_yellow`; its estimate table is unchanged, since the table
+copies the target. From 0.05 the fit is `"blocked"`, with
+`center_separation_red`, and its estimate table is empty; its
+`get_diagnostics(fit)$ccc` then holds single values grouped as `center`,
+`conditioning`, `residual` and `prior`, for example
+`get_diagnostics(fit)$ccc$center$delta_c_max`. `delta_c_rel`, the RMS of the
+ratios, is recorded and printed in the warning message but does not change
+the status.
+
+### Condition number of the calibration matrix
+
+$\kappa_A$, stored as `kappa_A`, is the condition number of $A$: the ratio of
+its largest to its smallest singular value. It is at least 1 and does not
+change when $A$ is multiplied by a nonzero constant. A large $\kappa_A$ means
+that $A$ stretches the centered draws far more in some directions than in
+others, as when $\Sigma_{\text{raw}}$ is close to singular, so that small
+errors in the stacked draws can be greatly magnified. From
+$\kappa_A = 10^6$ the fit gets the status `"warning"`, with the reason code
+`ccc_conditioning_yellow`, and from $10^8$ it is `"blocked"`, with
+`ccc_conditioning_red`.
+
+## What the calibration does not show
+
+CCC gives the draws the mean and covariance of the target it receives,
+whatever that target is. It cannot show that the target is right, and it does
+not correct a target that is wrong. The preprint calls the correction a moment
+calibration that guarantees agreement with the supplied target, and in its
+Appendix B.3 it treats the coverage of intervals built from the calibrated
+draws as an empirical question, which its simulation addresses for targets
+from model-based fits only [@lee2026onemcmc, pp. 13, 38]. The diagnostics
+compare the stacked fit with the target and describe the matrix $A$; they say
+nothing about coverage either.
+
+The interval of a `stack_direct` fit is computed from the estimate, the
+standard error and the degrees of freedom of the target. pvstackr's reporting
+rule labels it coverage-claimable only when the target uses the Barnard–Rubin
+degrees of freedom; the label records how the interval was built and does not
+certify its coverage. [Reading and reporting the
+results](a3-reading-results.html#interval-columns) gives the rule, [Choosing a
+method and reading its intervals](m5-methods-and-coverage.html#interval-rule)
+gives its reason, and [The design-based target: BRR–Fay replicate weights and
+Rubin's rules](m2-brr-fay-target.html) shows how $\bar\beta$ and
+$T_{\text{MI}}$ are computed.
+
+## Checks {#checks}
+
+The first check applies the map to simulated draws; it is an arithmetic check
+of the two moment properties. The second reads the diagnostics recorded in the
+example fit, which hold by construction.
+
+### The moment properties on simulated draws
+
+The example fit has no draws, so the chunk below simulates them: $S = 4000$
+draws of $p = 3$ coefficients from a normal distribution with a mean and a
+covariance chosen for the check. It sets a target mean and covariance in place
+of $\bar\beta$ and $T_{\text{MI}}$ and applies the map as pvstackr computes it,
+except that it inverts $L_{\text{raw}}$ with `solve()` where pvstackr uses
+`forwardsolve()`, which gives the same matrix up to rounding.
 
 ```{r ccc-invariant}
-set.seed(5104)                      # M4 is the only Method vignette with randomness
+set.seed(5104)                      # fixed seed, so the simulated draws are the same in every run
 p <- 3L; S <- 4000L
 
-## an arbitrary raw draw cloud with a non-trivial mean and covariance
+## simulated draws of p = 3 coefficients with a chosen mean and covariance
 Sigma_raw_true <- crossprod(matrix(rnorm(p * p), p, p)) + diag(p)
 raw <- sweep(matrix(rnorm(S * p), S, p) %*% chol(Sigma_raw_true),
              2L, c(10, -3, 0.5), `+`)
 
-## target moments to impose (stand in for c = beta_bar and Sigma_tgt = T_MI)
+## target mean and covariance for the check, in place of beta_bar and T_MI
 c_tgt     <- c(458, 47, 2)
 Sigma_tgt <- matrix(c(4.0, 0.5, 0.0,
                       0.5, 2.0, 0.3,
                       0.0, 0.3, 1.5), 3, 3, byrow = TRUE)
 
-## EQ-CCC: beta_cal = c + L_tgt L_raw^{-1} (beta - colMeans(raw))
-L_tgt <- t(chol(Sigma_tgt))         # lower-triangular Cholesky factor of the target
-L_raw <- t(chol(cov(raw)))          # lower-triangular Cholesky factor of the (empirical) raw cov
-A     <- L_tgt %*% solve(L_raw)     # the affine transform L_tgt L_raw^{-1}
+## the map: beta_cal = c_tgt + A (beta - colMeans(raw)), with A = L_tgt L_raw^{-1}
+L_tgt <- t(chol(Sigma_tgt))         # lower Cholesky factor of the target covariance
+L_raw <- t(chol(cov(raw)))          # lower Cholesky factor of the covariance of the draws
+A     <- L_tgt %*% solve(L_raw)     # the calibration matrix A
 
-cal <- sweep(raw, 2L, colMeans(raw), `-`) %*% t(A)   # recenter, then linear map
-cal <- sweep(cal, 2L, c_tgt, `+`)                    # shift to the target center
+cal <- sweep(raw, 2L, colMeans(raw), `-`) %*% t(A)   # center the draws, then multiply by A
+cal <- sweep(cal, 2L, c_tgt, `+`)                    # add the target mean
 
-all.equal(unname(colMeans(cal)), c_tgt)      # TRUE  (max|diff| ~ 1e-13)
-all.equal(unname(cov(cal)),      Sigma_tgt)  # TRUE  (max|diff| ~ 1e-15)
+all.equal(unname(colMeans(cal)), c_tgt)      # TRUE (largest difference about 1e-13)
+all.equal(unname(cov(cal)),      Sigma_tgt)  # TRUE (largest difference about 1e-14)
 ```
 
-Both invariants hold: the calibrated cloud's mean equals the imposed center $c$
-and its covariance equals the imposed target $\Sigma_{\text{tgt}}$, each to machine
-precision. That is EQ-CCC realised — the affine map does exactly what Section 2's
-algebra said it must.
+Both comparisons return `TRUE`. `all.equal()` accepts a relative difference
+below about $1.5 \times 10^{-8}$; the largest absolute differences in this run
+are about $10^{-13}$ for the mean, whose entries are as large as 458, and
+$10^{-14}$ for the covariance, the size of rounding errors. The agreement is
+exact apart from rounding because the map is built from the mean and
+covariance of the same draws that the check summarizes, as in pvstackr. The
+simulated covariance is positive definite and well conditioned by
+construction (the term `+ diag(p)` and 4000 draws for three coefficients), so
+the check reaches neither the error for a matrix that is not positive definite
+nor the thresholds of `kappa_A`.
 
-::: {.alert .alert-info}
-**Construction note — why these hit machine precision, and what production requires.**
-In this panel $L_{\text{raw}}$ is the Cholesky factor of the **empirical**
-`cov(raw)` and the draws are recentered on the **empirical** `colMeans(raw)` — the
-very same cloud's own moments. Because the map is built from and applied to the
-identical empirical moments, the cancellation in Section 2's covariance derivation
-is exact and both invariants land at ~$10^{-14}$. Production CCC adds no ridge to
-this: it factors $\Sigma_{\text{raw}}$ exactly as this panel does, by plain
-Cholesky, and **requires** only that $\Sigma_{\text{raw}}$ and the external target
-both be positive definite (Section 4). The difference is one of guardrails, not
-arithmetic — in production a non-positive-definite $\Sigma_{\text{raw}}$ is rejected
-on the Cholesky path and a poorly conditioned one is flagged through $\kappa_A$,
-whereas this synthetic cloud is well-conditioned by construction (`Sigma_raw_true`
-is positive-definite with a `+ diag(p)` term), so those guardrails never fire. The
-plain inverse used here is exactly the production map, not a simplified stand-in for
-it.
-:::
+### The diagnostics of the example fit
 
-We can still read the fit's **realized** center-separation numbers directly off the
-fixture, even though there are no draws — they were recorded in the `ccc`
-diagnostic block when the fixture was calibrated. This is read-only:
+The example fit recorded its calibration diagnostics when it was made, and
+they can be read without the draws:
 
 ```{r ccc-diagnostics}
 dg <- get_diagnostics(fit)
 
-names(dg)                                                    # preflight, stack_fit, stack_fit_warnings, ccc
+names(dg)
 dg$ccc[c("center_status", "delta_c_rel", "delta_c_max")]
 ```
 
-`center_status == "ok"` says the center separation fell in the green tier — the raw
-stacked center and $\bar\beta$ agree. The two summaries are both effectively zero:
-`delta_c_rel` (the **RMS** diagnostic of Section 5) is about
-$2.5\times10^{-14}$ and `delta_c_max` (the **max-over-terms reportable gate**) about
-$4.4\times10^{-14}$. Both are reported, and the green / yellow / red gate is keyed
-to `delta_c_max`. The same `ccc` block carries the conditioning diagnostic
-`kappa_A` of Section 4 and a per-term breakdown `delta_c_by_term`, should you wish
-to inspect the algorithm's behaviour further.
+`center_status` is `"ok"`: `delta_c_max` is about $4.4 \times 10^{-14}$ and
+`delta_c_rel` about $2.5 \times 10^{-14}$, far below 0.01. These values hold by
+construction. The functions that made the example fit returned draws built
+around the target, whose means equal $\bar\beta$ apart from rounding ([Getting
+started with pvstackr](a1-getting-started.html#example-fit)), so the values
+show what the diagnostics look like, not how close the draws of a sampler come
+to the target. The list also holds `delta_c_by_term` and `kappa_A` (see [the
+diagnostics](#diagnostics)).
 
-::: {.alert .alert-warning}
-**CCC is an affine moment match, NOT a coverage theorem.** This is the central
-honesty point of the page, and it mirrors A3 §4's warning exactly. Everything
-verified above is **algebraic by construction**: EQ-CCC *forces*
-$\operatorname{mean}=c$ and $\operatorname{Cov}=\Sigma_{\text{tgt}}$, so the
-~$10^{-14}$ agreement merely confirms the linear algebra **ran cleanly** — it is
-not, and must never be read as, evidence that the resulting intervals *cover*.
-Coverage comes from the **provenance** of $\Sigma_{\text{tgt}}=T_{\text{MI}}$ —
-external, design-based, BRR–Fay [@judkins1990fay], pooled by the Rubin rules
-[@rubin1987multiple] (M2) — together with the companion paper's simulation oracle,
-**not** from CCC. Concretely, this fixture's near-zero $\Delta_c$ sits alongside
-`coverage_claim_allowed == FALSE` (it carries classic Rubin df, not Barnard–Rubin;
-A3 §4, M5): the calibration ran perfectly and the fit is still, honestly,
-**descriptive**. A clean CCC is necessary plumbing, not a coverage certificate.
-:::
-
-## 7. Where to next
-
-You now have the variance counterpart to M3's point identity in full: the CCC
-affine map (EQ-CCC) that forces the raw stacked draw cloud's first two moments onto
-the external target's $c=\bar\beta$ and $\Sigma_{\text{tgt}}=T_{\text{MI}}$, the
-target-versus-posterior centering convention that decides whether a fit is
-reportable, the deterministic fail-fast Cholesky algorithm and its $\kappa_A$
-conditioning check, and the center-separation diagnostic (EQ-DELTAC) with both the
-RMS diagnostic (`delta_c_rel`) and the max-over-terms gate (`delta_c_max`). And its hard
-boundary: an algebraic moment match, exact by construction, that confers **no**
-coverage on its own.
-
-- **M5 · Methods, PSIS, and coverage** — the natural next step, and where the
-  caveat of this page is cashed out. CCC's clean moment match is *not* the source
-  of coverage; M5 states precisely why only `stack_direct` — calibrated by CCC to
-  an external design-based target — is coverage-claimable, while `per_pv` and
-  `stack_psis` carry model-based covariance and are descriptive always.
-- **M2 · The BRR–Fay fixed-effect target** — the provenance of
-  $\Sigma_{\text{tgt}}=T_{\text{MI}}$ that this page imposes: the BRR–Fay sandwich
-  (EQ-BRRFAY) and Rubin pooling (EQ-TMI) that build the external object, and the
-  design-variance coverage result that — unlike CCC — actually licenses coverage.
-- **M3 · The stacked fractional bridge** — the *point* leg this page's variance leg
-  completes: Theorem 2.2 (EQ-THM22) matched $\bar\beta$, CCC matches the covariance,
-  and the two together are the "one fit instead of $M$" machinery.
-
-To see these diagnostics from the reporting side — the `get_diagnostics(fit)$ccc`
-peek, the `center_status` / `delta_c_rel` / `delta_c_max` fields, and the reminder
-that their tiny values do not confer coverage — return to **A3 · Reading results**
-(§6.3).
-
-Bug reports and feature requests:
-<https://github.com/joonho112/pvstackr/issues>.
-
-### Session info
+The numbers above were computed in this session:
 
 ```{r session-info}
 sessionInfo()

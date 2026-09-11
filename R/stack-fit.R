@@ -193,9 +193,9 @@ pv_stack_cache_spec <- function(cache_dir = "cache", cache_stem = "pvstackr-stac
   directory_created <- FALSE
   writable <- NA
   resolved_dir <- path.expand(cache_dir)
-  # Only the bundled backend prepares the directory. An injected adapter owns its
-  # own cache, and the recorded provenance says so: `directory_created` is FALSE
-  # and `writable` is NA for that route, and the fit validator enforces it.
+  # Only the bundled backend prepares the directory. An injected adapter
+  # manages its own cache; for that route the fit validator requires
+  # `directory_created = FALSE` and `writable = NA` in `provenance$cache`.
   if (package_managed) {
     if (file.exists(resolved_dir) && !dir.exists(resolved_dir)) {
       pv_abort("`cache_dir` exists but is not a directory.")
@@ -542,7 +542,7 @@ pv_stack_materialized_prior <- function(prior, draw_name_map,
   # fits `0 + ...`, so a population-level prior written for the original formula
   # would widen to cover the intercept as well. Expanding it to one row per
   # non-intercept column restores the original scope exactly rather than
-  # approximating it; anything that cannot be expanded this way is refused above.
+  # approximating it; anything that cannot be expanded is refused above.
   global_b <- prior$class == "b" & !nzchar(prior$coef)
   if (is.null(intercept_backend_name) || !any(global_b)) {
     return(prior)
@@ -699,10 +699,11 @@ pv_stack_direct_preflight <- function(
     current_manifest,
     list(model_bundle_hash = model_bundle$bundle_hash)
   )
-  # Migration identity is authenticated target provenance, not current-data
-  # evidence. Reattach only the strict registered projection after every raw
-  # component has been recomputed so migrated targets can produce the same
-  # canonical manifest hash without reusing stored component hashes.
+  # A target upgraded by pv_revalidate_brr_target() carries a `migration`
+  # record, which describes the target rather than the data and so cannot be
+  # recomputed. Copy only that record (validated below); every other component
+  # was recomputed above, so the manifest hash can match the target's without
+  # reusing any stored component hash.
   if ("migration" %in% names(target$binding_manifest)) {
     current_manifest <- c(
       current_manifest,

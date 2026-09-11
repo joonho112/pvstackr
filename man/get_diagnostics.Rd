@@ -6,7 +6,7 @@
 \alias{get_diagnostics.pvstackr_fit}
 \alias{get_diagnostics.pvstackr_method_comparison}
 \alias{get_diagnostics.pvstackr_legacy_psis_inspection}
-\title{Access pvstackr Diagnostics}
+\title{Get the diagnostics of a fit or comparison}
 \usage{
 get_diagnostics(x, ...)
 
@@ -19,45 +19,60 @@ get_diagnostics(x, ...)
 \method{get_diagnostics}{pvstackr_legacy_psis_inspection}(x, ...)
 }
 \arguments{
-\item{x}{A pvstackr object.}
+\item{x}{A fit (class \code{pvstackr_fit}) or a method comparison from
+\code{\link[=pv_compare_methods]{pv_compare_methods()}}.}
 
-\item{...}{Reserved for future extensions.}
+\item{...}{Ignored.}
 }
 \value{
-A structured diagnostics list. For a legacy PSIS inspection object
-this is bounded Pareto-k evidence plus its redaction record; historical
-pooling, weights, estimates, and draws are never returned.
+A named list whose elements depend on the object:
+\itemize{
+\item A \code{stack_direct} fit: \code{preflight} (the check that \code{data}, \code{formula} and
+\code{target} match), \code{sampler} and \code{sampler_gate} (the sampler diagnostics
+and pvstackr's check of them), \code{stack_fit} and \code{stack_fit_warnings}
+(records and notes from the stacked fit) and \code{ccc} (the calibration
+diagnostics, such as \code{delta_c_max} and \code{kappa_A}). A blocked fit has
+only \code{preflight}, \code{sampler}, \code{sampler_gate}, \code{redaction} (what was
+removed) and, when the calibration check blocked it, \code{ccc}, with its
+values grouped as \code{center}, \code{conditioning}, \code{residual} and \code{prior}.
+\item A \code{per_pv} fit: \code{reference} (a record of the per-plausible-value fits
+and, when kept, their draws) and \code{pooling} (their Rubin's-rules
+combination).
+\item A \code{stack_psis} fit: \code{psis} (the Pareto k-hat values, the decision and
+the weight diagnostics), \code{pooling} and \code{weighted} (the weighted result
+of each plausible value and, when kept, the stacked draws and the
+normalized weights). A blocked fit has only \code{psis} and \code{redaction}.
+\item A method comparison: \code{reference_method}, \code{methods}, \code{statuses},
+\code{blocked_methods}, \code{warning_methods}, \code{agreement},
+\code{method_diagnostics}, \code{timing} and \code{target_overlap} (see
+\code{\link[=pv_compare_methods]{pv_compare_methods()}}).
+\item The inspection object that \code{\link[=pv_migrate_legacy_psis_fit]{pv_migrate_legacy_psis_fit()}} makes from a
+\code{stack_psis} fit of an earlier pvstackr version: \code{psis} (the Pareto
+k-hat values and the decision) and \code{redaction} (what was removed).
+}
+
+\code{get_diagnostics()} stops with an error if the fit or comparison was
+changed after it was created.
 }
 \description{
-Return the structured diagnostics list stored on a fit or method comparison.
-Diagnostics keep method-specific details that are intentionally not flattened
-into the reportable estimate table.
-}
-\details{
-Diagnostic keys are method-specific; inspect \code{names(get_diagnostics(x))}. A
-current \code{stack_direct} fit carries top-level \code{sampler} and \code{sampler_gate}
-records plus \code{preflight}, \code{stack_fit}, \code{stack_fit_warnings}, and \code{ccc};
-sampler-blocked fits retain only slim preflight/sampler/gate evidence and the
-independently valid external target, rebuilt from an exact recursive
-allowlist with no formula object in preflight and a safe formula environment
-on the target snapshot. A legacy cached stack-direct fit may
-predate the sampler keys. A \code{per_pv} fit carries \code{reference} and \code{pooling};
-a \code{stack_psis} fit
-carries \code{psis} (status and Pareto-k), \code{pooling}, and \code{weighted}. A method
-comparison instead carries comparison-level keys such as \code{agreement},
-\code{method_diagnostics}, \code{timing}, and \code{target_overlap} (the shared-provenance
-summary).
+\code{get_diagnostics()} returns the diagnostics list of a fit or a method
+comparison: the results of pvstackr's checks and the details of a method
+that are not in the estimate table.
 }
 \examples{
-path <- system.file("extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr")
+path <- system.file(
+  "extdata", "examples", "pisa_tiny_stack_direct.rds", package = "pvstackr"
+)
 if (nzchar(path)) {
   fit <- readRDS(path)$fit
   names(get_diagnostics(fit))
 }
 }
 \seealso{
-\code{\link[=get_estimates]{get_estimates()}}, \code{\link[=get_target]{get_target()}}, \code{\link[=get_draws]{get_draws()}}; \code{\link[=pv_fit]{pv_fit()}},
-\code{\link[=pv_compare_methods]{pv_compare_methods()}}.
+\code{\link[=pv_fit_direct]{pv_fit_direct()}} and \link{pvstackr_object_contracts} for the
+elements of a fit's diagnostics; "Status and checks" in
+\link{pvstackr_object_contracts} for the thresholds of the checks and their
+reason codes.
 
 Other pvstackr-accessors:
 \code{\link[=get_draws]{get_draws()}},

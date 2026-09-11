@@ -3726,9 +3726,10 @@ pv_fit_validation_projection <- function(fit) {
   projected <- fit
   projected$validation$stamp <- pv_fit_validation_stamp_sentinel()
 
-  # Backend fit objects are intentionally opaque retention exceptions. Their
-  # presence and authorization remain covered, but their implementation-owned
-  # contents are outside the portable validation stamp.
+  # Retained backend fit objects are replaced by markers before hashing. The
+  # checksum still covers their presence and the `keep_backend_fit` setting,
+  # but not their contents, which belong to the backend package and are not
+  # guaranteed to serialize to the same bytes in another session.
   if (is.list(projected$stack_fit) &&
       "fit" %in% names(projected$stack_fit) &&
       !is.null(projected$stack_fit$fit)) {
@@ -3746,11 +3747,11 @@ pv_fit_validation_projection <- function(fit) {
     )
   }
 
-  # Formula environments affect both evaluation and retention safety. Only the
-  # two canonical package environments are portable. The serialized formula
-  # uses baseenv() for byte stability, while an adjacent marker preserves the
-  # exact base-versus-stats identity. A private environment fails closed even
-  # in the cheap tier instead of being normalized away.
+  # A formula's environment affects how it is evaluated and can carry user
+  # objects into a saved fit, so only baseenv() and the stats namespace are
+  # allowed. The formula is hashed with baseenv() for stable bytes, and
+  # `environment_id` records which of the two it had. Any other environment
+  # is an error, also in the "cheap" tier, rather than being replaced.
   normalize_formulas <- function(x) {
     if (inherits(x, "formula")) {
       formula_environment <- environment(x)
@@ -3978,8 +3979,9 @@ validate_pvstackr_fit <- function(fit, tier = c("deep", "cheap")) {
     return(invisible(fit))
   }
 
-  # Opaque backend payloads cannot participate in a portable content digest,
-  # so a requested cheap validation deliberately falls back to the deep tier.
+  # The checksum does not cover the contents of retained backend fit objects,
+  # so a fit that keeps them gets the full "deep" checks even when "cheap" was
+  # requested.
   pv_validate_pvstackr_fit_deep(fit)
   pv_validate_fit_validation_stamp(fit)
   invisible(fit)

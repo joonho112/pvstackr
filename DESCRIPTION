@@ -1,14 +1,18 @@
 Package: pvstackr
-Title: Stacked-Fit Calibration to Rubin/BRR-Fay Fixed-Effect Targets for Plausible Values
-Version: 0.2.0
+Title: Bayesian Plausible-Value Analysis with One Calibrated Stacked Fit
+Version: 0.2.1
 Authors@R:
     person("JoonHo", "Lee", , "jlee296@ua.edu", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0009-0006-4019-8703"))
-Description: Provides tools for Bayesian-backend fixed-effect calibration and
-    reporting with plausible-value survey data. The package supports
-    one-stacked-fit workflows for Bayesian backends while assembling external
-    Rubin/BRR-Fay fixed-effect targets and calibrating fixed-effect draws to
-    those targets.
+Description: Fits survey-weighted linear regression models to assessment data
+    whose outcome is given as plausible values, such as PISA, and reports the
+    fixed effects. The default method fits one Bayesian model to the data
+    stacked over the plausible values and calibrates its fixed-effect draws to
+    a design-based target, computed with balanced repeated replication weights
+    (Fay's method) and Rubin's rules for multiple imputation; the reported
+    estimates, standard errors and degrees of freedom are those of the target.
+    Two further methods combine one fit per plausible value, or reweight the
+    stacked fit with importance weights that the user supplies.
 License: MIT + file LICENSE
 URL: https://joonho112.github.io/pvstackr/,
     https://github.com/joonho112/pvstackr
@@ -37,4 +41,4 @@ SystemRequirements: Optional CmdStan and a C++ toolchain for live brms
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: false
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
